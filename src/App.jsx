@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
-//  FIXED: Updated import path for QuestionBank
+import Dashboard from './pages/Dashboard';
 import QuestionBank from './features/questions/pages/QuestionBank';
 import ManageUsers from './pages/ManageUsers';
 import LoginPage from './pages/LoginPage';
@@ -17,67 +17,55 @@ const App = () => {
   const navigate = useNavigate();
 
   // Check for existing authentication on app load
-useEffect(() => {
-  const verifyAuth = async () => {
-    const token = localStorage.getItem('token');
-    const usernameoremail = localStorage.getItem('usernameoremail');
-    
-    if (token && usernameoremail && usernameoremail !== 'undefined') {
-      try {
-        // Add token verification API call if needed
-        // await verifyToken(token); 
-        
-        setIsAuthenticated(true);
-        setCurrentUser({ token, username: usernameoremail });
-      } catch (error) {
-        // If token is invalid, clear storage
-        localStorage.removeItem('token');
-        localStorage.removeItem('usernameoremail');
-        setIsAuthenticated(false);
-        navigate('/login');
+  useEffect(() => {
+    const verifyAuth = async () => {
+      const token = localStorage.getItem('token');
+      const usernameoremail = localStorage.getItem('usernameoremail');
+      const userid = localStorage.getItem('userid');
+      
+      if (token && usernameoremail && usernameoremail !== 'undefined' && userid) {
+        try {
+          // Add token verification API call if needed
+          // await verifyToken(token); 
+          
+          setIsAuthenticated(true);
+          setCurrentUser({ 
+            token, 
+            username: usernameoremail,
+            id: userid 
+          });
+        } catch (error) {
+          // If token is invalid, clear storage
+          localStorage.removeItem('token');
+          localStorage.removeItem('usernameoremail');
+          localStorage.removeItem('userid');
+          setIsAuthenticated(false);
+          navigate('/login');
+        }
       }
-    }
-    setIsLoading(false);
-  };
+      setIsLoading(false);
+    };
 
-  verifyAuth();
-}, [navigate]);
-const handleLogin = (token, username, userid) => {
-  console.log('Handling login with:', { token, username, userid }); // Debug log
-  
-  localStorage.setItem('token', token);
-  localStorage.setItem('usernameoremail', username);
-  localStorage.setItem('userid', userid);
-  
-  setIsAuthenticated(true);
-  setCurrentUser({
-    token,
-    username,
-    id: userid
-  });
-  
-  navigate('/question-bank');
-};
+    verifyAuth();
+  }, [navigate]);
 
-// In your useEffect for auth check:
-useEffect(() => {
-  const verifyAuth = () => {
-    const token = localStorage.getItem('token');
-    const username = localStorage.getItem('usernameoremail');
-    const userid = localStorage.getItem('userid');
+  const handleLogin = (token, username, userid) => {
+    console.log('Handling login with:', { token, username, userid });
     
-    console.log('Auth check:', { token, username, userid }); // Debug log
+    localStorage.setItem('token', token);
+    localStorage.setItem('usernameoremail', username);
+    localStorage.setItem('userid', userid);
     
-    if (token && username && userid) {
-      setIsAuthenticated(true);
-      setCurrentUser({ token, username, id: userid });
-    }
-    setIsLoading(false);
+    setIsAuthenticated(true);
+    setCurrentUser({
+      token,
+      username,
+      id: userid
+    });
+    
+    // Navigate to dashboard by default
+    navigate('/dashboard');
   };
-
-  verifyAuth();
-}, [navigate]);
-
 
   const handleLogout = async () => {
     try {
@@ -87,6 +75,7 @@ useEffect(() => {
     } finally {
       localStorage.removeItem('token');
       localStorage.removeItem('usernameoremail');
+      localStorage.removeItem('userid');
       setIsAuthenticated(false);
       setCurrentUser(null);
       
@@ -97,8 +86,11 @@ useEffect(() => {
   // Show loading spinner while checking authentication
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -116,14 +108,27 @@ useEffect(() => {
         )}
         <main className="flex-1 overflow-auto p-4">
           <Routes>
+            {/* Login Route */}
             <Route
               path="/login"
               element={
                 isAuthenticated ? 
-                <Navigate to="/question-bank" replace /> : 
+                <Navigate to="/dashboard" replace /> : 
                 <LoginPage onLogin={handleLogin} />
               }
             />
+            
+            {/* Dashboard Route */}
+            <Route
+              path="/dashboard"
+              element={
+                isAuthenticated ? 
+                <Dashboard /> : 
+                <Navigate to="/login" replace />
+              }
+            />
+            
+            {/* Question Bank Route */}
             <Route
               path="/question-bank"
               element={
@@ -132,6 +137,8 @@ useEffect(() => {
                 <Navigate to="/login" replace />
               }
             />
+            
+            {/* Manage Users Route */}
             <Route
               path="/manage-users"
               element={
@@ -140,15 +147,30 @@ useEffect(() => {
                 <Navigate to="/login" replace />
               }
             />
+            
+            {/* Root Route - redirect to dashboard if authenticated, login if not */}
             <Route
               path="/"
               element={
-                <Navigate to={isAuthenticated ? "/question-bank" : "/login"} replace />
+                <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
               }
             />
+            
+            {/* Catch-all route for 404 */}
             <Route 
               path="*" 
-              element={<div className="text-center p-10">Page not found</div>} 
+              element={
+                <div className="flex flex-col items-center justify-center min-h-96 text-center">
+                  <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
+                  <p className="text-gray-600 mb-6">Page not found</p>
+                  <button 
+                    onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}
+                    className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Go Home
+                  </button>
+                </div>
+              } 
             />
           </Routes>
         </main>

@@ -159,31 +159,73 @@ const fetchAllTagsFromAPI = useCallback(async () => {
     }
   }, [API_BASE_URL, getAuthHeaders, handleAPIResponse]);
 
-  const fetchQuestionTypesFromAPI = useCallback(async () => {
-    try {
-      setLoadingApiQuestionTypes(true);
-      const response = await fetch(`${API_BASE_URL}/questions/qtypes`, {
-        headers: getAuthHeaders()
-      });
-      
-      const data = await handleAPIResponse(response);
-      let types = Array.isArray(data?.types) ? data.types : [];
-      
-      setApiQuestionTypes([
-        { value: 'All', label: 'All Question Types' },
-        ...types.map(type => ({
-          value: type.qtype,
-          label: type.name || type.qtype || 'Unknown Type'
-        }))
-      ]);
-    } catch (error) {
-      console.error('Failed to fetch question types:', error);
-      setApiQuestionTypes([{ value: 'All', label: 'All Question Types' }]);
-    } finally {
-      setLoadingApiQuestionTypes(false);
+const fetchQuestionTypesFromAPI = useCallback(async () => {
+  try {
+    setLoadingApiQuestionTypes(true);
+    const response = await fetch(`${API_BASE_URL}/questions/qtypes`, {
+      headers: getAuthHeaders()
+    });
+    const data = await handleAPIResponse(response);
+    console.log('Question types API response:', data); 
+    
+    // Handle multiple possible response structures
+    let types = [];
+    if (Array.isArray(data)) {
+      types = data;
+    } else if (data.qtypes && Array.isArray(data.qtypes)) {
+      types = data.qtypes;
+    } else if (data.data && Array.isArray(data.data)) {
+      types = data.data;
+    } else if (data.types && Array.isArray(data.types)) {
+      types = data.types;
     }
-  }, [API_BASE_URL, getAuthHeaders, handleAPIResponse]);
-
+    
+    console.log('Processed types array:', types);
+    
+    // Handle different type object structures
+    const processedTypes = types.map(type => {
+      if (typeof type === 'string') {
+        return {
+          value: type,
+          label: type.charAt(0).toUpperCase() + type.slice(1).replace(/([A-Z])/g, ' $1')
+        };
+      } else if (typeof type === 'object' && type !== null) {
+        const qtype = type.qtype || type.type || type.name || type.value;
+        const label = type.label || type.name || 
+                     (qtype ? qtype.charAt(0).toUpperCase() + qtype.slice(1).replace(/([A-Z])/g, ' $1') : 'Unknown Type');
+        return {
+          value: qtype,
+          label: label
+        };
+      }
+      return {
+        value: String(type),
+        label: String(type)
+      };
+    }).filter(type => type.value); // Remove any invalid entries
+    
+    console.log('Final processed types:', processedTypes);
+    
+    setApiQuestionTypes([
+      { value: 'All', label: 'All Question Types' },
+      ...processedTypes
+    ]);
+  } catch (error) {
+    console.error('Failed to fetch question types:', error);
+    // Provide fallback question types
+    setApiQuestionTypes([
+      { value: 'All', label: 'All Question Types' },
+      { value: 'multichoice', label: 'Multiple Choice' },
+      { value: 'truefalse', label: 'True/False' },
+      { value: 'essay', label: 'Essay' },
+      { value: 'shortanswer', label: 'Short Answer' },
+      { value: 'matching', label: 'Matching' },
+      { value: 'numerical', label: 'Numerical' }
+    ]);
+  } finally {
+    setLoadingApiQuestionTypes(false);
+  }
+}, [API_BASE_URL, getAuthHeaders, handleAPIResponse]);
   const fetchQuestionStatusesFromAPI = useCallback(async () => {
     try {
       setLoadingStatuses(true);
@@ -315,7 +357,7 @@ const fetchAllTagsFromAPI = useCallback(async () => {
       {/* Course Filter Indicator */}
       {filters.courseId && (
         <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-          <span>🎓 Course Filter Active</span>
+          <span> Course Filter Active</span>
           <button
             onClick={() => setFilters(prev => ({ ...prev, courseId: null }))}
             className="text-blue-600 hover:text-blue-800 font-bold"

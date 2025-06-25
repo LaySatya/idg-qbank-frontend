@@ -90,7 +90,7 @@ const CategoriesComponent = ({
         setSuccess(null);
         
         // Load course categories (these are different from question categories)
-        console.log('🏛️ Loading course categories from API...');
+        // console.log(' Loading course categories from API...');
         const response = await fetch('http://127.0.0.1:8000/api/questions/course-categories', {
           method: 'GET',
           headers: {
@@ -105,7 +105,7 @@ const CategoriesComponent = ({
         }
 
         const courseCategoriesData = await response.json();
-        console.log('🏛️ Course categories response:', courseCategoriesData);
+        // console.log(' Course categories response:', courseCategoriesData);
         
         if (!cancelled) {
           if (Array.isArray(courseCategoriesData) && courseCategoriesData.length > 0) {
@@ -145,13 +145,13 @@ const CategoriesComponent = ({
   // Load all courses for all categories
   const loadAllCourses = async (categoriesData) => {
     try {
-      console.log('📚 Loading courses for all categories...');
+      // console.log(' Loading courses for all categories...');
       
       const allCoursesMap = new Map();
       
       for (const category of categoriesData) {
         try {
-          console.log(`📚 Fetching courses for category ${category.id} (${category.name})`);
+          console.log(` Fetching courses for category ${category.id} (${category.name})`);
           
           const response = await fetch(
             `http://127.0.0.1:8000/api/questions/courses?categoryid=${category.id}`,
@@ -167,7 +167,7 @@ const CategoriesComponent = ({
 
           if (response.ok) {
             const coursesData = await response.json();
-            console.log(`📚 Courses for category ${category.id}:`, coursesData);
+            // console.log(` Courses for category ${category.id}:`, coursesData);
             
             let coursesArray = [];
             if (Array.isArray(coursesData)) {
@@ -203,10 +203,10 @@ const CategoriesComponent = ({
 
       const coursesArray = Array.from(allCoursesMap.values());
       setAllCourses(coursesArray);
-      console.log('📚 All courses loaded:', coursesArray.length);
+      console.log(' All courses loaded:', coursesArray.length);
       
     } catch (error) {
-      console.error('📚 Error loading all courses:', error);
+      console.error(' Error loading all courses:', error);
     }
   };
 
@@ -273,7 +273,7 @@ const CategoriesComponent = ({
   };
 
   const handleCourseSelect = (course) => {
-    console.log('📚 Course selected:', course);
+    console.log(' Course selected:', course);
     
     setSelectedCourse(course);
     
