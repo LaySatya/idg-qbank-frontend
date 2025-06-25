@@ -2,7 +2,7 @@
 // src/components/FiltersRow.jsx - Optimized Version
 // ============================================================================
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-
+import { RefreshCcw } from 'lucide-react';
 const FiltersRow = ({
   searchQuery,
   setSearchQuery,
@@ -412,13 +412,16 @@ const fetchAllTagsFromAPI = useCallback(async () => {
 
       {/* Action Buttons */}
       <div className="flex gap-2">
+            
         <button
           onClick={handleRefreshData}
           disabled={loadingTags || loadingStatuses || loadingCategories || loadingApiQuestionTypes}
-          className="px-3 py-2 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm disabled:opacity-50"
+          className="px-3 py-2 bg-sky-500 text-white rounded hover:bg-green-200 text-sm disabled:opacity-50 flex items-center gap-2"
         >
-          ↻ Refresh
+          <RefreshCcw size={18} className={loadingTags || loadingStatuses || loadingCategories || loadingApiQuestionTypes ? 'animate-spin' : ''} />
+          Refresh
         </button>
+        
 
         {hasActiveFilters && (
           <button

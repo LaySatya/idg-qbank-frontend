@@ -245,7 +245,7 @@ const TopButtonsRow = ({
   };
 
   return (
-    <div className="w-full bg-gradient-to-br from-white to-gray-50 border-b border-gray-200 shadow-sm">
+    <div className="w-full bg-gradient-to-br from-white to-sky-50 border-b border-gray-200 shadow-sm mb-7">
       <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         {/* Navigation Dropdown */}
         <div className="flex items-center gap-3">
@@ -254,7 +254,7 @@ const TopButtonsRow = ({
           </label>
           <select
             id="url_select"
-            className="block rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+            className="block rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium shadow-sm focus:border-sky-500 focus:ring focus:ring-sky-200 focus:ring-opacity-100 min-w-[200px] transition-colors duration-200"
             name="jump"
             onChange={(e) => handleNavigation(e.target.value)}
             value={currentView === 'questions' ? '/question/edit.php' : 
@@ -290,7 +290,7 @@ const TopButtonsRow = ({
             <div className="flex flex-col gap-2">
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-md bg-gray-500 text-white px-4 py-2 font-semibold shadow hover:bg-gray-600 transition-colors duration-200"
+                className="inline-flex items-center gap-2 rounded-md bg-gray-200 text-black px-4 py-2 font-semibold shadow hover:bg-gray-300 transition-colors duration-200"
                 onClick={handleCreateQuestion}
               >
                 <Plus size={18} />
@@ -322,11 +322,12 @@ const TopButtonsRow = ({
             <button
               type="button"
               onClick={() => setShowCategoriesModal(true)}
-              className="inline-flex items-center gap-2 rounded-md bg-blue-600 text-white px-4 py-2 font-semibold shadow hover:bg-blue-700 transition"
+              className="inline-flex items-center gap-2 rounded-md bg-sky-700 text-white px-4 py-2 font-semibold shadow hover:bg-blue-700 transition"
             >
               <FolderOpen size={18} />
               Open Categories
             </button>
+            
           )}
         
           {/* Import Button - show in questions view */}

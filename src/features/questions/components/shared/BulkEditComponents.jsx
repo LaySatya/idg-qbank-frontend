@@ -287,7 +287,7 @@ export const CategorySelector = ({
 }) => {
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-4">
         <label className="block text-sm font-medium text-gray-700">
           {label}
           {loading && (

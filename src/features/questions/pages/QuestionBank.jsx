@@ -1171,6 +1171,10 @@ const QuestionBank = () => {
   const [newQuestionTitle, setNewQuestionTitle] = useState('');
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
 
+      // filters search query handler
+const filteredQuestions = questions.filter(q =>
+  q.title?.toLowerCase().includes(searchQuery.toLowerCase())
+);
   // Enhanced delete function
   const handleDeleteQuestion = async (questionId) => {
     if (!window.confirm('Are you sure you want to delete this question?')) {
@@ -1412,7 +1416,7 @@ const QuestionBank = () => {
       type: 'All',
       courseId: courseId
     });
-    
+
     // Clear other filters
     setSearchQuery('');
     setTagFilter('All');
@@ -1624,35 +1628,35 @@ const QuestionBank = () => {
             {/* Questions table */}
             {!loading && questions.length > 0 && (
               <>
-                <QuestionsTable
-                  questions={questions}
-                  allQuestions={questions}
-                  filteredQuestions={questions}
-                  selectedQuestions={selectedQuestions}
-                  setSelectedQuestions={setSelectedQuestions}
-                  showQuestionText={showQuestionText}
-                  editingQuestion={editingQuestion}
-                  setEditingQuestion={setEditingQuestion}
-                  newQuestionTitle={newQuestionTitle}
-                  setNewQuestionTitle={setNewQuestionTitle}
-                  setShowSaveConfirm={setShowSaveConfirm}
-                  openActionDropdown={openActionDropdown}
-                  setOpenActionDropdown={setOpenActionDropdown}
-                  openStatusDropdown={openStatusDropdown}
-                  setOpenStatusDropdown={setOpenStatusDropdown}
-                  dropdownRefs={dropdownRefs}
-                  onPreview={setPreviewQuestion}
-                  onEdit={(question) => {
-                    console.log('✏️ Editing question:', question.id, 'Choices:', question.choices);
-                    setEditingQuestionData(question);
-                  }}
-                  onDuplicate={handleDuplicateQuestion}
-                  onHistory={setHistoryModal}
-                  onDelete={handleDeleteQuestion}
-                  onStatusChange={handleStatusChange}
-                  username={username}
-                  setQuestions={setQuestions}
-                />
+            <QuestionsTable
+                questions={filteredQuestions}
+                allQuestions={questions}
+                filteredQuestions={filteredQuestions}
+                selectedQuestions={selectedQuestions}
+                setSelectedQuestions={setSelectedQuestions}
+                showQuestionText={showQuestionText}
+                editingQuestion={editingQuestion}
+                setEditingQuestion={setEditingQuestion}
+                newQuestionTitle={newQuestionTitle}
+                setNewQuestionTitle={setNewQuestionTitle}
+                setShowSaveConfirm={setShowSaveConfirm}
+                openActionDropdown={openActionDropdown}
+                setOpenActionDropdown={setOpenActionDropdown}
+                openStatusDropdown={openStatusDropdown}
+                setOpenStatusDropdown={setOpenStatusDropdown}
+                dropdownRefs={dropdownRefs}
+                onPreview={setPreviewQuestion}
+                onEdit={(question) => {
+                  console.log(' Editing question:', question.id, 'Choices:', question.choices);
+                  setEditingQuestionData(question);
+                }}
+                onDuplicate={handleDuplicateQuestion}
+                onHistory={setHistoryModal}
+                onDelete={handleDeleteQuestion}
+                onStatusChange={handleStatusChange}
+                username={username}
+                setQuestions={setQuestions}
+              />
 
                 {/* Enhanced Pagination Controls */}
                 {!loading && questions.length > 0 && (

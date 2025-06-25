@@ -372,7 +372,7 @@ const CategoriesComponent = ({
             {level === 0 ? (
               <Building2 size={18} className={isSelected ? "text-blue-600" : "text-gray-600"} />
             ) : hasChildren ? (
-              <FolderOpen size={16} className={isSelected ? "text-blue-500" : "text-gray-500"} />
+              <FolderOpen size={16} className={isSelected ? "text-sky-500" : "text-gray-500"} />
             ) : (
               <Folder size={16} className={isSelected ? "text-blue-500" : "text-gray-500"} />
             )}
