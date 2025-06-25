@@ -8,29 +8,40 @@ const LoginForm = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    const trimmedUsername = username.trim();
-    const trimmedPassword = password.trim();
-    if (!trimmedUsername || !trimmedPassword) {
-      setError('Username and password are required');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const response = await loginUser(trimmedUsername, trimmedPassword);
-      localStorage.setItem('token', response.token);
-      const actualUsername = response.username || response.usernameoremail || response.user || trimmedUsername;
-      localStorage.setItem('usernameoremail', actualUsername);
-      if (onLogin) onLogin(response.token, actualUsername);
-    } catch (err) {
-      setError(err.message || 'Login failed. Please check your credentials.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+// Modify the handleSubmit in LoginForm.js
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
+  
+  if (!username.trim() || !password.trim()) {
+    setError('Username and password are required');
+    return;
+  }
 
+  setIsLoading(true);
+  
+  try {
+    const response = await loginUser(username.trim(), password.trim());
+    
+    // Debug log to verify response
+    console.log('Login response:', response);
+
+    localStorage.setItem('token', response.token);
+    localStorage.setItem('usernameoremail', response.username);
+    localStorage.setItem('userid', response.userid); // Make sure this is set
+
+    if (onLogin) {
+      onLogin(response.token, response.username, response.userid);
+    } else {
+      window.location.href = '/question-bank'; // Fallback redirect
+    }
+  } catch (err) {
+    console.error('Login failed:', err);
+    setError(err.message || 'Login failed. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};
   return (
     <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8 space-y-8">
       <div className="flex flex-col items-center">

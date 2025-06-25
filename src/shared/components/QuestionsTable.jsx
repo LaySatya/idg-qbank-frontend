@@ -2,7 +2,8 @@
 // components/QuestionsTable.jsx - Complete File with Fixed Tag Display
 // ============================================================================
 import React, { useEffect } from 'react';
-
+import { questionAPI } from '../../api/questionAPI'; 
+import { toast } from 'react-hot-toast';
 const QuestionsTable = ({
   questions,
   allQuestions,
@@ -31,9 +32,9 @@ const QuestionsTable = ({
   setQuestions,
 }) => {
 
-  // 🔧 FIXED: Enhanced tag rendering with proper error handling
+  //  FIXED: Enhanced tag rendering with proper error handling
   const renderTags = (question) => {
-    console.log(`🏷️ Rendering tags for question ${question.id}:`, {
+    console.log(` Rendering tags for question ${question.id}:`, {
       question_title: question.title?.substring(0, 30) + '...',
       tags: question.tags,
       tags_type: typeof question.tags,
@@ -43,7 +44,7 @@ const QuestionsTable = ({
 
     // Ensure we have a valid tags array
     if (!Array.isArray(question.tags) || question.tags.length === 0) {
-      console.log(`❌ No valid tags array for question ${question.id}`);
+      console.log(` No valid tags array for question ${question.id}`);
       return (
         <div className="text-xs text-gray-400 italic mt-1">
           No tags available
@@ -99,57 +100,57 @@ const QuestionsTable = ({
           };
           
         } catch (error) {
-          console.warn(`⚠️ Error processing tag ${index} for question ${question.id}:`, tag, error);
+          console.warn(`Error processing tag ${index} for question ${question.id}:`, tag, error);
           return null;
         }
       })
       .filter(Boolean); // Remove null entries
 
-    console.log(`🔍 Filtered tags for question ${question.id}:`, {
+    console.log(` Filtered tags for question ${question.id}:`, {
       original_count: question.tags.length,
       filtered_count: contentTags.length,
       content_tags: contentTags.map(t => t.display)
     });
 
     if (contentTags.length === 0) {
-      console.log(`📭 No content tags to display for question ${question.id}`);
+      console.log(` No content tags to display for question ${question.id}`);
       return (
         <div className="text-xs text-gray-400 italic mt-1">
           No content tags available
         </div>
       );
     }
+// Limit to 2 tags, show "..." if more
+  const maxTagsToShow = 2;
+  const tagsToShow = contentTags.slice(0, maxTagsToShow);
+  const hasMore = contentTags.length > maxTagsToShow;
 
-    return (
-      <div className="flex flex-wrap gap-1 mt-1">
-        <span className="text-xs font-medium text-gray-600 mr-1">Tags:</span>
-        {contentTags.map((processedTag, index) => {
-          const uniqueKey = `${question.id}-tag-${processedTag.id}-${index}`;
-          
-          return (
-            <span
-              key={uniqueKey}
-              className="inline-flex items-center px-2 py-1 text-xs font-medium bg-cyan-600 text-white rounded hover:bg-cyan-700 cursor-pointer transition-colors"
-              title={`Filter by tag: ${processedTag.display}`}
-              onClick={() => {
-                console.log(`🏷️ Clicked tag: ${processedTag.display}`);
-                // Add tag filter functionality if needed
-                // setTagFilter(processedTag.display);
-              }}
-            >
-              {processedTag.display}
-            </span>
-          );
-        })}
-      </div>
-    );
-  };
-
+     return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      <span className="text-xs font-medium text-gray-600 mr-1">Tags:</span>
+      {tagsToShow.map((processedTag, index) => {
+        const uniqueKey = `${question.id}-tag-${processedTag.id}-${index}`;
+        return (
+          <span
+            key={uniqueKey}
+            className="inline-flex items-center px-2 py-1 text-xs font-medium bg-cyan-600 text-white rounded hover:bg-cyan-700 cursor-pointer transition-colors"
+            title={`Filter by tag: ${processedTag.display}`}
+          >
+            {processedTag.display}
+          </span>
+        );
+      })}
+      {hasMore && (
+        <span className="text-xs font-medium text-gray-500 ml-1">...</span>
+      )}
+    </div>
+  );
+};
   // Fetch tags for each question if not present or if they're in string format
   useEffect(() => {
     if (!questions || questions.length === 0) return;
     
-    console.log('🔍 CHECKING TAGS: Questions for tag validation:', questions.map(q => ({
+    console.log(' CHECKING TAGS: Questions for tag validation:', questions.map(q => ({
       id: q.id,
       title: q.title ? q.title.substring(0, 30) + '...' : '(no title)',
       hasTags: Array.isArray(q.tags),
@@ -161,13 +162,13 @@ const QuestionsTable = ({
     // Check if any questions need tag fetching
     const questionsNeedingTags = questions.filter(q => {
       if (!Array.isArray(q.tags) || q.tags.length === 0) {
-        console.log(`❌ Question ${q.id} has no tags, needs fetching`);
+        console.log(` Question ${q.id} has no tags, needs fetching`);
         return true;
       }
       
       // Check if tags are in old string format instead of object format
       if (typeof q.tags[0] === 'string') {
-        console.log(`🔄 Question ${q.id} has string tags, needs API refresh:`, q.tags);
+        console.log(` Question ${q.id} has string tags, needs API refresh:`, q.tags);
         return true;
       }
       
@@ -227,7 +228,7 @@ const QuestionsTable = ({
                 
                 // Extract tags array from the response
                 const tags = Array.isArray(data.tags) ? data.tags : [];
-                console.log(`💾 Updating question ${q.id} with ${tags.length} fresh tags:`, tags);
+                console.log(`Updating question ${q.id} with ${tags.length} fresh tags:`, tags);
                 
                 return { ...q, tags };
               } else {
@@ -390,15 +391,53 @@ const QuestionsTable = ({
   // Start editing title
   const startEditingTitle = (question) => {
     setEditingQuestion(question.id);
-    setNewQuestionTitle(question.title);
+    setNewQuestionTitle(question.name || question.title || '');
   };
 
   // Initiate question save
-  const initiateQuestionSave = (questionId) => {
-    if (newQuestionTitle.trim() === '') return;
-    setShowSaveConfirm(true);
-  };
+  // const initiateQuestionSave = (questionId) => {
+  //   if (newQuestionTitle.trim() === '') return;
+  //   setShowSaveConfirm(true);
+  // };
 
+const initiateQuestionSave = async (questionId) => {
+  if (newQuestionTitle.trim() === '') {
+    alert('Question title cannot be empty');
+    return;
+  }
+
+  try {
+    const userid = localStorage.getItem('userid');
+    if (!userid) {
+      // More helpful error message
+      const shouldReload = confirm('Session expired. Reload the page?');
+      if (shouldReload) window.location.reload();
+      return;
+    }
+
+    const question = questions.find(q => q.id === questionId);
+    if (!question) return;
+
+    await questionAPI.updateQuestionName(
+      questionId,
+      newQuestionTitle,
+      question.questiontext || '',
+      Number(userid) // Ensure it's a number
+    );
+
+    // Update local state
+    setQuestions(prev => 
+      prev.map(q => 
+        q.id === questionId ? { ...q, name: newQuestionTitle } : q
+      )
+    );
+    setEditingQuestion(null);
+    toast.success('Question updated successfully');
+  } catch (error) {
+    console.error('Update error:', error);
+    toast.error(`Failed to update: ${error.message}`);
+  }
+};
   if (!questions || questions.length === 0) {
     return (
       <div className="p-8 text-center text-gray-500">
@@ -518,7 +557,7 @@ const QuestionsTable = ({
                           onClick={() => startEditingTitle(question)}
                         >
                           <a href="#" className=" ml-2 text-black-900 hover:text-blue-900">
-                            {question.title} 
+                            {question.name || question.title || '(No title)'} 
                             <span className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                               <i className="fa-regular fa-pen-to-square text-gray-400"></i>
                             </span>
@@ -530,7 +569,7 @@ const QuestionsTable = ({
                     {question.idNumber && (
                       <span className="ml-1">
                         <span className="sr-only">ID number</span>&nbsp;
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-grey-100 text-grey-800">ID Q {question.idNumber}</span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-small bg-grey-100 text-grey-800">ID {question.idNumber}</span>
                       </span>
                     )}
                   </div>

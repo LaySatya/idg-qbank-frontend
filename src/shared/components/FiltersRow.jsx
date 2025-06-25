@@ -1,7 +1,7 @@
 // ============================================================================
-// src/components/FiltersRow.jsx - Complete File with Enhanced Tag Integration
+// src/components/FiltersRow.jsx - Optimized Version
 // ============================================================================
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 const FiltersRow = ({
   searchQuery,
@@ -10,419 +10,327 @@ const FiltersRow = ({
   setFilters,
   tagFilter,
   setTagFilter,
-  allTags,
+  allTags = [],
   availableQuestionTypes = [],
   availableCategories = [],
-  loadingQuestionTypes: propLoadingQuestionTypes = false
+  loadingQuestionTypes = false
 }) => {
+  // State for API data
   const [apiTags, setApiTags] = useState([]);
-  const [loadingTags, setLoadingTags] = useState(false);
   const [questionStatuses, setQuestionStatuses] = useState([]);
+  const [apiCategories, setApiCategories] = useState([]);
+  const [apiQuestionTypes, setApiQuestionTypes] = useState([]);
+  
+  // Loading states
+  const [loadingTags, setLoadingTags] = useState(false);
   const [loadingStatuses, setLoadingStatuses] = useState(false);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loadingApiQuestionTypes, setLoadingApiQuestionTypes] = useState(false);
   const [tagStats, setTagStats] = useState({ total: 0, loaded: 0 });
   
-  // API state for categories and question types
-  const [apiCategories, setApiCategories] = useState([]);
-  const [loadingCategories, setLoadingCategories] = useState(false);
-  const [apiQuestionTypes, setApiQuestionTypes] = useState([]);
-  const [loadingApiQuestionTypes, setLoadingApiQuestionTypes] = useState(false);
+  // Performance optimization
+  const initialLoad = useRef(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
-  // Laravel API configuration
+  // API configuration
   const API_BASE_URL = 'http://127.0.0.1:8000/api';
-
-  // Helper function to get auth headers
-  const getAuthHeaders = () => {
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  // Helper functions
+  const getAuthHeaders = useCallback(() => {
     const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-    
+    if (!token) throw new Error('No authentication token');
     return {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
       'Accept': 'application/json'
     };
-  };
+  }, []);
 
-  // Helper function to handle API responses
-  const handleAPIResponse = async (response) => {
+  const handleAPIResponse = useCallback(async (response) => {
     if (!response.ok) {
       if (response.status === 401) {
         localStorage.removeItem('token');
-        localStorage.removeItem('usernameoremail');
-        window.location.href = '/users';
-        return;
+        window.location.href = '/login';
       }
-      
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData.message || `HTTP ${response.status}`);
     }
-    
     return response.json();
-  };
+  }, []);
 
-  // 🔧 FIXED: Enhanced tag collection with case-insensitive deduplication
-  const fetchAllTagsFromAPI = async () => {
-    try {
-      setLoadingTags(true);
-      setTagStats({ total: 0, loaded: 0 });
-      console.log(' Starting comprehensive tag collection from existing API...');
-      
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token');
+  // Memoized fetch functions
+const fetchAllTagsFromAPI = useCallback(async () => {
+  try {
+    setLoadingTags(true);
+    setTagStats({ total: 0, loaded: 0 });
 
-      // Step 1: Get all questions to collect their IDs
-      console.log(' Step 1: Fetching all questions...');
-      const questionsResponse = await fetch(`${API_BASE_URL}/questions/filters?page=1&perpage=1000`, {
-        method: 'GET',
-        headers: getAuthHeaders()
-      });
-      
-      if (!questionsResponse.ok) throw new Error('Failed to fetch questions');
-      
-      const questionsData = await questionsResponse.json();
-      const questions = Array.isArray(questionsData.questions) ? questionsData.questions : [];
-      
-      console.log(` Found ${questions.length} questions to process for tags`);
-      setTagStats(prev => ({ ...prev, total: questions.length }));
+    const questionsUrl = `${API_BASE_URL}/questions/filters?page=1&per_page=1000${
+      filters.courseId ? `&courseid=${filters.courseId}` : ''
+    }`;
 
-      // Step 2: Collect all unique tags with case-insensitive deduplication
-      const allTagsMap = new Map(); // Use lowercase key for deduplication
+    const questionsResponse = await fetch(questionsUrl, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    
+    const questionsData = await handleAPIResponse(questionsResponse);
+    const questions = Array.isArray(questionsData.questions) ? questionsData.questions : [];
+    setTagStats(prev => ({ ...prev, total: questions.length }));
+
+    // Process tags in batches
+    const batchSize = 15;
+    let processedCount = 0;
+    const allTagsMap = new Map();
+
+    for (let i = 0; i < questions.length; i += batchSize) {
+      const batch = questions.slice(i, i + batchSize);
       
-      // Process questions in batches to avoid overwhelming the API
-      const batchSize = 15;
-      let processedCount = 0;
-      
-      for (let i = 0; i < questions.length; i += batchSize) {
-        const batch = questions.slice(i, i + batchSize);
-        console.log(` Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(questions.length/batchSize)} (${batch.length} questions)`);
-        
-        await Promise.all(
-          batch.map(async (question) => {
-            try {
-              const tagResponse = await fetch(
-                `${API_BASE_URL}/questions/question-tags?questionid=${question.id}`,
-                {
-                  method: 'GET',
-                  headers: getAuthHeaders()
-                }
-              );
-              
-              if (tagResponse.ok) {
-                const tagData = await tagResponse.json();
-                const tags = Array.isArray(tagData.tags) ? tagData.tags : [];
-                
-                tags.forEach(tag => {
-                  // Handle your API format: { id, name, rawname, isstandard, description, descriptionformat, flag }
-                  const tagName = (tag.rawname || tag.name || '').trim();
-                  if (tagName) {
-                    const lowerKey = tagName.toLowerCase(); // Use lowercase for deduplication
-                    
-                    if (allTagsMap.has(lowerKey)) {
-                      allTagsMap.get(lowerKey).count += 1;
-                    } else {
-                      allTagsMap.set(lowerKey, {
-                        name: tagName, // Keep original case for display
-                        displayName: tagName.charAt(0).toUpperCase() + tagName.slice(1).toLowerCase(), // Proper case
-                        id: tag.id,
-                        count: 1,
-                        isStandard: tag.isstandard || false
-                      });
-                    }
-                  }
+      await Promise.all(batch.map(async (question) => {
+        try {
+          const tagResponse = await fetch(
+            `${API_BASE_URL}/questions/question-tags?questionid=${question.id}`,
+            { headers: getAuthHeaders() }
+          );
+          
+          if (tagResponse.ok) {
+            const tagData = await tagResponse.json();
+            const tags = Array.isArray(tagData.tags) ? tagData.tags : [];
+            
+            tags.forEach(tag => {
+              const tagName = (tag.rawname || tag.name || '').trim();
+              if (tagName) {
+                const lowerKey = tagName.toLowerCase();
+                allTagsMap.set(lowerKey, {
+                  name: tagName,
+                  displayName: tagName.charAt(0).toUpperCase() + tagName.slice(1),
+                  id: tag.id,
+                  count: (allTagsMap.get(lowerKey)?.count || 0) + 1  // Fixed this line
                 });
               }
-              
-              processedCount++;
-              setTagStats(prev => ({ ...prev, loaded: processedCount }));
-              
-            } catch (error) {
-              console.warn(`Failed to fetch tags for question ${question.id}:`, error);
-              processedCount++;
-              setTagStats(prev => ({ ...prev, loaded: processedCount }));
-            }
-          })
-        );
-        
-        // Small delay between batches to be nice to the API
-        if (i + batchSize < questions.length) {
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-      }
-
-      console.log(` Raw tag collection complete. Found ${allTagsMap.size} unique tags (case-insensitive)`);
-
-      // Step 3: Filter out system tags (keep 'exam' as it's content)
-      const systemTags = [
-        'easy', 'medium', 'hard', 'beginner', 'intermediate', 'advanced',
-     'published',
-        'true-false', 'truefalse', 'multichoice', 'matching',
-        'essay', 'shortanswer', 'ddmarker', 'ddimageortext', 'gapselect',
-        'quiz', 'test' // Note: 'exam' is NOT excluded - it's a valid content tag
-      ];
-      
-      const contentTags = Array.from(allTagsMap.values())
-        .filter(tagInfo => !systemTags.includes(tagInfo.name.toLowerCase()))
-        .sort((a, b) => {
-          // Sort by usage count (descending), then alphabetically
-          if (b.count !== a.count) {
-            return b.count - a.count;
+            });
           }
-          return a.displayName.localeCompare(b.displayName);
-        });
+        } finally {
+          processedCount++;
+          setTagStats(prev => ({ ...prev, loaded: processedCount }));
+        }
+      }));
 
-      console.log(` Final result: ${contentTags.length} content tags after filtering and deduplication`);
-      console.log(' Top 10 tags by usage:', contentTags.slice(0, 10).map(t => `${t.displayName} (${t.count})`));
-      
-      // Extract just the tag names for the dropdown (using proper case)
-      const tagNames = contentTags.map(tagInfo => tagInfo.displayName);
-      
-      setApiTags(tagNames);
-      return tagNames;
-    } catch (error) {
-      console.error(' Failed to fetch all tags:', error);
-      setApiTags([]);
-      return [];
-    } finally {
-      setLoadingTags(false);
-      setTagStats(prev => ({ ...prev, loaded: prev.total }));
+      if (i + batchSize < questions.length) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
     }
-  };
 
-  // Fetch categories from API
-  const fetchCategoriesFromAPI = async () => {
+    const systemTags = ['easy', 'medium', 'hard', 'ready', 'draft', 'multichoice', 'essay'];
+    const contentTags = Array.from(allTagsMap.values())
+      .filter(tagInfo => !systemTags.includes(tagInfo.name.toLowerCase()))
+      .sort((a, b) => b.count - a.count || a.displayName.localeCompare(b.displayName));
+
+    setApiTags(contentTags.map(t => t.displayName));
+  } catch (error) {
+    console.error('Failed to fetch tags:', error);
+    setApiTags([]);
+  } finally {
+    setLoadingTags(false);
+  }
+}, [filters.courseId, API_BASE_URL, getAuthHeaders, handleAPIResponse]);
+  const fetchCategoriesFromAPI = useCallback(async () => {
     try {
       setLoadingCategories(true);
-      console.log(' Fetching categories from API...');
-      
       const response = await fetch(`${API_BASE_URL}/questions/categories`, {
-        method: 'GET',
         headers: getAuthHeaders()
       });
       
       const data = await handleAPIResponse(response);
-      console.log('Categories API response:', data);
+      let categories = Array.isArray(data?.categories) ? data.categories : [];
       
-      // Handle different response formats
-      let categories = [];
-      if (Array.isArray(data)) {
-        categories = data;
-      } else if (Array.isArray(data.categories)) {
-        categories = data.categories;
-      } else if (data.success && Array.isArray(data.data)) {
-        categories = data.data;
-      }
-      
-      // Transform to expected format
-      const transformedCategories = [
+      setApiCategories([
         { value: 'All', label: 'All Categories' },
         ...categories.map(cat => ({
-          value: cat.id || cat.value || cat.categoryid,
-          label: cat.name || cat.label || cat.categoryname || `Category ${cat.id}`
+          value: cat.id,
+          label: cat.name || `Category ${cat.id}`
         }))
-      ];
-      
-      console.log(`Loaded ${transformedCategories.length - 1} categories from API`);
-      setApiCategories(transformedCategories);
-      return transformedCategories;
+      ]);
     } catch (error) {
-      console.error(' Failed to fetch categories:', error);
+      console.error('Failed to fetch categories:', error);
       setApiCategories([{ value: 'All', label: 'All Categories' }]);
-      return [{ value: 'All', label: 'All Categories' }];
     } finally {
       setLoadingCategories(false);
     }
-  };
+  }, [API_BASE_URL, getAuthHeaders, handleAPIResponse]);
 
-  // Fetch question types from API
-  const fetchQuestionTypesFromAPI = async () => {
+  const fetchQuestionTypesFromAPI = useCallback(async () => {
     try {
       setLoadingApiQuestionTypes(true);
-      console.log('🔧 Fetching question types from API...');
-      
       const response = await fetch(`${API_BASE_URL}/questions/qtypes`, {
-        method: 'GET',
         headers: getAuthHeaders()
       });
       
       const data = await handleAPIResponse(response);
-      console.log('🔧 Question types API response:', data);
+      let types = Array.isArray(data?.types) ? data.types : [];
       
-      // Handle different response formats
-      let types = [];
-      if (Array.isArray(data)) {
-        types = data;
-      } else if (Array.isArray(data.types)) {
-        types = data.types;
-      } else if (data.success && Array.isArray(data.data)) {
-        types = data.data;
-      }
-      
-      // Transform to expected format
-      const transformedTypes = [
+      setApiQuestionTypes([
         { value: 'All', label: 'All Question Types' },
         ...types.map(type => ({
-          value: type.qtype || type.value || type.type,
-          label: type.name || type.label || type.qtype || 'Unknown Type',
-          description: type.description || ''
+          value: type.qtype,
+          label: type.name || type.qtype || 'Unknown Type'
         }))
-      ];
-      
-      console.log(` Loaded ${transformedTypes.length - 1} question types from API`);
-      setApiQuestionTypes(transformedTypes);
-      return transformedTypes;
+      ]);
     } catch (error) {
-      console.error(' Failed to fetch question types:', error);
+      console.error('Failed to fetch question types:', error);
       setApiQuestionTypes([{ value: 'All', label: 'All Question Types' }]);
-      return [{ value: 'All', label: 'All Question Types' }];
     } finally {
       setLoadingApiQuestionTypes(false);
     }
-  };
+  }, [API_BASE_URL, getAuthHeaders, handleAPIResponse]);
 
-  // Fetch question statuses from existing questions
-  const fetchQuestionStatusesFromAPI = async () => {
+  const fetchQuestionStatusesFromAPI = useCallback(async () => {
     try {
       setLoadingStatuses(true);
-      console.log('Extracting question statuses from API...');
-      
-      const response = await fetch(`${API_BASE_URL}/questions/filters?page=1&perpage=100`, {
-        method: 'GET',
-        headers: getAuthHeaders()
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/questions/filters?page=1&per_page=100${
+          filters.courseId ? `&courseid=${filters.courseId}` : ''
+        }`,
+        { headers: getAuthHeaders() }
+      );
       
       const data = await handleAPIResponse(response);
+      const questions = Array.isArray(data.questions) ? data.questions : [];
       
-      let questions = [];
-      if (Array.isArray(data.questions)) {
-        questions = data.questions;
-      } else if (Array.isArray(data)) {
-        questions = data;
-      }
-      
-      const statusSet = new Set();
-      
-      questions.forEach(question => {
-        if (question.status) statusSet.add(question.status);
-        // Add any other status field variations your API might use
-      });
-      
-      // Add standard statuses that should always be available
+      const statusSet = new Set(questions.map(q => q.status).filter(Boolean));
       statusSet.add('ready');
       statusSet.add('draft');
-      // statusSet.add('hidden');
       
-      const statuses = Array.from(statusSet).filter(Boolean).sort();
-      
-      console.log(` Extracted ${statuses.length} unique statuses:`, statuses);
-      
-      setQuestionStatuses(statuses);
-      return statuses;
+      setQuestionStatuses(Array.from(statusSet).sort());
     } catch (error) {
-      console.error(' Failed to fetch question statuses:', error);
-      setQuestionStatuses(['ready', 'draft', ]); // Fallback
-      return ['ready', 'draft', ];
+      console.error('Failed to fetch statuses:', error);
+      setQuestionStatuses(['ready', 'draft']);
     } finally {
       setLoadingStatuses(false);
     }
-  };
+  }, [filters.courseId, API_BASE_URL, getAuthHeaders, handleAPIResponse]);
 
-  // Load all data on component mount
+  // Effects
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (initialLoad.current) {
+      initialLoad.current = false;
+      return;
+    }
+    if (filters.courseId !== null) {
+      fetchAllTagsFromAPI();
+    }
+  }, [filters.courseId, fetchAllTagsFromAPI]);
+
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        console.log(' Loading ALL filter data from API...');
-        
-        // Load all data in parallel for better performance
-        const [tagsResult, statusesResult, categoriesResult, typesResult] = await Promise.all([
-          fetchAllTagsFromAPI(),
-          fetchQuestionStatusesFromAPI(),
+        await Promise.all([
           fetchCategoriesFromAPI(),
           fetchQuestionTypesFromAPI()
         ]);
-        
-        console.log(' All filter data loaded successfully', {
-          tags: tagsResult.length,
-          statuses: statusesResult.length,
-          categories: categoriesResult.length - 1, // Subtract 'All' option
-          questionTypes: typesResult.length - 1    // Subtract 'All' option
-        });
-      } catch (error) {
-        console.error(' Error loading initial filter data:', error);
+        await Promise.all([
+          fetchAllTagsFromAPI(),
+          fetchQuestionStatusesFromAPI()
+        ]);
+      } finally {
+        setIsInitialLoad(false);
       }
     };
-    
     loadInitialData();
-  }, []); // Only run on mount
+  }, [fetchCategoriesFromAPI, fetchQuestionTypesFromAPI, fetchAllTagsFromAPI, fetchQuestionStatusesFromAPI]);
 
-  // Combine frontend tags with API tags and handle case-insensitive deduplication
-  const combinedTags = React.useMemo(() => {
-    const frontendTags = Array.isArray(allTags) ? allTags.filter(tag => tag !== 'All') : [];
-    const allCombined = [...apiTags, ...frontendTags];
+  // Combined data
+  const finalCategories = useMemo(() => 
+    apiCategories.length > 0 ? apiCategories : availableCategories,
+    [apiCategories, availableCategories]
+  );
+
+  const finalQuestionTypes = useMemo(() => 
+    apiQuestionTypes.length > 0 ? apiQuestionTypes : availableQuestionTypes,
+    [apiQuestionTypes, availableQuestionTypes]
+  );
+
+  const combinedTags = useMemo(() => {
+    const systemTags = ['easy', 'medium', 'hard', 'ready', 'draft', 'multichoice', 'essay'];
+    const uniqueTags = new Map();
     
-    // System tags to exclude
-    const systemTags = [
-      'easy', 'medium', 'hard', 'beginner', 'intermediate', 'advanced',
-      'ready', 'draft', 'hidden', 'published',
-      'true-false', 'truefalse', 'multichoice', 'matching',
-      'essay', 'shortanswer', 'ddmarker', 'ddimageortext', 'gapselect',
-      'quiz', 'test' // 'exam' is kept as content tag
-    ];
-    
-    // Case-insensitive deduplication using Map
-    const uniqueTagsMap = new Map();
-    
-    allCombined.forEach(tag => {
-      if (tag && typeof tag === 'string') {
-        const lowerKey = tag.toLowerCase().trim();
-        
-        // Skip system tags
-        if (!systemTags.includes(lowerKey) && lowerKey !== '') {
-          if (!uniqueTagsMap.has(lowerKey)) {
-            // Use proper case: capitalize first letter, rest lowercase
-            const properCase = tag.charAt(0).toUpperCase() + tag.slice(1).toLowerCase();
-            uniqueTagsMap.set(lowerKey, properCase);
-          }
+    [...apiTags, ...allTags]
+      .filter(tag => tag && typeof tag === 'string')
+      .forEach(tag => {
+        const lowerKey = tag.toLowerCase();
+        if (!systemTags.includes(lowerKey)) {
+          uniqueTags.set(lowerKey, tag.charAt(0).toUpperCase() + tag.slice(1).toLowerCase());
         }
-      }
-    });
+      });
     
-    // Convert back to array and sort
-    const result = Array.from(uniqueTagsMap.values()).sort();
-    
-    console.log(' FiltersRow tag deduplication:', {
-      original_count: allCombined.length,
-      after_dedup: result.length,
-      original_tags: allCombined,
-      deduplicated_tags: result
-    });
-    
-    return result;
+    return Array.from(uniqueTags.values()).sort();
   }, [allTags, apiTags]);
 
-  // Manual refresh function
-  const handleRefreshData = async () => {
-    console.log(' Manual refresh triggered for all filter data...');
+  const hasActiveFilters = useMemo(() => 
+    debouncedSearchQuery || 
+    filters.category !== 'All' || 
+    filters.status !== 'All' || 
+    filters.type !== 'All' || 
+    tagFilter !== 'All' ||
+    (filters.courseId && filters.courseId !== null),
+    [debouncedSearchQuery, filters, tagFilter]
+  );
+
+  const handleClearFilters = useCallback(() => {
+    if (filters.courseId && window.confirm('Clear all filters including course selection?')) {
+      setFilters({ category: 'All', status: 'All', type: 'All', courseId: null });
+    } else {
+      setFilters(prev => ({ ...prev, category: 'All', status: 'All', type: 'All' }));
+    }
+    setSearchQuery('');
+    setTagFilter('All');
+  }, [filters.courseId, setFilters, setSearchQuery, setTagFilter]);
+
+  const handleRefreshData = useCallback(async () => {
     await Promise.all([
       fetchAllTagsFromAPI(),
       fetchQuestionStatusesFromAPI(),
       fetchCategoriesFromAPI(),
       fetchQuestionTypesFromAPI()
     ]);
-  };
+  }, [fetchAllTagsFromAPI, fetchQuestionStatusesFromAPI, fetchCategoriesFromAPI, fetchQuestionTypesFromAPI]);
 
-  // Use API data if available, fallback to props
-  const finalCategories = apiCategories.length > 0 ? apiCategories : availableCategories;
-  const finalQuestionTypes = apiQuestionTypes.length > 0 ? apiQuestionTypes : availableQuestionTypes;
-  const isLoadingAnyData = loadingTags || loadingStatuses || loadingCategories || loadingApiQuestionTypes;
+  if (isInitialLoad) {
+    return (
+      <div className="p-4 border-t border-b border-gray-200 bg-gray-50 flex justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 border-t border-b border-gray-200 bg-gray-50 flex flex-wrap gap-3 items-center">
+      {/* Course Filter Indicator */}
+      {filters.courseId && (
+        <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+          <span>🎓 Course Filter Active</span>
+          <button
+            onClick={() => setFilters(prev => ({ ...prev, courseId: null }))}
+            className="text-blue-600 hover:text-blue-800 font-bold"
+            title="Clear course filter"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Search Input */}
       <div className="relative flex-grow max-w-md">
         <input
           type="text"
-          placeholder="Search questions..."
+          placeholder={filters.courseId ? "Search in course..." : "Search questions..."}
           className="w-full pl-10 pr-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -437,20 +345,18 @@ const FiltersRow = ({
       {/* Category Filter */}
       <div className="relative">
         <select 
-          className="border rounded py-2 px-3 pr-8 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className={`border rounded py-2 px-3 pr-8 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+            filters.courseId ? 'bg-gray-100 text-gray-500' : ''
+          }`}
           value={filters.category}
-          onChange={(e) => setFilters({...filters, category: e.target.value})}
-          disabled={loadingCategories}
+          onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value }))}
+          disabled={loadingCategories || !!filters.courseId}
         >
-          {loadingCategories ? (
-            <option value="All">Loading categories...</option>
-          ) : (
-            finalCategories.map((category, idx) => (
-              <option key={`category-${category.value || idx}`} value={category.value}>
-                {category.label}
-              </option>
-            ))
-          )}
+          {finalCategories.map((category) => (
+            <option key={`category-${category.value}`} value={category.value}>
+              {category.label}
+            </option>
+          ))}
         </select>
       </div>
       
@@ -459,14 +365,12 @@ const FiltersRow = ({
         <select 
           className="border rounded py-2 px-3 pr-8 min-w-[120px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           value={filters.status}
-          onChange={(e) => setFilters({...filters, status: e.target.value})}
+          onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
           disabled={loadingStatuses}
         >
-          <option value="All">
-            {loadingStatuses ? 'Loading...' : `All Statuses (${questionStatuses.length})`}
-          </option>
-          {questionStatuses.map((status, idx) => (
-            <option key={`status-${idx}`} value={status}>
+          <option value="All">All Statuses</option>
+          {questionStatuses.map((status) => (
+            <option key={`status-${status}`} value={status}>
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </option>
           ))}
@@ -478,18 +382,14 @@ const FiltersRow = ({
         <select 
           className="border rounded py-2 px-3 pr-8 min-w-[180px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           value={filters.type}
-          onChange={(e) => setFilters({...filters, type: e.target.value})}
+          onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
           disabled={loadingApiQuestionTypes}
         >
-          {loadingApiQuestionTypes ? (
-            <option value="All">Loading question types...</option>
-          ) : (
-            finalQuestionTypes.map((type, idx) => (
-              <option key={`type-${type.value}-${idx}`} value={type.value}>
-                {type.label} {type.description && `- ${type.description.slice(0, 30)}...`}
-              </option>
-            ))
-          )}
+          {finalQuestionTypes.map((type) => (
+            <option key={`type-${type.value}`} value={type.value}>
+              {type.label}
+            </option>
+          ))}
         </select>
       </div>
       
@@ -498,17 +398,12 @@ const FiltersRow = ({
         <select
           className="border rounded py-2 px-3 pr-8 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           value={tagFilter}
-          onChange={e => setTagFilter(e.target.value)}
+          onChange={(e) => setTagFilter(e.target.value)}
           disabled={loadingTags}
         >
-          <option value="All">
-            {loadingTags 
-              ? `Loading tags... (${tagStats.loaded}/${tagStats.total})`
-              : `All Tags (${combinedTags.length})`
-            }
-          </option>
-          {combinedTags.map((tag, idx) => (
-            <option key={`tag-${tag}-${idx}`} value={tag}>
+          <option value="All">All Tags</option>
+          {combinedTags.map((tag) => (
+            <option key={`tag-${tag}`} value={tag}>
               {tag}
             </option>
           ))}
@@ -517,117 +412,23 @@ const FiltersRow = ({
 
       {/* Action Buttons */}
       <div className="flex gap-2">
-        {/* Refresh Tags Button */}
-        {/* <button
-          onClick={fetchAllTagsFromAPI}
-          disabled={loadingTags}
-          className="px-3 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-          title="Refresh tags from all questions"
-        >
-          {loadingTags ? (
-            <>
-              <div className="animate-spin rounded-full h-3 w-3 border border-blue-600 border-t-transparent"></div>
-              Tags
-            </>
-          ) : (
-            <>
-               Tags
-            </>
-          )}
-        </button> */}
-
-        {/* Refresh All Data Button */}
         <button
           onClick={handleRefreshData}
-          disabled={isLoadingAnyData}
-          className="px-3 py-2 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Refresh all filter data from API"
+          disabled={loadingTags || loadingStatuses || loadingCategories || loadingApiQuestionTypes}
+          className="px-3 py-2 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm disabled:opacity-50"
         >
-          {isLoadingAnyData ? '⟳' : '↻'} Refresh
+          ↻ Refresh
         </button>
 
-        {/* Clear All Filters Button */}
-        {(searchQuery || filters.category !== 'All' || filters.status !== 'All' || 
-          filters.type !== 'All' || tagFilter !== 'All') && (
+        {hasActiveFilters && (
           <button
-            onClick={() => {
-              setSearchQuery('');
-              setFilters({ category: 'All', status: 'All', type: 'All' });
-              setTagFilter('All');
-            }}
+            onClick={handleClearFilters}
             className="px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm"
           >
             Clear All
           </button>
         )}
       </div>
-
-      {/* Loading Indicators */}
-      {isLoadingAnyData && (
-        <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center gap-1">
-          <div className="animate-spin rounded-full h-3 w-3 border border-blue-600 border-t-transparent"></div>
-          <span>
-            {loadingTags && `Loading tags (${tagStats.loaded}/${tagStats.total})`}
-            {loadingStatuses && 'Loading statuses'}
-            {loadingCategories && 'Loading categories'}
-            {loadingApiQuestionTypes && 'Loading types'}
-          </span>
-        </div>
-      )}
-
-      {/* Development Status Panel */}
-      {/* {process.env.NODE_ENV === 'development' && (
-        <div className="w-full mt-2 p-2 bg-white rounded border text-xs">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <strong className="text-blue-600">Categories:</strong>
-              <div>{finalCategories.length - 1} loaded</div>
-              {finalCategories.length <= 1 && (
-                <div className="text-orange-500">⚠️ API: /questions/categories</div>
-              )}
-            </div>
-            <div>
-              <strong className="text-green-600">Statuses:</strong>
-              <div>{questionStatuses.length} available</div>
-              <div className="text-gray-500">{questionStatuses.join(', ')}</div>
-            </div>
-            <div>
-              <strong className="text-purple-600">Question Types:</strong>
-              <div>{finalQuestionTypes.length - 1} loaded</div>
-              {finalQuestionTypes.length <= 1 && (
-                <div className="text-orange-500">⚠️ API: /questions/qtypes</div>
-              )}
-            </div>
-            <div>
-              <strong className="text-orange-600">Content Tags:</strong>
-              <div>{combinedTags.length} available</div>
-              {loadingTags && (
-                <div className="text-blue-500">
-                  Progress: {tagStats.loaded}/{tagStats.total}
-                </div>
-              )}
-            </div>
-          </div>
-          {combinedTags.length > 0 && (
-            <div className="mt-2">
-              <strong>Available Tags (deduplicated):</strong>
-              <div className="text-gray-600 max-h-20 overflow-y-auto">
-                {combinedTags.slice(0, 20).join(', ')}
-                {combinedTags.length > 20 && ` ... and ${combinedTags.length - 20} more`}
-              </div>
-            </div>
-          )}
-          {(finalCategories.length <= 1 || finalQuestionTypes.length <= 1) && (
-            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
-              <strong className="text-yellow-700">Missing Data:</strong>
-              <div className="text-yellow-600 text-xs">
-                {finalCategories.length <= 1 && "• Categories not loading - check API: /questions/categories"}
-                {finalQuestionTypes.length <= 1 && "• Question types not loading - check API: /questions/qtypes"}
-              </div>
-            </div>
-          )}
-        </div>
-      )} */}
     </div>
   );
 };

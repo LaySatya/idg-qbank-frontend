@@ -1,8 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useBulkEditAPI } from '../../hooks/useBulkEditAPI';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTags, faFolder, faTimes,faInfoCircle ,faLayerGroup } from '@fortawesome/free-solid-svg-icons';
-import { TagManager, CategorySelector, BulkActionsPanel, ChangesPreview } from "../shared/BulkEditComponents";
+import { faTags, faTimes, faInfoCircle, faLayerGroup, faCheckCircle, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
+import { TagManager, BulkActionsPanel, ChangesPreview } from "../shared/BulkEditComponents";
+
+const statusOptions = [
+  {
+    value: 'draft',
+    label: 'Draft',
+    color: 'text-yellow-800',
+    bg: 'bg-yellow-50',
+    border: 'border-yellow-200',
+    icon: <FontAwesomeIcon icon={faExclamationTriangle} className="text-yellow-500" />
+  },
+  {
+    value: 'ready',
+    label: 'Ready',
+    color: 'text-green-800',
+    bg: 'bg-green-50',
+    border: 'border-green-200',
+    icon: <FontAwesomeIcon icon={faCheckCircle} className="text-green-600" />
+  }
+];
 
 const BulkEditModal = ({ 
   questions, 
@@ -13,10 +32,6 @@ const BulkEditModal = ({
   const [editMode, setEditMode] = useState('basic'); // 'basic' or 'advanced'
   const [bulkChanges, setBulkChanges] = useState({
     status: '',
-    defaultMark: '',
-    penaltyFactor: '',
-    generalFeedback: '',
-    category: '',
     tags: {
       add: [],
       remove: []
@@ -24,7 +39,6 @@ const BulkEditModal = ({
   });
 
   const [individualChanges, setIndividualChanges] = useState({});
-  const [errors, setErrors] = useState({});
 
   // API hooks
   const {
@@ -33,17 +47,9 @@ const BulkEditModal = ({
     tagsError,
     addCustomTag,
     refreshTags,
-    categories,
-    categoriesLoading,
-    categoriesError,
-    refreshCategories,
     existingTags,
-    hasExistingTags,
-    bulkUpdateStatus,
     bulkLoading,
-    bulkError,
     isLoading,
-    refreshAll
   } = useBulkEditAPI(questions);
 
   // Initialize individual changes with current question data
@@ -51,12 +57,7 @@ const BulkEditModal = ({
     const initial = {};
     questions.forEach(q => {
       initial[q.id] = {
-        title: q.title || '',
         status: q.status || 'draft',
-        defaultMark: q.defaultMark || 1,
-        penaltyFactor: q.penaltyFactor || 0,
-        generalFeedback: q.generalFeedback || '',
-        category: q.category || '',
         tags: q.tags || []
       };
     });
@@ -95,21 +96,11 @@ const BulkEditModal = ({
   const applyBulkChanges = () => {
     const updatedChanges = { ...individualChanges };
     questions.forEach(q => {
+      // Apply status change if specified
       if (bulkChanges.status) {
         updatedChanges[q.id].status = bulkChanges.status;
       }
-      if (bulkChanges.defaultMark !== '') {
-        updatedChanges[q.id].defaultMark = Number(bulkChanges.defaultMark);
-      }
-      if (bulkChanges.penaltyFactor !== '') {
-        updatedChanges[q.id].penaltyFactor = Number(bulkChanges.penaltyFactor);
-      }
-      if (bulkChanges.generalFeedback) {
-        updatedChanges[q.id].generalFeedback = bulkChanges.generalFeedback;
-      }
-      if (bulkChanges.category) {
-        updatedChanges[q.id].category = bulkChanges.category;
-      }
+      
       // Handle tags
       let newTags = [...updatedChanges[q.id].tags];
       bulkChanges.tags.add.forEach(tag => {
@@ -125,28 +116,7 @@ const BulkEditModal = ({
     setIndividualChanges(updatedChanges);
   };
 
-  const validateChanges = () => {
-    const newErrors = {};
-    Object.entries(individualChanges).forEach(([questionId, changes]) => {
-      if (!changes.title?.trim()) {
-        newErrors[`${questionId}_title`] = 'Question title is required';
-      }
-      if (changes.defaultMark < 0) {
-        newErrors[`${questionId}_defaultMark`] = 'Default mark must be positive';
-      }
-      if (changes.penaltyFactor < 0 || changes.penaltyFactor > 1) {
-        newErrors[`${questionId}_penaltyFactor`] = 'Penalty factor must be between 0 and 1';
-      }
-    });
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSave = async () => {
-    if (!validateChanges()) {
-      alert('Please fix the validation errors before saving.');
-      return;
-    }
     try {
       const updatedQuestions = questions.map(q => ({
         ...q,
@@ -174,331 +144,260 @@ const BulkEditModal = ({
     }
   };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-50">
-        {/* Overlay */}
-        <div className="absolute inset-0" />
-        <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col border border-gray-200">
-          {/* Header */}
-          <div className="flex justify-between items-center p-5 border-b border-gray-200 bg-white rounded-t-xl">
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-gray-100 border border-blue-500 rounded">
-                               <span className="text-blue-600 text-2xl">
-                  <FontAwesomeIcon icon={faLayerGroup} />
-                </span>
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Bulk Edit Questions</h2>
-                <p className="text-xs text-gray-500">{`Editing ${questions.length} questions`}</p>
-              </div>
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-50">
+      {/* Overlay */}
+      <div className="absolute inset-0" />
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col border border-gray-200">
+        {/* Header */}
+        <div className="flex justify-between items-center p-5 border-b border-gray-200 bg-white rounded-t-xl">
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center justify-center w-10 h-10 bg-gray-100 border border-blue-500 rounded">
+              <span className="text-blue-600 text-2xl">
+                <FontAwesomeIcon icon={faLayerGroup} />
+              </span>
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-blue-600 transition-colors text-2xl font-bold focus:outline-none">
-              <FontAwesomeIcon icon={faTimes} />
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Bulk Edit Questions</h2>
+              <p className="text-xs text-gray-500">{`Editing ${questions.length} questions`}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-blue-600 transition-colors text-2xl font-bold focus:outline-none">
+            <FontAwesomeIcon icon={faTimes} />
+          </button>
+        </div>
+
+        {/* Mode Toggle */}
+        <div className="p-3 border-b border-gray-100 bg-gray-50">
+          <div className="flex space-x-2 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setEditMode('basic')}
+              className={`flex-1 py-2 px-4 rounded text-sm font-semibold transition-colors ${
+                editMode === 'basic' 
+                  ? 'bg-blue-600 text-white shadow' 
+                  : 'text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Basic Edit
+            </button>
+            <button
+              onClick={() => setEditMode('advanced')}
+              className={`flex-1 py-2 px-4 rounded text-sm font-semibold transition-colors ${
+                editMode === 'advanced' 
+                  ? 'bg-blue-600 text-white shadow' 
+                  : 'text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Individual Edit
             </button>
           </div>
-  
-          {/* Mode Toggle */}
-          <div className="p-3 border-b border-gray-100 bg-gray-50">
-            <div className="flex space-x-2 bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setEditMode('basic')}
-                className={`flex-1 py-2 px-4 rounded text-sm font-semibold transition-colors ${
-                  editMode === 'basic' 
-                    ? 'bg-blue-600 text-white shadow' 
-                    : 'text-gray-700 hover:bg-gray-200'
-                }`}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-5 bg-white rounded-b-xl">
+          {editMode === 'basic' ? (
+            <div className="space-y-8">
+              <BulkActionsPanel
+                title="Apply to Selected Questions"
+                description={`Make changes to all ${questions.length} selected questions at once`}
+                onApply={applyBulkChanges}
+                applyButtonText="Apply Changes to All Questions"
+                loading={bulkLoading}
               >
-                Basic Edit
-              </button>
-              <button
-                onClick={() => setEditMode('advanced')}
-                className={`flex-1 py-2 px-4 rounded text-sm font-semibold transition-colors ${
-                  editMode === 'advanced' 
-                    ? 'bg-blue-600 text-white shadow' 
-                    : 'text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Individual Edit
-              </button>
-            </div>
-          </div>
-  
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-5 bg-white rounded-b-xl">
-            {editMode === 'basic' ? (
-              <div className="space-y-8">
-                <BulkActionsPanel
-                  title="Apply to Selected Questions"
-                  description={`Make changes to all ${questions.length} selected questions at once`}
-                  onApply={applyBulkChanges}
-                  applyButtonText="Apply Changes to All Questions"
-                  loading={bulkLoading}
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                      <select
-                        value={bulkChanges.status}
-                        onChange={(e) => handleBulkChange('status', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">No change</option>
-                        <option value="ready">Ready</option>
-                        <option value="draft">Draft</option>
-                        <option value="published">Published</option>
-                        <option value="archived">Archived</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Default Mark</label>
-                      <input
-                        type="number"
-                        value={bulkChanges.defaultMark}
-                        onChange={(e) => handleBulkChange('defaultMark', e.target.value)}
-                        placeholder="No change"
-                        min="0"
-                        step="1"
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Penalty Factor</label>
-                      <input
-                        type="number"
-                        value={bulkChanges.penaltyFactor}
-                        onChange={(e) => handleBulkChange('penaltyFactor', e.target.value)}
-                        placeholder="No change"
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                  <CategorySelector
-                    categories={categories}
-                    selectedCategory={bulkChanges.category}
-                    onChange={(value) => handleBulkChange('category', value)}
-                    loading={categoriesLoading}
-                    error={categoriesError}
-                    onRefresh={refreshCategories}
-                    placeholder="No change"
-                    label="Category"
-                  />
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">General Feedback</label>
-                    <textarea
-                      value={bulkChanges.generalFeedback}
-                      onChange={(e) => handleBulkChange('generalFeedback', e.target.value)}
-                      placeholder="Leave empty for no change"
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <TagManager
-                    availableTags={tags}
-                    existingTags={existingTags}
-                    selectedAddTags={bulkChanges.tags.add}
-                    selectedRemoveTags={bulkChanges.tags.remove}
-                    onTagOperation={handleTagOperation}
-                    onAddCustomTag={addCustomTag}
-                    loading={tagsLoading}
-                    error={tagsError}
-                    onRefresh={refreshTags}
-                    showSmartRemoval={true}
-                    customTagPlaceholder="Enter new tag name"
-                  />
-                </BulkActionsPanel>
-                <ChangesPreview
-                  questions={questions}
-                  individualChanges={individualChanges}
-                  title="Preview Changes"
-                  maxHeight="16rem"
-                />
-              </div>
-            ) : (
-                          <div className="space-y-8">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center mb-2">
-                  <span className="text-blue-600 mr-3 text-2xl">
-                    <FontAwesomeIcon icon={faInfoCircle} />
-                  </span>
-                  <div>
-                    <h3 className="text-base font-semibold text-blue-900">Individual Edit Mode</h3>
-                    <p className="text-sm text-blue-700">Edit each question individually. Changes will only apply to the specific question you modify.</p>
-                  </div>
-                </div>
-                <div className="space-y-6 max-h-[28rem] overflow-y-auto pr-1">
-                  {questions.map((q, index) => (
+                {/* Status Selection */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Status</label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div
-                      key={q.id}
-                      className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow"
+                      className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                        bulkChanges.status === '' 
+                          ? 'border-gray-300 bg-gray-50' 
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                      onClick={() => handleBulkChange('status', '')}
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-lg font-bold text-gray-900">
-                          Question {index + 1}
-                        </h3>
-                        <span className="text-xs text-gray-400 font-mono">ID: {q.id}</span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Question Title</label>
-                          <input
-                            type="text"
-                            value={individualChanges[q.id]?.title || ''}
-                            onChange={(e) => handleIndividualChange(q.id, 'title', e.target.value)}
-                            className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                              errors[`${q.id}_title`] ? 'border-red-500' : 'border-gray-300'
-                            }`}
-                          />
-                          {errors[`${q.id}_title`] && (
-                            <p className="text-red-500 text-xs mt-1">{errors[`${q.id}_title`]}</p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                          <select
-                            value={individualChanges[q.id]?.status || 'draft'}
-                            onChange={(e) => handleIndividualChange(q.id, 'status', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="ready">Ready</option>
-                            <option value="draft">Draft</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Default Mark</label>
-                          <input
-                            type="number"
-                            value={individualChanges[q.id]?.defaultMark || 1}
-                            onChange={(e) => handleIndividualChange(q.id, 'defaultMark', Number(e.target.value))}
-                            min="0"
-                            step="1"
-                            className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                              errors[`${q.id}_defaultMark`] ? 'border-red-500' : 'border-gray-300'
-                            }`}
-                          />
-                          {errors[`${q.id}_defaultMark`] && (
-                            <p className="text-red-500 text-xs mt-1">{errors[`${q.id}_defaultMark`]}</p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Penalty Factor</label>
-                          <input
-                            type="number"
-                            value={individualChanges[q.id]?.penaltyFactor || 0}
-                            onChange={(e) => handleIndividualChange(q.id, 'penaltyFactor', Number(e.target.value))}
-                            min="0"
-                            max="1"
-                            step="0.1"
-                            className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                              errors[`${q.id}_penaltyFactor`] ? 'border-red-500' : 'border-gray-300'
-                            }`}
-                          />
-                          {errors[`${q.id}_penaltyFactor`] && (
-                            <p className="text-red-500 text-xs mt-1">{errors[`${q.id}_penaltyFactor`]}</p>
-                          )}
-                        </div>
-                      </div>
-                        <div className="mt-4">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
-                            <TagManager
-                                availableTags={tags}
-                                existingTags={existingTags}
-                                selectedAddTags={individualChanges[q.id]?.tags || []}
-                                selectedRemoveTags={individualChanges[q.id]?.tags || []}
-                                onTagOperation={(operation, tag) => {
-                                handleIndividualChange(
-                                q.id,
-                                'tags',
-                                operation === 'add'
-                                ? [
-                                ...(individualChanges[q.id]?.tags || []).filter(t => t !== tag),
-                                tag
-                                ]
-                                : (individualChanges[q.id]?.tags || []).filter(t => t !== tag)
-                                );
-                                }}
-                                onAddCustomTag={addCustomTag}
-                                loading={tagsLoading}
-                                error={tagsError}
-                                onRefresh={refreshTags}
-                                showSmartRemoval={true}
-                                customTagPlaceholder="Enter new tag name"
-                                            />
-                                          </div>
-                      <div className="mt-4">
-                        <CategorySelector
-                          categories={categories}
-                          selectedCategory={individualChanges[q.id]?.category || ''}
-                          onChange={(value) => handleIndividualChange(q.id, 'category', value)}
-                          loading={categoriesLoading}
-                          error={categoriesError}
-                          placeholder="Select category..."
-                          label="Category"
-                          showNoChange={false}
+                      <div className="flex items-center">
+                        <input
+                          type="radio"
+                          name="status"
+                          checked={bulkChanges.status === ''}
+                          onChange={() => handleBulkChange('status', '')}
+                          className="mr-3"
                         />
-                      </div>
-                      <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">General Feedback</label>
-                        <textarea
-                          value={individualChanges[q.id]?.generalFeedback || ''}
-                          onChange={(e) => handleIndividualChange(q.id, 'generalFeedback', e.target.value)}
-                          rows={2}
-                          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                        <span className="text-gray-700 font-medium">No change</span>
                       </div>
                     </div>
-                  ))}
+                    {statusOptions.map((status) => (
+                      <div
+                        key={status.value}
+                        className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                          bulkChanges.status === status.value 
+                            ? `${status.border} ${status.bg}` 
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                        onClick={() => handleBulkChange('status', status.value)}
+                      >
+                        <div className="flex items-center">
+                          <input
+                            type="radio"
+                            name="status"
+                            checked={bulkChanges.status === status.value}
+                            onChange={() => handleBulkChange('status', status.value)}
+                            className="mr-3"
+                          />
+                          <span className="mr-2">{status.icon}</span>
+                          <span className={`font-medium ${status.color}`}>{status.label}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tag Management */}
+                <TagManager
+                  availableTags={tags}
+                  existingTags={existingTags}
+                  selectedAddTags={bulkChanges.tags.add}
+                  selectedRemoveTags={bulkChanges.tags.remove}
+                  onTagOperation={handleTagOperation}
+                  onAddCustomTag={addCustomTag}
+                  loading={tagsLoading}
+                  error={tagsError}
+                  onRefresh={refreshTags}
+                  showSmartRemoval={true}
+                  customTagPlaceholder="Enter new tag name"
+                />
+              </BulkActionsPanel>
+
+              <ChangesPreview
+                questions={questions}
+                individualChanges={individualChanges}
+                title="Preview Changes"
+                maxHeight="16rem"
+              />
+            </div>
+          ) : (
+            <div className="space-y-8">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center mb-2">
+                <span className="text-blue-600 mr-3 text-2xl">
+                  <FontAwesomeIcon icon={faInfoCircle} />
+                </span>
+                <div>
+                  <h3 className="text-base font-semibold text-blue-900">Individual Edit Mode</h3>
+                  <p className="text-sm text-blue-700">Edit each question individually. Changes will only apply to the specific question you modify.</p>
                 </div>
               </div>
+              <div className="space-y-6 max-h-[28rem] overflow-y-auto pr-1">
+                {questions.map((q, index) => (
+                  <div
+                    key={q.id}
+                    className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-bold text-gray-900">
+                        Question {index + 1}
+                      </h3>
+                      <span className="text-xs text-gray-400 font-mono">ID: {q.id}</span>
+                    </div>
+
+                    {/* Status Selection for Individual Question */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-3">Status</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {statusOptions.map((status) => (
+                          <div
+                            key={status.value}
+                            className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                              individualChanges[q.id]?.status === status.value 
+                                ? `${status.border} ${status.bg}` 
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                            onClick={() => handleIndividualChange(q.id, 'status', status.value)}
+                          >
+                            <div className="flex items-center">
+                              <input
+                                type="radio"
+                                name={`status-${q.id}`}
+                                checked={individualChanges[q.id]?.status === status.value}
+                                onChange={() => handleIndividualChange(q.id, 'status', status.value)}
+                                className="mr-3"
+                              />
+                              <span className="mr-2">{status.icon}</span>
+                              <span className={`font-medium ${status.color}`}>{status.label}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Tags for Individual Question */}
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
+                      <TagManager
+                        availableTags={tags}
+                        existingTags={existingTags}
+                        selectedAddTags={individualChanges[q.id]?.tags || []}
+                        selectedRemoveTags={individualChanges[q.id]?.tags || []}
+                        onTagOperation={(operation, tag) => {
+                          handleIndividualChange(
+                            q.id,
+                            'tags',
+                            operation === 'add'
+                              ? [
+                                  ...(individualChanges[q.id]?.tags || []).filter(t => t !== tag),
+                                  tag
+                                ]
+                              : (individualChanges[q.id]?.tags || []).filter(t => t !== tag)
+                          );
+                        }}
+                        onAddCustomTag={addCustomTag}
+                        loading={tagsLoading}
+                        error={tagsError}
+                        onRefresh={refreshTags}
+                        showSmartRemoval={true}
+                        customTagPlaceholder="Enter new tag name"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-between items-center p-5 border-t border-gray-200 bg-white rounded-b-xl">
+          <div className="text-sm text-gray-600 flex flex-wrap items-center gap-4">
+            {tags.length > 0 && (
+              <span className="text-blue-700 flex items-center">
+                <FontAwesomeIcon icon={faTags} className="mr-1" />
+                {tags.length} tags loaded
+              </span>
             )}
           </div>
-  
-          {/* Footer */}
-          <div className="flex justify-between items-center p-5 border-t border-gray-200 bg-white rounded-b-xl">
-            <div className="text-sm text-gray-600 flex flex-wrap items-center gap-4">
-              {Object.keys(errors).length > 0 && (
-                <span className="text-red-600 flex items-center">
-                  <FontAwesomeIcon icon={faTimes} className="mr-1" />
-                  {Object.keys(errors).length} validation error{Object.keys(errors).length !== 1 ? 's' : ''}
-                </span>
-              )}
-              {tags.length > 0 && (
-                <span className="text-blue-700 flex items-center">
-                  <FontAwesomeIcon icon={faTags} className="mr-1" />
-                  {tags.length} tags loaded
-                </span>
-              )}
-              {categories.length > 0 && (
-                <span className="text-blue-700 flex items-center">
-                  <FontAwesomeIcon icon={faFolder} className="mr-1" />
-                  {categories.length} categories loaded
-                </span>
-              )}
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 transition-colors font-semibold"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={Object.keys(errors).length > 0 || isLoading}
-                className={`px-4 py-2 rounded font-semibold transition-colors shadow ${
-                  Object.keys(errors).length > 0 || isLoading
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
-              >
-                {isLoading ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
+          <div className="flex space-x-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 transition-colors font-semibold"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isLoading}
+              className={`px-4 py-2 rounded font-semibold transition-colors shadow ${
+                isLoading
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              {isLoading ? 'Saving...' : 'Save Changes'}
+            </button>
           </div>
         </div>
       </div>
-    );
-  };
-  
-  export default BulkEditModal;
+    </div>
+  );
+};
+
+export default BulkEditModal;

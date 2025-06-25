@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, FileQuestion, User } from 'lucide-react';
+import Logo from '../../assets/CADT-IDG-Logos-Navy_CADT-IDG-Lockup-1-Khmer-English.png';
 
 const Sidebar = ({ collapsed }) => {
   // Navigation items
@@ -24,28 +25,33 @@ const Sidebar = ({ collapsed }) => {
 
   return (
     <aside 
-      className={`bg-blue-800 text-white transition-all duration-300 ease-in-out ${
+      className={`bg-white text-black transition-all duration-200 ease-in-out ${
         collapsed ? 'w-16' : 'w-64'
       } relative`}
     >
       {/* Logo / Brand */}
-      <div className="flex items-center h-16 px-4 border-b border-blue-700">
-        {collapsed ? (
-          <div className="w-full flex justify-center">
-            <div className="h-8 w-8 rounded-md bg-white flex items-center justify-center">
-              <span className="text-indigo-800 font-bold text-lg">ROT</span>
+           <div className="flex items-center h-16 px-4 border-b bg-white border-gray-200">
+          {collapsed ? (
+            <div className="w-full flex justify-center">
+              <div className="h-8 w-8 rounded-md bg-white flex items-center justify-center">
+                <img
+                  src={Logo}
+                  alt="CADT IDG Logo"
+                  className="h-8 w-auto object-contain"
+                />
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex items-center">
-            <div className="h-8 w-8 rounded-md bg-white flex items-center justify-center mr-2">
-              <span className="text-blue-800 font-bold text-lg">ROT</span>
+          ) : (
+            <div className="w-full flex items-center">
+              <img
+                src={Logo}
+                alt="CADT IDG Logo"
+                className="h-12 w-full object-contain"
+                style={{ maxHeight: '48px' }}
+              />
             </div>
-            <span className="font-bold text-lg">Rean Ot lv </span>
-          </div>
-        )}
-      </div>
-
+          )}
+        </div>
       {/* Navigation */}
       <nav className="py-4">
         <ul>
@@ -56,8 +62,8 @@ const Sidebar = ({ collapsed }) => {
                 className={({ isActive }) => 
                   `flex items-center px-4 py-3 ${
                     isActive 
-                      ? 'bg-blue-900 text-white' 
-                      : 'text-blue-200 hover:bg-indigo-700'
+                      ? 'bg-sky-600 text-white' 
+                      : 'text-black hover:bg-white'
                   } transition-colors duration-200 ${
                     collapsed ? 'justify-center' : ''
                   }`

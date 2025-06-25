@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
-// ✅ FIXED: Updated import path for QuestionBank
+//  FIXED: Updated import path for QuestionBank
 import QuestionBank from './features/questions/pages/QuestionBank';
 import ManageUsers from './pages/ManageUsers';
 import LoginPage from './pages/LoginPage';
@@ -17,31 +17,67 @@ const App = () => {
   const navigate = useNavigate();
 
   // Check for existing authentication on app load
-  useEffect(() => {
+useEffect(() => {
+  const verifyAuth = async () => {
     const token = localStorage.getItem('token');
     const usernameoremail = localStorage.getItem('usernameoremail');
     
     if (token && usernameoremail && usernameoremail !== 'undefined') {
-      setIsAuthenticated(true);
-      setCurrentUser({ token, username: usernameoremail });
-    } else if (token && (!usernameoremail || usernameoremail === 'undefined')) {
-      // Clean up if we have invalid data
-      localStorage.removeItem('token');
-      localStorage.removeItem('usernameoremail');
+      try {
+        // Add token verification API call if needed
+        // await verifyToken(token); 
+        
+        setIsAuthenticated(true);
+        setCurrentUser({ token, username: usernameoremail });
+      } catch (error) {
+        // If token is invalid, clear storage
+        localStorage.removeItem('token');
+        localStorage.removeItem('usernameoremail');
+        setIsAuthenticated(false);
+        navigate('/login');
+      }
     }
     setIsLoading(false);
-  }, []);
-
-  const handleLogin = (token, usernameoremail) => {
-    // Ensure we have a valid username
-    const validUsername = usernameoremail && usernameoremail !== 'undefined' ? usernameoremail : 'User';
-    
-    localStorage.setItem('token', token);
-    localStorage.setItem('usernameoremail', validUsername);
-    setIsAuthenticated(true);
-    setCurrentUser({ token, username: validUsername });
-    navigate('/question-bank'); 
   };
+
+  verifyAuth();
+}, [navigate]);
+const handleLogin = (token, username, userid) => {
+  console.log('Handling login with:', { token, username, userid }); // Debug log
+  
+  localStorage.setItem('token', token);
+  localStorage.setItem('usernameoremail', username);
+  localStorage.setItem('userid', userid);
+  
+  setIsAuthenticated(true);
+  setCurrentUser({
+    token,
+    username,
+    id: userid
+  });
+  
+  navigate('/question-bank');
+};
+
+// In your useEffect for auth check:
+useEffect(() => {
+  const verifyAuth = () => {
+    const token = localStorage.getItem('token');
+    const username = localStorage.getItem('usernameoremail');
+    const userid = localStorage.getItem('userid');
+    
+    console.log('Auth check:', { token, username, userid }); // Debug log
+    
+    if (token && username && userid) {
+      setIsAuthenticated(true);
+      setCurrentUser({ token, username, id: userid });
+    }
+    setIsLoading(false);
+  };
+
+  verifyAuth();
+}, [navigate]);
+
 
   const handleLogout = async () => {
     try {

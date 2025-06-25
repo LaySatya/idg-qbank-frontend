@@ -1,8 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  faEdit, faTrash, faCopy, faDownload, faChevronDown, faUsers, faEye, faChartBar, faExclamationTriangle, faCheckCircle, faBug,faTag, faPlusCircle, faMinusCircle 
+  faEdit, faTrash, faCopy, faDownload, faChevronDown, faUsers, faEye,
+  faChartBar, faExclamationTriangle, faCheckCircle, faBug, faTag,
+  faPlusCircle, faMinusCircle, faTimes, faSearch, faPlus
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { toast } from 'react-hot-toast';
 
 const statusOptions = [
   {
@@ -29,171 +32,224 @@ const BulkActionsRow = ({
   setShowBulkEditModal,
   onBulkDelete,
   onBulkStatusChange,
-   uestions,           
-  setQuestions, 
-  onBulkTagAction
+  questions,
+  setQuestions
 }) => {
-
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showMoreActions, setShowMoreActions] = useState(false);
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [newTagName, setNewTagName] = useState('');
+  const [allTags, setAllTags] = useState([]);
+  const [commonTags, setCommonTags] = useState([]);
+  const [loadingTags, setLoadingTags] = useState(false);
   const statusDropdownRef = useRef(null);
   const moreActionsRef = useRef(null);
-  const [showTagDropdown, setShowTagDropdown] = useState(false);
-  const [tagAction, setTagAction] = useState('add');
-  const [selectedTag, setSelectedTag] = useState('');
   const tagDropdownRef = useRef(null);
-   // Tag state
-  const [allTags, setAllTags] = useState([]);
-  const [removableTags, setRemovableTags] = useState([]);
-  const [loadingTags, setLoadingTags] = useState(false);
 
-
-    // Fetch all tags for "Add Tag"
+  // Close dropdowns when clicking outside
   useEffect(() => {
-    if (tagAction === 'add' && showTagDropdown) {
-      setLoadingTags(true);
-      fetch('http://127.0.0.1:8000/api/questions/tags', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Accept': 'application/json'
-        }
-      })
-        .then(res => res.json())
-        .then(data => {
-          console.log('Fetched tags:', data);
-          // Handle all possible response shapes
-          if (Array.isArray(data)) {
-            setAllTags(data);
-          } else if (Array.isArray(data.tags)) {
-            setAllTags(data.tags);
-          } else if (Array.isArray(data.data)) {
-            setAllTags(data.data);
-          } else {
-            setAllTags([]);
-          }
-          setLoadingTags(false);
-        })
-        .catch(() => {
-          setAllTags([]);
-          setLoadingTags(false);
-        });
-    }
-  }, [tagAction, showTagDropdown]);
-
-    // Fetch intersection of tags for "Remove Tag"
-  useEffect(() => {
-    const fetchTagsForQuestions = async () => {
-      if (tagAction === 'remove' && showTagDropdown && selectedQuestions.length > 0) {
-        setLoadingTags(true);
-        try {
-          // Fetch tags for each selected question
-          const tagLists = await Promise.all(
-            selectedQuestions.map(qid =>
-              fetch(`http://127.0.0.1:8000/api/questions/question-tags?questionid=${qid}`, {
-                headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                  'Accept': 'application/json'
-                }
-              })
-                .then(res => res.json())
-                .then(data => (data.tags || []))
-            )
-          );
-          // Find intersection of tag ids
-          let intersection = tagLists[0] || [];
-          for (let i = 1; i < tagLists.length; i++) {
-            intersection = intersection.filter(tag =>
-              tagLists[i].some(t => t.id === tag.id)
-            );
-          }
-          setRemovableTags(intersection);
-        } catch {
-          setRemovableTags([]);
-        }
-        setLoadingTags(false);
-      }
-    };
-    fetchTagsForQuestions();
-  }, [tagAction, showTagDropdown, selectedQuestions]);
-
-
-  useEffect(() => {
-
     const handleClickOutside = (event) => {
       if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target)) {
         setShowStatusDropdown(false);
       }
-      if (tagDropdownRef.current && !tagDropdownRef.current.contains(event.target)) {
-        setShowTagDropdown(false);
-      }
       if (moreActionsRef.current && !moreActionsRef.current.contains(event.target)) {
         setShowMoreActions(false);
       }
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(event.target)) {
+        setShowTagDropdown(false);
+      }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-   
   }, []);
+
+  // Fetch all tags when dropdown opens
+  useEffect(() => {
+    if (showTagDropdown) {
+      fetchAllTags();
+      fetchCommonTags();
+    }
+  }, [showTagDropdown]);
+
+  const fetchAllTags = async () => {
+    setLoadingTags(true);
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/questions/tags', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        }
+      });
+      const data = await res.json();
+      setAllTags(Array.isArray(data) ? data : (data.tags || data.data || []));
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+      setAllTags([]);
+      toast.error('Failed to load tags');
+    } finally {
+      setLoadingTags(false);
+    }
+  };
+
+  const fetchCommonTags = async () => {
+    if (selectedQuestions.length === 0) return;
+    try {
+      const tagLists = await Promise.all(
+        selectedQuestions.map(qid =>
+          fetch(`http://127.0.0.1:8000/api/questions/question-tags?questionid=${qid}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Accept': 'application/json'
+            }
+          })
+            .then(res => res.json())
+            .then(data => (data.tags || []))
+        )
+      );
+      
+      let intersection = tagLists[0] || [];
+      for (let i = 1; i < tagLists.length; i++) {
+        intersection = intersection.filter(tag =>
+          tagLists[i].some(t => t.id === tag.id)
+        );
+      }
+      setCommonTags(intersection);
+    } catch (error) {
+      console.error('Error fetching common tags:', error);
+      setCommonTags([]);
+    }
+  };
+
+  const handleCreateTag = async () => {
+    if (!newTagName.trim()) return;
+    
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/questions/tags', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ name: newTagName })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setAllTags([...allTags, data.tag]);
+        setNewTagName('');
+        toast.success('Tag created successfully!');
+      } else {
+        toast.error(data.message || 'Failed to create tag');
+      }
+    } catch (error) {
+      toast.error('Error creating tag');
+    }
+  };
+
+  const handleAddTag = async (tagId) => {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/questions/bulk-tags', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          questionids: selectedQuestions,
+          tagids: [tagId]
+        })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setQuestions(prevQuestions =>
+          prevQuestions.map(q => {
+            if (!selectedQuestions.includes(q.id)) return q;
+            let newTags = Array.isArray(q.tags) ? [...q.tags] : [];
+            const tagObj = allTags.find(t => t.id === tagId);
+            if (tagObj && !newTags.some(t => t.id === tagId)) {
+              newTags.push(tagObj);
+            }
+            return { ...q, tags: newTags };
+          })
+        );
+        toast.success('Tag added successfully!');
+        fetchCommonTags();
+      } else {
+        toast.error(data.message || 'Failed to add tag');
+      }
+    } catch (error) {
+      toast.error('Error adding tag');
+    }
+  };
+
+  const handleRemoveTag = async (tagId) => {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/questions/bulk-tags', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          questionids: selectedQuestions,
+          tagids: [tagId]
+        })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setQuestions(prevQuestions =>
+          prevQuestions.map(q => {
+            if (!selectedQuestions.includes(q.id)) return q;
+            let newTags = Array.isArray(q.tags) ? [...q.tags] : [];
+            newTags = newTags.filter(t => t.id !== tagId);
+            return { ...q, tags: newTags };
+          })
+        );
+        toast.success('Tag removed successfully!');
+        fetchCommonTags();
+      } else {
+        toast.error(data.message || 'Failed to remove tag');
+      }
+    } catch (error) {
+      toast.error('Error removing tag');
+    }
+  };
 
   const handleStatusChange = async (newStatus) => {
     if (!selectedQuestions.length) {
-      alert('Please select at least one question.');
+      toast.error('Please select at least one question.');
       return;
     }
-    if (window.confirm(`Change status of ${selectedQuestions.length} question(s) to "${newStatus}"?`)) {
-      if (onBulkStatusChange) {
-        await onBulkStatusChange(selectedQuestions, newStatus);
+    
+    const statusLabel = statusOptions.find(s => s.value === newStatus)?.label || newStatus;
+    
+    if (window.confirm(`Change status of ${selectedQuestions.length} question(s) to "${statusLabel}"?`)) {
+      try {
+        if (onBulkStatusChange) {
+          await onBulkStatusChange(selectedQuestions, newStatus);
+          toast.success(`Status updated to "${statusLabel}" for ${selectedQuestions.length} question(s)`);
+        }
+      } catch (error) {
+        toast.error(`Failed to update status to "${statusLabel}"`);
       }
     }
     setShowStatusDropdown(false);
   };
-        const handleBulkTag = async () => {
-        if (!selectedTag) return;
-        if (!selectedQuestions.length) return;
-        const token = localStorage.getItem('token');
-        const url = 'http://127.0.0.1:8000/api/questions/bulk-tags';
-        const method = tagAction === 'add' ? 'POST' : 'DELETE';
-        const body = JSON.stringify({
-          questionids: selectedQuestions,
-          tagids: [selectedTag]
-        });
-        const res = await fetch(url, {
-          method,
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert(`${tagAction === 'add' ? 'Added' : 'Removed'} tag successfully!`);
-          // Update local questions state for instant UI feedback
-          setQuestions(prevQuestions =>
-            prevQuestions.map(q => {
-              if (!selectedQuestions.includes(q.id)) return q;
-              let newTags = Array.isArray(q.tags) ? [...q.tags] : [];
-              if (tagAction === 'add') {
-                // Only add if not already present
-                if (!newTags.some(t => t.id === Number(selectedTag))) {
-                  const tagObj = allTags.find(t => t.id === Number(selectedTag));
-                  if (tagObj) newTags.push(tagObj);
-                }
-              } else {
-                // Remove tag
-                newTags = newTags.filter(t => t.id !== Number(selectedTag));
-              }
-              return { ...q, tags: newTags };
-            })
-          );
-          setShowTagDropdown(false);
-          setSelectedTag('');
-          setSelectedQuestions([]); // Optionally clear selection
-        } else {
-          alert('Some tags could not be processed.');
-        }
-      };
+
+  const filteredTags = allTags.filter(tag =>
+    tag.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const availableTags = filteredTags.filter(tag => 
+    !commonTags.some(commonTag => commonTag.id === tag.id)
+  );
 
   if (selectedQuestions.length === 0) return null;
 
@@ -223,74 +279,138 @@ const BulkActionsRow = ({
           <button
             className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-700 bg-white border border-blue-200 rounded hover:bg-blue-50 focus:outline-none focus:ring-1 focus:ring-blue-400 transition"
             onClick={() => setShowBulkEditModal(true)}
-            disabled={selectedQuestions.length === 0}
           >
             <FontAwesomeIcon icon={faEdit} />
             Bulk Edit
           </button>
-          {/* Tag Bulk Actions Dropdown */}
-      <div className="relative" ref={tagDropdownRef}>
-        <button
-          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400 transition"
-          onClick={() => setShowTagDropdown(!showTagDropdown)}
-          disabled={selectedQuestions.length === 0}
-        >
-          <FontAwesomeIcon icon={faTag} />
-          Tag Actions
-          <FontAwesomeIcon icon={faChevronDown} className={`ml-1 transition-transform ${showTagDropdown ? 'rotate-180' : ''}`} />
-        </button>
-        {showTagDropdown && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow z-50 min-w-[200px] p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <button
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${tagAction === 'add' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}
-                onClick={() => setTagAction('add')}
-              >
-                <FontAwesomeIcon icon={faPlusCircle} /> Add Tag
-              </button>
-              <button
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${tagAction === 'remove' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}
-                onClick={() => setTagAction('remove')}
-              >
-                <FontAwesomeIcon icon={faMinusCircle} /> Remove Tag
-              </button>
-            </div>
-              <select
-              className="w-full border rounded px-2 py-1 text-sm mb-2"
-              value={selectedTag}
-              onChange={e => setSelectedTag(e.target.value)}
-            >
-              <option value="">Select tag...</option>
-              {(tagAction === 'add' ? allTags : removableTags).map(tag => (
-                <option key={tag.id} value={tag.id}>{tag.name}</option>
-              ))}
-            </select>
+
+          {/* Tag Dropdown */}
+          <div className="relative" ref={tagDropdownRef}>
             <button
-              className={`w-full py-1 rounded text-white font-semibold ${tagAction === 'add' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'}`}
-              onClick={handleBulkTag}
-              disabled={!selectedTag}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400 transition"
+              onClick={() => setShowTagDropdown(!showTagDropdown)}
             >
-              {tagAction === 'add' ? 'Add Tag' : 'Remove Tag'}
+              <FontAwesomeIcon icon={faTag} />
+              Manage Tags
+              <FontAwesomeIcon 
+                icon={faChevronDown} 
+                className={`ml-1 transition-transform ${showTagDropdown ? 'rotate-180' : ''}`} 
+              />
             </button>
+            
+            {showTagDropdown && (
+              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 w-80">
+                <div className="p-3">
+                  {/* Search Bar */}
+                  <div className="relative mb-3">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <FontAwesomeIcon icon={faSearch} className="text-gray-400 text-sm" />
+                    </div>
+                    <input
+                      type="text"
+                      className="pl-9 pr-4 py-2 border border-gray-300 rounded-md w-full text-sm focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Search tags..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Create New Tag Input */}
+                  {searchTerm && !allTags.some(t => t.name.toLowerCase() === searchTerm.toLowerCase()) && (
+                    <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
+                          placeholder="New tag name"
+                          value={newTagName || searchTerm}
+                          onChange={(e) => setNewTagName(e.target.value)}
+                        />
+                        <button
+                          onClick={handleCreateTag}
+                          className="px-2 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                        >
+                          Create
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Current Tags Section */}
+                  {commonTags.length > 0 && (
+                    <div className="mb-3">
+                      <h5 className="text-xs font-medium text-gray-700 mb-2 uppercase tracking-wide">
+                        Current Tags
+                      </h5>
+                      <div className="max-h-24 overflow-y-auto">
+                        {commonTags.map(tag => (
+                          <div 
+                            key={`current-${tag.id}`}
+                            className="flex justify-between items-center p-2 bg-blue-50 rounded mb-1 hover:bg-blue-100"
+                          >
+                            <span className="text-sm text-blue-800 font-medium">{tag.name}</span>
+                            <button
+                              onClick={() => handleRemoveTag(tag.id)}
+                              className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                              title="Remove tag"
+                            >
+                              <FontAwesomeIcon icon={faTimes} size="xs" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Available Tags Section */}
+                  <div>
+                    <h5 className="text-xs font-medium text-gray-700 mb-2 uppercase tracking-wide">
+                      Add Tags
+                    </h5>
+                    {loadingTags ? (
+                      <div className="text-center text-gray-500 py-4 text-sm">Loading tags...</div>
+                    ) : (
+                      <div className="max-h-40 overflow-y-auto">
+                        {availableTags.length > 0 ? (
+                          availableTags.map(tag => (
+                            <div 
+                              key={`available-${tag.id}`}
+                              className="flex justify-between items-center p-2 hover:bg-gray-50 rounded mb-1"
+                            >
+                              <span className="text-sm text-gray-700">{tag.name}</span>
+                              <button
+                                onClick={() => handleAddTag(tag.id)}
+                                className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+                                title="Add tag"
+                              >
+                                <FontAwesomeIcon icon={faPlus} size="xs" />
+                              </button>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-sm text-gray-500 py-2 text-center">
+                            {searchTerm ? `No tags found matching "${searchTerm}"` : 'No available tags to add'}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-
-
-
 
           {/* Status Dropdown */}
           <div className="relative" ref={statusDropdownRef}>
             <button
               className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400 transition"
               onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-              disabled={selectedQuestions.length === 0}
             >
               Set Status
               <FontAwesomeIcon icon={faChevronDown} className={`ml-1 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
             </button>
             {showStatusDropdown && (
-              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow z-50 min-w-[140px]">
+              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[140px]">
                 <div className="py-1">
                   <div className="px-3 py-1.5 text-xs text-gray-600 bg-gray-100 border-b border-gray-200">
                     Question status
@@ -315,13 +435,12 @@ const BulkActionsRow = ({
             <button
               className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400 transition"
               onClick={() => setShowMoreActions(!showMoreActions)}
-              disabled={selectedQuestions.length === 0}
             >
               <FontAwesomeIcon icon={faChevronDown} />
               More
             </button>
             {showMoreActions && (
-              <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded shadow z-50 min-w-[160px]">
+              <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[160px]">
                 <div className="py-1">
                   <div className="px-3 py-1.5 text-xs text-gray-600 bg-gray-100 border-b border-gray-200">
                     Actions
@@ -356,39 +475,12 @@ const BulkActionsRow = ({
           <button
             className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-red-600 border border-red-700 rounded hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-400 transition"
             onClick={onBulkDelete}
-            disabled={selectedQuestions.length === 0}
           >
             <FontAwesomeIcon icon={faTrash} />
             Delete
           </button>
         </div>
       </div>
-
-      {/* Quick Status Actions */}
-      {/* <div className="px-4 py-2 bg-white border-t border-gray-100">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-600">Quick actions:</span>
-          <div className="flex gap-1">
-                        {statusOptions.map((status) => (
-              <button
-                key={`quick-${status.value}`}
-                className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium border rounded transition hover:bg-opacity-90
-                  ${status.value === 'draft'
-                    ? 'bg-yellow-400 text-yellow-900 border-yellow-500 hover:bg-yellow-500'
-                    : 'bg-blue-400 text-white border-blue-600 hover:bg-blue-600'
-                  }`
-                }
-                onClick={() => handleStatusChange(status.value)}
-                disabled={selectedQuestions.length === 0}
-                title={`Set selected questions to ${status.label}`}
-              >
-                <span>{status.icon}</span>
-                {status.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div> */}
     </div>
   );
 };

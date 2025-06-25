@@ -3,33 +3,36 @@ import axios from 'axios';
 const API_URL = 'http://127.0.0.1:8000/api/users';
 export const loginUser = async (username, password) => {
   try {
-    const params = new URLSearchParams();
-    params.append('usernameoremail', username);     
-    params.append('password', password);     
+    const response = await fetch('http://127.0.0.1:8000/api/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        usernameoremail: username,
+        password: password
+      })
+    });
 
-    const response = await axios.post(
-      `${API_URL}`,
-      params,
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      }
-    );
+    const data = await response.json();
     
-    // Check if the backend says login failed
-    if (!response.data.status) {
-      throw new Error(response.data.message || 'Login failed');
+    if (!response.ok) {
+      throw new Error(data.message || 'Login failed');
     }
-    
-    return response.data;
+
+    // Ensure the response contains the required fields
+    if (!data.token) {
+      throw new Error('No authentication token received');
+    }
+
+    return {
+      token: data.token,
+      username: data.username || username,
+      userid: data.userid || data.id // Make sure your backend returns this
+    };
   } catch (error) {
-    // If it's our custom error, throw it
-    if (error.message && !error.response) {
-      throw error;
-    }
-    // Otherwise handle HTTP errors
-    throw error.response ? error.response.data : new Error('Network error');
+    console.error('Login error:', error);
+    throw error;
   }
 };
 

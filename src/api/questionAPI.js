@@ -1,5 +1,5 @@
 // ============================================================================
-//  src/api/questionAPI.js - Enhanced API Service with User Caching & Normalization
+// Enhanced: src/api/questionAPI.js - API Service with Bulk Operations & Better Error Handling
 // ============================================================================
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
@@ -14,18 +14,36 @@ const getAuthHeaders = () => {
   };
 };
 
-// Helper: Handle API responses
+// Helper: Handle API responses with better error handling
 const handleAPIResponse = async (response) => {
   if (!response.ok) {
     if (response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('usernameoremail');
-      alert('Your session has expired. Please log in again.');
-      window.location.href = '/login';
+      
+      // Show user-friendly message before redirect
+      if (window.confirm('Your session has expired. Click OK to log in again.')) {
+        window.location.href = '/login';
+      }
       throw new Error('Authentication expired - redirecting to login');
     }
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    
+    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+    
+    try {
+      const errorData = await response.json();
+      if (errorData.message) {
+        errorMessage = errorData.message;
+      } else if (errorData.error) {
+        errorMessage = errorData.error;
+      } else if (errorData.errors && Array.isArray(errorData.errors)) {
+        errorMessage = errorData.errors.join(', ');
+      }
+    } catch (parseError) {
+      console.warn('Failed to parse error response:', parseError);
+    }
+    
+    throw new Error(errorMessage);
   }
   return response.json();
 };
@@ -89,7 +107,7 @@ const getUserById = async (userId) => {
 
     return userCache.get(userId) || null;
   } catch (error) {
-    console.error('❌ Failed to fetch user info:', error);
+    console.error('Failed to fetch user info:', error);
     return null;
   }
 };
@@ -101,22 +119,91 @@ const getUserNameById = async (userId) => {
 };
 
 export const questionAPI = {
-  // Get all tags
+  // Get all tags with better normalization
   async getTags() {
     try {
+      console.log('Fetching all tags from API...');
+      
       const response = await fetch(`${API_BASE_URL}/questions/tags`, {
         method: 'GET',
         headers: getAuthHeaders()
       });
+      
       const data = await handleAPIResponse(response);
+      console.log(' Raw tags response:', data);
+      
       let tags = [];
-      if (Array.isArray(data)) tags = data;
-      else if (data.tags && Array.isArray(data.tags)) tags = data.tags;
-      else if (data.data && Array.isArray(data.data)) tags = data.data;
-      return tags.map(tag => typeof tag === 'string' ? tag : (tag.name || tag.tag_name || tag.text || tag.displayname || String(tag.id))).filter(Boolean);
+      if (Array.isArray(data)) {
+        tags = data;
+      } else if (data.tags && Array.isArray(data.tags)) {
+        tags = data.tags;
+      } else if (data.data && Array.isArray(data.data)) {
+        tags = data.data;
+      }
+      
+      // Better tag normalization
+      const normalizedTags = tags.map(tag => {
+        if (typeof tag === 'string') {
+          return tag.trim();
+        } else if (typeof tag === 'object' && tag !== null) {
+          return tag.rawname || tag.name || tag.tag_name || tag.text || tag.displayname || String(tag.id);
+        }
+        return String(tag);
+      }).filter(tag => tag && tag.trim() !== '');
+      
+      console.log(' Normalized tags:', normalizedTags);
+      return normalizedTags;
     } catch (error) {
-      console.error('❌ Failed to fetch tags:', error);
+      console.error(' Failed to fetch tags:', error);
+      // Return fallback tags
       return ['exam', 'quiz', 'general', 'l1', 'l2', 'l3', 'hardware', 'software'];
+    }
+  },
+
+  // Get tags for a specific question
+  async getQuestionTags(questionId) {
+    try {
+      console.log(`Fetching tags for question ${questionId}...`);
+      
+      const response = await fetch(`${API_BASE_URL}/questions/question-tags?questionid=${questionId}`, {
+        method: 'GET',
+        headers: getAuthHeaders()
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(` Tags for question ${questionId}:`, data);
+      
+      return Array.isArray(data.tags) ? data.tags : [];
+    } catch (error) {
+      console.error(` Failed to fetch tags for question ${questionId}:`, error);
+      return [];
+    }
+  },
+
+  // Bulk tag operations
+  async bulkTagOperations(questionIds, tagIds, operation = 'add') {
+    try {
+      console.log(` Bulk ${operation} tags:`, { questionIds, tagIds });
+      
+      const url = `${API_BASE_URL}/questions/bulk-tags`;
+      const method = operation === 'add' ? 'POST' : 'DELETE';
+      
+      const response = await fetch(url, {
+        method,
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          questionids: questionIds,
+          tagids: tagIds
+        })
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(` Bulk ${operation} tags successful:`, data);
+      
+      return data;
+    } catch (error) {
+      console.error(` Bulk ${operation} tags failed:`, error);
+      throw error;
     }
   },
 
@@ -137,7 +224,7 @@ export const questionAPI = {
         label: cat.name || cat.label || cat.category || `Category ${cat.id}`
       }));
     } catch (error) {
-      console.error('❌ Failed to fetch categories:', error);
+      console.error('Failed to fetch categories:', error);
       return [{ value: 1, label: 'Default Category' }];
     }
   },
@@ -162,7 +249,7 @@ export const questionAPI = {
         };
       });
     } catch (error) {
-      console.error('❌ Failed to fetch question types:', error);
+      console.error('Failed to fetch question types:', error);
       return [
         { value: 'multichoice', label: 'Multiple Choice' },
         { value: 'truefalse', label: 'True/False' },
@@ -180,7 +267,7 @@ export const questionAPI = {
       });
       return await handleAPIResponse(response);
     } catch (error) {
-      console.error('❌ Failed to fetch users:', error);
+      console.error('Failed to fetch users:', error);
       return [];
     }
   },
@@ -208,7 +295,7 @@ export const questionAPI = {
       });
       return await handleAPIResponse(response);
     } catch (error) {
-      console.error('❌ Failed to create True/False question:', error);
+      console.error('Failed to create True/False question:', error);
       throw error;
     }
   },
@@ -239,7 +326,7 @@ export const questionAPI = {
       });
       return await handleAPIResponse(response);
     } catch (error) {
-      console.error('❌ Failed to create Multiple Choice question:', error);
+      console.error('Failed to create Multiple Choice question:', error);
       throw error;
     }
   },
@@ -248,7 +335,7 @@ export const questionAPI = {
   async getQuestions(filters = {}, page = 1, perPage = 10) {
     const params = new URLSearchParams();
     params.append('page', page.toString());
-    params.append('perpage', perPage.toString());
+    params.append('per_page', perPage.toString());
     if (filters.category && filters.category !== 'All') params.append('categoryid', filters.category.toString());
     if (filters.status && filters.status !== 'All') params.append('status', filters.status.toLowerCase());
     if (filters.type && filters.type !== 'All') params.append('qtype', filters.type);
@@ -285,7 +372,7 @@ export const questionAPI = {
       }
       return data;
     } catch (error) {
-      console.error('❌ Failed to fetch questions:', error);
+      console.error('Failed to fetch questions:', error);
       throw error;
     }
   },
@@ -303,14 +390,50 @@ export const questionAPI = {
       });
       return handleAPIResponse(response);
     } catch (error) {
-      console.error(' Failed to update question status:', error);
+      console.error('Failed to update question status:', error);
       throw error;
     }
   },
 
-  // Bulk update question status
+
+
+// Update question name and text (no version change)
+async updateQuestionName(questionId, name, questiontext, userId) {
+  try {
+    // Validate required fields
+    if (!questionId || !name || !userId) {
+      throw new Error('questionid, name, and userid are required');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/questions`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        questionid: questionId,
+        name: name,
+        questiontext: questiontext || '', // Ensure questiontext is provided
+        userid: userId
+      })
+    });
+
+    const data = await handleAPIResponse(response);
+    
+    if (data.status !== true) {
+      throw new Error(data.message || 'Update failed');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Failed to update question name:', error);
+    throw error;
+  }
+},
+
+  // Bulk update question status with better error handling
   async bulkUpdateQuestionStatus(questionIds, newStatus) {
     try {
+      console.log(' Bulk updating question status:', { questionIds, newStatus });
+      
       const response = await fetch(`${API_BASE_URL}/questions/status`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -319,25 +442,162 @@ export const questionAPI = {
           newstatus: newStatus
         })
       });
-      return await handleAPIResponse(response);
+      
+      const data = await handleAPIResponse(response);
+      console.log(' Bulk status update successful:', data);
+      
+      return data;
     } catch (error) {
       console.error(' Failed to bulk update question status:', error);
       throw error;
     }
   },
 
-  // Bulk delete questions
+  // Bulk delete questions with better error handling
   async bulkDeleteQuestions(questionIds) {
-    const response = await fetch(`${API_BASE_URL}/questions/bulk-delete`, {
-      method: 'DELETE',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ questionids: questionIds })
-    });
-    return await handleAPIResponse(response);
+    try {
+      console.log(' Bulk deleting questions:', questionIds);
+      
+      const response = await fetch(`${API_BASE_URL}/questions/bulk-delete`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ questionids: questionIds })
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(' Bulk delete successful:', data);
+      
+      return data;
+    } catch (error) {
+      console.error(' Failed to bulk delete questions:', error);
+      throw error;
+    }
+  },
+
+  // Bulk edit questions (multiple fields at once)
+  async bulkEditQuestions(questionIds, updates) {
+    try {
+      console.log(' Bulk editing questions:', { questionIds, updates });
+      
+      const response = await fetch(`${API_BASE_URL}/questions/bulk-edit`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          questionids: questionIds,
+          updates: updates
+        })
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(' Bulk edit successful:', data);
+      
+      return data;
+    } catch (error) {
+      console.error(' Failed to bulk edit questions:', error);
+      throw error;
+    }
+  },
+
+  // Get questions by IDs (for bulk operations)
+  async getQuestionsByIds(questionIds) {
+    try {
+      console.log(' Fetching questions by IDs:', questionIds);
+      
+      const response = await fetch(`${API_BASE_URL}/questions/by-ids`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          questionids: questionIds
+        })
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(' Questions by IDs fetched:', data);
+      
+      return data;
+    } catch (error) {
+      console.error(' Failed to fetch questions by IDs:', error);
+      throw error;
+    }
+  },
+
+  // Export questions in various formats
+  async exportQuestions(questionIds, format = 'xml') {
+    try {
+      console.log('Exporting questions:', { questionIds, format });
+      
+      const response = await fetch(`${API_BASE_URL}/questions/export`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          questionids: questionIds,
+          format: format
+        })
+      });
+      
+      if (format === 'xml' || format === 'json') {
+        // For text-based formats, return the content
+        return await response.text();
+      } else {
+        // For binary formats, return blob
+        return await response.blob();
+      }
+    } catch (error) {
+      console.error(' Failed to export questions:', error);
+      throw error;
+    }
+  },
+
+  // Duplicate questions
+  async duplicateQuestions(questionIds) {
+    try {
+      console.log(' Duplicating questions:', questionIds);
+      
+      const response = await fetch(`${API_BASE_URL}/questions/duplicate`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          questionids: questionIds
+        })
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(' Questions duplicated:', data);
+      
+      return data;
+    } catch (error) {
+      console.error(' Failed to duplicate questions:', error);
+      throw error;
+    }
+  },
+
+  // Get question statistics
+  async getQuestionStatistics(questionIds = null) {
+    try {
+      console.log(' Fetching question statistics:', questionIds);
+      
+      const url = questionIds 
+        ? `${API_BASE_URL}/questions/statistics`
+        : `${API_BASE_URL}/questions/statistics`;
+      
+      const response = await fetch(url, {
+        method: questionIds ? 'POST' : 'GET',
+        headers: getAuthHeaders(),
+        body: questionIds ? JSON.stringify({ questionids: questionIds }) : undefined
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log('Question statistics fetched:', data);
+      
+      return data;
+    } catch (error) {
+      console.error(' Failed to fetch question statistics:', error);
+      throw error;
+    }
   }
 };
 
-// Normalization helper for question objects
+// Enhanced normalization helper for question objects
 export function normalizeQuestionFromAPI(apiQuestion) {
   const rawQType = apiQuestion.qtype || apiQuestion.type || 'multichoice';
   const normalizedQType = mapQuestionTypeFromAPI(rawQType);
@@ -366,7 +626,7 @@ export function normalizeQuestionFromAPI(apiQuestion) {
     }
   }
 
-  // Handle tags from API
+  // Enhanced: Handle tags from API with better normalization
   const getTagsFromAPI = () => {
     let apiTags = [];
     if (apiQuestion.tags && Array.isArray(apiQuestion.tags)) apiTags = apiQuestion.tags;
@@ -376,9 +636,17 @@ export function normalizeQuestionFromAPI(apiQuestion) {
     else if (typeof apiQuestion.tags === 'string' && apiQuestion.tags.trim()) {
       apiTags = apiQuestion.tags.split(',').map(tag => tag.trim()).filter(Boolean);
     }
-    return apiTags.map(tag => {
+    
+    return apiTags.map((tag, index) => {
       if (typeof tag === 'string') return tag.trim();
-      else if (tag && typeof tag === 'object') return tag.name || tag.tag_name || tag.displayname || tag.text || tag.rawname || String(tag.id);
+      else if (tag && typeof tag === 'object') {
+        return {
+          id: tag.id || index,
+          name: tag.name || tag.rawname || tag.text || tag.displayname || String(tag.id),
+          rawname: tag.rawname || tag.name,
+          isstandard: tag.isstandard || false
+        };
+      }
       return String(tag);
     }).filter(Boolean);
   };
@@ -451,39 +719,59 @@ export function normalizeQuestionFromAPI(apiQuestion) {
     comments: apiQuestion.comments || apiQuestion.comment_count || 0,
     usage: usageInfo.usage,
     lastUsed: usageInfo.lastUsed,
-        history: Array.isArray(apiQuestion.history) ? apiQuestion.history : []
+    history: Array.isArray(apiQuestion.history) ? apiQuestion.history : []
   };
 }
 
-// Demo tags generator (for fallback/demo only)
+// Enhanced demo tags generator with more realistic tags
 export function generateDemoTags(question) {
   const tags = [];
   if (question.status && question.status !== 'draft') tags.push(question.status);
   const questionText = (question.questiontext || question.questionText || question.title || '').toLowerCase();
-  if (questionText.includes('google')) tags.push('google');
-  if (questionText.includes('programming') || questionText.includes('code')) tags.push('programming');
-  if (questionText.includes('computer')) tags.push('computer-science');
-  if (questionText.includes('math') || questionText.includes('calculate') || questionText.includes('number')) tags.push('mathematics');
+  
+  // Subject-based tags
+  if (questionText.includes('google') || questionText.includes('search')) tags.push('google', 'search-engines');
+  if (questionText.includes('programming') || questionText.includes('code') || questionText.includes('software')) tags.push('programming', 'software-development');
+  if (questionText.includes('computer') || questionText.includes('hardware')) tags.push('computer-science', 'technology');
+  if (questionText.includes('math') || questionText.includes('calculate') || questionText.includes('number')) tags.push('mathematics', 'calculations');
+  if (questionText.includes('network') || questionText.includes('internet')) tags.push('networking', 'internet');
+  if (questionText.includes('database') || questionText.includes('sql')) tags.push('database', 'data-management');
+  if (questionText.includes('security') || questionText.includes('encryption')) tags.push('cybersecurity', 'data-protection');
+  
+  // Difficulty-based tags
   if (question.defaultMark) {
     const mark = parseFloat(question.defaultMark);
-    if (mark <= 1) tags.push('easy');
-    else if (mark <= 3) tags.push('medium');
-    else tags.push('hard');
+    if (mark <= 1) tags.push('easy', 'beginner');
+    else if (mark <= 3) tags.push('medium', 'intermediate');
+    else tags.push('hard', 'advanced');
   } else {
-    const difficulties = ['easy', 'medium', 'hard'];
-    tags.push(difficulties[Math.floor(Math.random() * difficulties.length)]);
+    const difficulties = [['easy', 'beginner'], ['medium', 'intermediate'], ['hard', 'advanced']];
+    const randomDiff = difficulties[Math.floor(Math.random() * difficulties.length)];
+    tags.push(...randomDiff);
   }
-  const academicTags = ['quiz', 'exam', 'practice', 'homework', 'review', 'assessment'];
-  if (Math.random() > 0.5) tags.push(academicTags[Math.floor(Math.random() * academicTags.length)]);
+  
+  // Academic context tags
+  const academicTags = ['quiz', 'exam', 'practice', 'homework', 'review', 'assessment', 'midterm', 'final'];
+  if (Math.random() > 0.3) tags.push(academicTags[Math.floor(Math.random() * academicTags.length)]);
+  
+  // Question type tags
   switch (question.qtype) {
-    case 'multichoice': tags.push('multiple-choice'); break;
-    case 'truefalse': tags.push('true-false'); break;
-    case 'essay': tags.push('written-response'); break;
-    case 'shortanswer': tags.push('short-answer'); break;
-    case 'ddimageortext': tags.push('drag-drop', 'interactive'); break;
-    case 'matching': tags.push('matching'); break;
-    case 'gapselect': tags.push('fill-in-blanks'); break;
+    case 'multichoice': tags.push('multiple-choice', 'selection'); break;
+    case 'truefalse': tags.push('true-false', 'binary-choice'); break;
+    case 'essay': tags.push('written-response', 'composition'); break;
+    case 'shortanswer': tags.push('short-answer', 'brief-response'); break;
+    case 'ddimageortext': tags.push('drag-drop', 'interactive', 'visual'); break;
+    case 'matching': tags.push('matching', 'pairing'); break;
+    case 'gapselect': tags.push('fill-in-blanks', 'completion'); break;
+    case 'numerical': tags.push('numerical', 'calculations'); break;
   }
-  if (tags.length < 3) tags.push(...['general', 'standard', 'basic'].slice(0, 3 - tags.length));
+  
+  // Ensure minimum tags
+  if (tags.length < 3) {
+    const generalTags = ['general', 'standard', 'basic', 'core', 'fundamental'];
+    tags.push(...generalTags.slice(0, 3 - tags.length));
+  }
+  
+  // Remove duplicates and return
   return [...new Set(tags.filter(tag => tag && tag.length > 0))];
 }

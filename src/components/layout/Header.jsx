@@ -52,7 +52,7 @@ const Header = ({ toggleSidebar, onLogout, username }) => {
                 onClick={() => setShowDropdown(!showDropdown)}
                 className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-md transition-colors"
               >
-                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                <div className="w-8 h-8 bg-sky-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
                   {username?.charAt(0).toUpperCase()}
                 </div>
                 <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

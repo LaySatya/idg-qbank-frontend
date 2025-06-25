@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { ChevronDown, Check, Upload, Plus, AlertCircle, CheckCircle } from 'lucide-react';
+import { ChevronDown, Check, Upload, Plus, AlertCircle, CheckCircle, FolderOpen } from 'lucide-react';
 
 const TopButtonsRow = ({
   showQuestionsDropdown,
@@ -12,22 +12,41 @@ const TopButtonsRow = ({
   questions,
   setCurrentPage,
   questionsPerPage,
-  setQuestions, // <-- Make sure this is passed from parent
+  setQuestions,
   totalQuestions,
-  setTotalQuestions
+  setTotalQuestions,
+   setShowCategoriesModal,
+  // Add these new props for navigation
+  currentView = 'questions', // default to questions view
+  setCurrentView,
+  onNavigate
 }) => {
   const [isImporting, setIsImporting] = useState(false);
   const [importStatus, setImportStatus] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Navigation handler
+  // Enhanced navigation handler
   const handleNavigation = (value) => {
     if (value.includes('import')) {
       handleImportClick();
       return;
     }
-    const pageName = value.split('/').pop().replace('.php', '');
-    setImportStatus({ type: 'info', message: `Navigating to ${pageName}...` });
+    
+    // Handle different navigation options
+    if (value.includes('categories')) {
+      if (setCurrentView) setCurrentView('categories');
+      setImportStatus({ type: 'info', message: 'Navigating to Categories...' });
+      if (onNavigate) onNavigate('categories');
+    } else if (value.includes('export')) {
+      if (setCurrentView) setCurrentView('export');
+      setImportStatus({ type: 'info', message: 'Navigating to Export...' });
+      if (onNavigate) onNavigate('export');
+    } else if (value.includes('edit')) {
+      if (setCurrentView) setCurrentView('questions');
+      setImportStatus({ type: 'info', message: 'Navigating to Questions...' });
+      if (onNavigate) onNavigate('questions');
+    }
+    
     setTimeout(() => setImportStatus(null), 2000);
   };
 
@@ -238,56 +257,91 @@ const TopButtonsRow = ({
             className="block rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
             name="jump"
             onChange={(e) => handleNavigation(e.target.value)}
-            defaultValue="/question/edit.php"
+            value={currentView === 'questions' ? '/question/edit.php' : 
+                  currentView === 'categories' ? '/question/bank/managecategories/category.php' :
+                  currentView === 'export' ? '/question/bank/exportquestions/export.php' :
+                  '/question/edit.php'}
           >
             <option value="/question/edit.php">Questions</option>
             <option value="/question/bank/managecategories/category.php">Categories</option>
             <option value="/question/bank/importquestions/import.php">Import</option>
             <option value="/question/bank/exportquestions/export.php">Export</option>
           </select>
-        </div>
 
-        {/* Main Actions */}
-        <div className="flex flex-wrap items-center gap-4">
-          {/* Create new question */}
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-md bg-gray-700 text-white px-4 py-2 font-semibold shadow hover:bg-gray-800 transition"
-            onClick={handleCreateQuestion}
-          >
-            <Plus size={18} />
-            Create a new question ...
-          </button>
-
-          {/* Show question text selector */}
-          <div className="flex items-center gap-2">
-            <label htmlFor="qbshowtext" className="text-gray-700 text-sm font-medium">
-              Show question text?
-            </label>
-            <select
-              id="qbshowtext"
-              name="qbshowtext"
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-              value={showQuestionText ? "1" : "0"}
-              onChange={(e) => handleQuestionTextChange(e.target.value)}
+          {/* Quick Categories Button - only show when not in categories view */}
+          {/* {currentView !== 'categories' && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-md bg-green-600 text-white px-3 py-2 text-sm font-medium shadow hover:bg-green-700 transition-colors duration-200"
+              onClick={() => handleNavigation('/question/bank/managecategories/category.php')}
+              title="Manage Categories"
             >
-              <option value="0">No</option>
-              <option value="1">Yes, text only</option>
-              <option value="2">Yes, with images, media, etc.</option>
-            </select>
-          </div>
-
-          {/* Import Button */}
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-md bg-blue-600 text-white px-4 py-2 font-semibold shadow hover:bg-blue-700 transition"
-            onClick={handleImportClick}
-            disabled={isImporting}
-          >
-            <Upload size={18} />
-            Import
-          </button>
-
+              <FolderOpen size={16} />
+              Categories
+            </button>
+          )} */}
+        </div>
+  
+        {/* Main Actions */}
+                
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Create new question - only show in questions view */}
+          {(currentView === 'questions' || !currentView) && (
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-md bg-gray-500 text-white px-4 py-2 font-semibold shadow hover:bg-gray-600 transition-colors duration-200"
+                onClick={handleCreateQuestion}
+              >
+                <Plus size={18} />
+                Create a new question ...
+              </button>
+        
+              {/* Show question text selector */}
+              <div className="flex items-center gap-2">
+                <label htmlFor="qbshowtext" className="text-gray-700 text-sm font-medium">
+                  Show question text?
+                </label>
+                <select
+                  id="qbshowtext"
+                  name="qbshowtext"
+                  className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                  value={showQuestionText ? "1" : "0"}
+                  onChange={(e) => handleQuestionTextChange(e.target.value)}
+                >
+                  <option value="0">No</option>
+                  <option value="1">Yes, text only</option>
+                  <option value="2">Yes, with images, media, etc.</option>
+                </select>
+              </div>
+            </div>
+          )}
+        
+          {/* Open Categories Modal Button */}
+          {(currentView === 'questions' || !currentView) && (
+            <button
+              type="button"
+              onClick={() => setShowCategoriesModal(true)}
+              className="inline-flex items-center gap-2 rounded-md bg-blue-600 text-white px-4 py-2 font-semibold shadow hover:bg-blue-700 transition"
+            >
+              <FolderOpen size={18} />
+              Open Categories
+            </button>
+          )}
+        
+          {/* Import Button - show in questions view */}
+          {(currentView === 'questions' || !currentView) && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-md bg-sky-600 text-white px-4 py-2 font-semibold shadow hover:bg-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleImportClick}
+              disabled={isImporting}
+            >
+              <Upload size={18} />
+              {isImporting ? 'Importing...' : 'Import Questions'}
+            </button>
+          )}
+        
           {/* Hidden file input */}
           <input
             ref={fileInputRef}
@@ -297,12 +351,13 @@ const TopButtonsRow = ({
             onChange={handleFileChange}
           />
         </div>
+     
       </div>
 
       {/* Status Message */}
       {importStatus && (
         <div
-          className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-md shadow-lg flex items-center gap-2 text-white font-semibold
+          className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-md shadow-lg flex items-center gap-2 text-white font-semibold transition-all duration-300
             ${importStatus.type === 'info' ? 'bg-blue-600' : ''}
             ${importStatus.type === 'success' ? 'bg-green-600' : ''}
             ${importStatus.type === 'error' ? 'bg-red-600' : ''}
@@ -311,7 +366,13 @@ const TopButtonsRow = ({
           {importStatus.type === 'info' && <AlertCircle size={20} />}
           {importStatus.type === 'success' && <CheckCircle size={20} />}
           {importStatus.type === 'error' && <AlertCircle size={20} />}
-          {importStatus.message}
+          <span>{importStatus.message}</span>
+          <button 
+            onClick={() => setImportStatus(null)}
+            className="ml-2 hover:bg-white/20 rounded p-1 transition-colors"
+          >
+            ×
+          </button>
         </div>
       )}
     </div>
