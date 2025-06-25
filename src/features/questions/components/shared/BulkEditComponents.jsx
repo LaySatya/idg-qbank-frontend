@@ -18,7 +18,7 @@ export const TagManager = ({
 }) => {
   const [customTag, setCustomTag] = useState('');
 
-  // 🔧 FIX: Normalize tag data - handle both string arrays and object arrays
+  //  FIX: Normalize tag data - handle both string arrays and object arrays
   const normalizeTagData = (tags) => {
     if (!Array.isArray(tags)) return [];
     
@@ -36,7 +36,7 @@ export const TagManager = ({
     }).filter(Boolean); // Remove any empty/null values
   };
 
-  // 🔧 FIX: Normalize available tags
+  //  FIX: Normalize available tags
   const normalizedAvailableTags = normalizeTagData(availableTags);
 
   const handleAddCustomTag = () => {
@@ -135,7 +135,7 @@ export const TagManager = ({
             ) : (
               normalizedAvailableTags.map((tag, index) => (
                 <button
-                  key={`add-tag-${tag}-${index}`} // 🔧 FIX: Unique key with fallback
+                  key={`add-tag-${tag}-${index}`} 
                   onClick={() => onTagOperation('add', tag)}
                   className={`px-3 py-1 rounded-full text-sm font-medium transition-all ${
                     selectedAddTags.includes(tag)
@@ -387,7 +387,7 @@ export const ChangesPreview = ({
   title = "Preview Changes",
   maxHeight = "16rem"
 }) => {
-  // 🔧 FIX: Normalize tag data for preview
+  //  FIX: Normalize tag data for preview
   const normalizeTagsForDisplay = (tags) => {
     if (!Array.isArray(tags)) return [];
     return tags.map(tag => {

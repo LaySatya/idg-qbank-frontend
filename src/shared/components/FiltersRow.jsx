@@ -416,7 +416,7 @@ const fetchAllTagsFromAPI = useCallback(async () => {
         <button
           onClick={handleRefreshData}
           disabled={loadingTags || loadingStatuses || loadingCategories || loadingApiQuestionTypes}
-          className="px-3 py-2 bg-sky-500 text-white rounded hover:bg-green-200 text-sm disabled:opacity-50 flex items-center gap-2"
+          className="px-3 py-2 bg-sky-500 text-black rounded hover:bg-sky-400 text-sm disabled:opacity-50 flex items-center gap-2"
         >
           <RefreshCcw size={18} className={loadingTags || loadingStatuses || loadingCategories || loadingApiQuestionTypes ? 'animate-spin' : ''} />
           Refresh
@@ -426,7 +426,7 @@ const fetchAllTagsFromAPI = useCallback(async () => {
         {hasActiveFilters && (
           <button
             onClick={handleClearFilters}
-            className="px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm"
+            className="px-3 py-2 bg-red-600 text-black rounded hover:bg-red-200 text-sm"
           >
             Clear All
           </button>

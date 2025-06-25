@@ -1,9 +1,10 @@
 // ============================================================================
 // components/QuestionsTable.jsx - Complete File with Fixed Tag Display
 // ============================================================================
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { questionAPI } from '../../api/questionAPI'; 
 import { toast } from 'react-hot-toast';
+
 const QuestionsTable = ({
   questions,
   allQuestions,
@@ -31,6 +32,12 @@ const QuestionsTable = ({
   username,
   setQuestions,
 }) => {
+//modal state edit question title name
+//  const [editConfirmModal, setEditConfirmModal] = useState(false);
+//   const [pendingEditQuestion, setPendingEditQuestion] = useState(null);
+const [showSaveModal, setShowSaveModal] = useState(false);
+const [pendingSaveQuestionId, setPendingSaveQuestionId] = useState(null);
+const [pendingSaveTitle, setPendingSaveTitle] = useState('');
 
   //  FIXED: Enhanced tag rendering with proper error handling
   const renderTags = (question) => {
@@ -389,9 +396,28 @@ const QuestionsTable = ({
   };
 
   // Start editing title
-  const startEditingTitle = (question) => {
-    setEditingQuestion(question.id);
-    setNewQuestionTitle(question.name || question.title || '');
+  // const startEditingTitle = (question) => {
+  //   setEditingQuestion(question.id);
+  //   setNewQuestionTitle(question.name || question.title || '');
+  // };
+  //   const startEditingTitle = (question) => {
+  //   setPendingEditQuestion(question);
+  //   setEditConfirmModal(true);
+  // };
+  // Handler for confirming edit
+  const handleConfirmEdit = () => {
+    if (pendingEditQuestion) {
+      setEditingQuestion(pendingEditQuestion.id);
+      setNewQuestionTitle(pendingEditQuestion.name || pendingEditQuestion.title || '');
+    }
+    setEditConfirmModal(false);
+    setPendingEditQuestion(null);
+  };
+
+  // Handler for canceling edit
+  const handleCancelEdit = () => {
+    setEditConfirmModal(false);
+    setPendingEditQuestion(null);
   };
 
   // Initiate question save
@@ -447,6 +473,7 @@ const initiateQuestionSave = async (questionId) => {
   }
 
   return (
+      <>
     <div className="overflow-x-auto">
       <table id="categoryquestions" className="min-w-full border-collapse">
         <thead>
@@ -538,32 +565,44 @@ const initiateQuestionSave = async (questionId) => {
                 <div className="flex flex-col items-start w-full">
                   <div className="w-full mb-2">
                     <label htmlFor={`checkq${question.id}`} className="block">
-                      {editingQuestion === question.id ? (
-                        <input
-                          type="text"
-                          value={newQuestionTitle}
-                          onChange={(e) => setNewQuestionTitle(e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                          autoFocus
-                          onBlur={() => initiateQuestionSave(question.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') initiateQuestionSave(question.id);
-                            if (e.key === 'Escape') setEditingQuestion(null);
-                          }}
-                        />
-                      ) : (
-                        <span 
+                   {editingQuestion === question.id ? (
+                    <input
+                      type="text"
+                      value={newQuestionTitle}
+                      onChange={(e) => setNewQuestionTitle(e.target.value)}
+                      className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                      autoFocus
+                      onBlur={() => {
+                        setPendingSaveQuestionId(question.id);
+                        setPendingSaveTitle(newQuestionTitle);
+                        setShowSaveModal(true);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          setPendingSaveQuestionId(question.id);
+                          setPendingSaveTitle(newQuestionTitle);
+                          setShowSaveModal(true);
+                        }
+                        if (e.key === 'Escape') setEditingQuestion(null);
+                      }}
+                    />
+                  ) : (
+                           <span 
                           className="inline-flex items-center group cursor-pointer"
-                          onClick={() => startEditingTitle(question)}
-                        >
-                          <a href="#" className=" ml-2 text-black-900 hover:text-blue-900">
-                            {question.name || question.title || '(No title)'} 
-                            <span className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                              <i className="fa-regular fa-pen-to-square text-gray-400"></i>
-                            </span>
-                          </a>
-                        </span>
-                      )}
+                             onClick={() => {
+                             setEditingQuestion(question.id);
+                                setNewQuestionTitle(question.name || question.title || '');
+                             }}
+                             >
+                             <a href="#" className="ml-2 text-black text-semibold hover:text-black-900 flex items-center">
+                              {question.name || question.title || '(No title)'}
+                                          {/* Always show pencil icon */}
+                                          <span className="ml-2">
+                                            <i className="fa-regular fa-pen-to-square text-gray-400"></i>
+                                          </span>
+                                        </a>
+                                      </span>
+                  )}
                     </label>
                     
                     {question.idNumber && (
@@ -574,7 +613,7 @@ const initiateQuestionSave = async (questionId) => {
                     )}
                   </div>
                   
-                  {/* 🔧 FIXED: Tags Rendering Section */}
+                  {/*  FIXED: Tags Rendering Section */}
                   <div className="w-full">
                     {renderTags(question)}
                   </div>
@@ -772,7 +811,7 @@ const initiateQuestionSave = async (questionId) => {
         </tbody>
       </table>
       
-      {/* 🔍 OPTIONAL: Development Debug Panel - Remove in production */}
+      {/*  OPTIONAL: Development Debug Panel - Remove in production */}
       {/* {process.env.NODE_ENV === 'development' && questions.length > 0 && (
         <div className="mt-4 p-4 bg-gray-100 rounded-lg border">
           <div className="text-sm font-bold text-gray-800 mb-2">🔍 Debug: Tag Analysis</div>
@@ -815,6 +854,40 @@ const initiateQuestionSave = async (questionId) => {
         </div>
       )} */}
     </div>
+        {/* Edit confirmation modal */}
+ {showSaveModal && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-60">
+    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+      <h3 className="font-bold text-lg mb-2">Save Changes?</h3>
+      <p className="mb-4">
+        Do you want to save the new question name: 
+        <span className="font-semibold text-blue-700"> "{pendingSaveTitle}"</span>?
+      </p>
+      <div className="flex justify-end gap-2">
+        <button
+          className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+          onClick={() => {
+            setShowSaveModal(false);
+            setEditingQuestion(null); 
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          className="px-4 py-2 rounded bg-sky-600 text-white hover:bg-sky-700"
+          onClick={async () => {
+            await initiateQuestionSave(pendingSaveQuestionId);
+            setShowSaveModal(false);
+          }}
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+  </>
   );
 };
 

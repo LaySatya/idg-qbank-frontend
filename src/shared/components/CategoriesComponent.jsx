@@ -245,12 +245,13 @@ const CategoriesComponent = ({
     };
 
     const categoryIds = getAllDescendantIds(category);
-    return allCourses.filter(course => categoryIds.includes(course.categoryId));
+     return allCourses.filter(course => course.categoryId === categoryId);
+    // return allCourses.filter(course => categoryIds.includes(course.categoryId));
   };
 
   // Handlers
   const handleCategorySelect = (categoryId) => {
-    console.log('🏛️ Category selected:', categoryId);
+    console.log(' Category selected:', categoryId);
     
     if (selectedCategory === categoryId) {
       // Deselect if clicking the same category
@@ -517,14 +518,14 @@ const CategoriesComponent = ({
     );
   };
 
-  // Filter courses based on search and selected category
-  const filteredCourses = selectedCategory 
-    ? getCoursesForCategory(selectedCategory).filter(course =>
-        course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.shortname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.categoryName.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : [];
+// Filter courses based on search and selected category
+const filteredCourses = selectedCategory 
+  ? getCoursesForCategory(selectedCategory).filter(course =>
+      course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      course.shortname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      course.categoryName.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  : [];
 
   // Don't render if modal is not open
   if (!isOpen) return null;

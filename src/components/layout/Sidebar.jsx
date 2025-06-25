@@ -25,7 +25,7 @@ const Sidebar = ({ collapsed }) => {
 
   return (
     <aside 
-      className={`bg-white text-black transition-all duration-200 ease-in-out ${
+      className={`bg-white text-black font-semibold transition-all duration-200 ease-in-out ${
         collapsed ? 'w-16' : 'w-64'
       } relative`}
     >
@@ -62,7 +62,7 @@ const Sidebar = ({ collapsed }) => {
                 className={({ isActive }) => 
                   `flex items-center px-4 py-3 ${
                     isActive 
-                      ? 'bg-sky-600 text-white' 
+                      ? 'bg-sky-600 text-black font-semibold' 
                       : 'text-black hover:bg-white'
                   } transition-colors duration-200 ${
                     collapsed ? 'justify-center' : ''

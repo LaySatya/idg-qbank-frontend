@@ -322,7 +322,7 @@ const TopButtonsRow = ({
             <button
               type="button"
               onClick={() => setShowCategoriesModal(true)}
-              className="inline-flex items-center gap-2 rounded-md bg-sky-700 text-white px-4 py-2 font-semibold shadow hover:bg-blue-700 transition"
+              className="inline-flex items-center gap-2 rounded-md bg-sky-600 text-black px-4 py-2 font-semibold shadow hover:bg-blue-700 transition"
             >
               <FolderOpen size={18} />
               Open Categories
@@ -334,7 +334,7 @@ const TopButtonsRow = ({
           {(currentView === 'questions' || !currentView) && (
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-md bg-sky-600 text-white px-4 py-2 font-semibold shadow hover:bg-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 rounded-md bg-sky-600 text-black px-4 py-2 font-semibold shadow hover:bg-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleImportClick}
               disabled={isImporting}
             >
