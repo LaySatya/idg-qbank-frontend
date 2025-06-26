@@ -1,9 +1,11 @@
 import axios from 'axios';
 
-const API_URL = 'http://127.0.0.1:8000/api/users';
+// const API_URL = 'http://127.0.0.1:8000/api/users';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export const loginUser = async (username, password) => {
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/users', {
+    const response = await fetch(`${API_BASE_URL}/users`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -44,7 +46,7 @@ export const logoutUser = async () => {
   try {
     const token = localStorage.getItem('token');
     if (token) {
-      await axios.post(`${API_URL}/logout`, {}, {
+      await axios.post(`${API_BASE_URL}/logout`, {}, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -61,7 +63,7 @@ export const logoutUser = async () => {
 ///use for get user from api for place manage user 
 export const getUsers = async () => {
   try {
-    const response = await axios.get(API_URL, {
+    const response = await axios.get(API_BASE_URL, {
       headers: {
         'Content-Type': 'application/json',
         // Add Authorization header if needed

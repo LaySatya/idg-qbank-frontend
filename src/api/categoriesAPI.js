@@ -3,7 +3,9 @@
 // ============================================================================
 import { useState, useCallback } from 'react';
 
-const BASE_URL = 'http://127.0.0.1:8000/api/questions';
+// const BASE_URL = 'http://127.0.0.1:8000/api/questions';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 
 /**
  * Get authentication token from localStorage
@@ -85,7 +87,7 @@ export const categoriesAPI = {
   fetchCourseCategories: async () => {
     try {
       console.log(' Fetching course categories...');
-      const response = await fetch(`${BASE_URL}/course-categories`, {
+      const response = await fetch(`${API_BASE_URL}/course-categories`, {
         method: 'GET',
         headers: getHeaders()
       });
@@ -107,7 +109,7 @@ export const categoriesAPI = {
   fetchQuestionCategories: async () => {
     try {
       console.log(' Fetching question categories...');
-      const response = await fetch(`${BASE_URL}/categories`, {
+      const response = await fetch(`${API_BASE_URL}/categories`, {
         method: 'GET',
         headers: getHeaders()
       });
@@ -129,7 +131,7 @@ export const categoriesAPI = {
     try {
       console.log('🎓 Fetching courses for course category:', categoryId);
       // 🔧 FIXED: Use the correct endpoint for courses by course category
-      const response = await fetch(`${BASE_URL}/courses?categoryid=${categoryId}`, {
+      const response = await fetch(`${API_BASE_URL}/courses?categoryid=${categoryId}`, {
         method: 'GET',
         headers: getHeaders()
       });
@@ -159,7 +161,7 @@ export const categoriesAPI = {
   fetchAllCourses: async () => {
     try {
       console.log('🎓 Fetching all courses...');
-      const response = await fetch(`${BASE_URL}/courses`, {
+      const response = await fetch(`${API_BASE_URL}/courses`, {
         method: 'GET',
         headers: getHeaders()
       });
@@ -191,7 +193,7 @@ export const categoriesAPI = {
       if (!courseId) {
         throw new Error('Course ID is required');
       }
-      const response = await fetch(`${BASE_URL}/question_categories?courseid=${courseId}`, {
+      const response = await fetch(`${API_BASE_URL}/question_categories?courseid=${courseId}`, {
         method: 'GET',
         headers: getHeaders()
       });
@@ -215,7 +217,7 @@ export const categoriesAPI = {
       if (!courseId) {
         throw new Error('Course ID is required');
       }
-      const response = await fetch(`${BASE_URL}/courses/${courseId}`, {
+      const response = await fetch(`${API_BASE_URL}/courses/${courseId}`, {
         method: 'GET',
         headers: getHeaders()
       });
@@ -251,7 +253,7 @@ export const categoriesAPI = {
         infoformat: 1,
         sortorder: 999
       };
-      const response = await fetch(`${BASE_URL}/categories`, {
+      const response = await fetch(`${API_BASE_URL}/categories`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(payload)
@@ -277,7 +279,7 @@ export const categoriesAPI = {
       if (!categoryId) {
         throw new Error('Category ID is required');
       }
-      const response = await fetch(`${BASE_URL}/categories/${categoryId}`, {
+      const response = await fetch(`${API_BASE_URL}/categories/${categoryId}`, {
         method: 'PUT',
         headers: getHeaders(),
         body: JSON.stringify(updateData)
@@ -302,7 +304,7 @@ export const categoriesAPI = {
       if (!categoryId) {
         throw new Error('Category ID is required');
       }
-      const response = await fetch(`${BASE_URL}/categories/${categoryId}`, {
+      const response = await fetch(`${API_BASE_URL}/categories/${categoryId}`, {
         method: 'DELETE',
         headers: getHeaders()
       });
@@ -383,7 +385,7 @@ export const categoriesAPI = {
       if (filters.categoryId) params.append('categoryid', filters.categoryId);
       if (filters.visible !== undefined) params.append('visible', filters.visible);
       
-      const response = await fetch(`${BASE_URL}/courses?${params.toString()}`, {
+      const response = await fetch(`${API_BASE_URL}/courses?${params.toString()}`, {
         method: 'GET',
         headers: getHeaders()
       });
