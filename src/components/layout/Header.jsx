@@ -2,12 +2,13 @@
 // Header.jsx - Updated with logout confirmation
 import React, { useState } from 'react';
 import LogoutConfirmationModal from '../LogoutConfirmationModal';
-
-const Header = ({ toggleSidebar, onLogout, username }) => {
+// import { useNavigate } from 'react-router-dom';
+const Header = ({ toggleSidebar, onLogout, username,  profileImageUrl}) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-
+  const [imgError, setImgError] = useState(false);
+//  const navigate = useNavigate();
   const handleLogoutClick = () => {
     setShowDropdown(false);
     setShowLogoutModal(true);
@@ -48,13 +49,24 @@ const Header = ({ toggleSidebar, onLogout, username }) => {
             
             {/* User dropdown menu */}
             <div className="relative">
-              <button
+                            <button
                 onClick={() => setShowDropdown(!showDropdown)}
                 className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-md transition-colors"
               >
-                <div className="w-8 h-8 bg-sky-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
-                  {username?.charAt(0).toUpperCase()}
-                </div>
+               {profileImageUrl && !imgError ? (
+                <img
+                  src={profileImageUrl + `?token=ba8735e43d5f1baf2382a99806bf9deb`}
+                  alt="Profile"
+                  className="w-8 h-8 rounded-full object-cover"
+                  onError={() => setImgError(true)}
+                />
+              ) : (
+                <span className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/>
+                  </svg>
+                </span>
+              )}
                 <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
@@ -66,8 +78,11 @@ const Header = ({ toggleSidebar, onLogout, username }) => {
                     <div className="font-medium">{username}</div>
                     <div className="text-gray-500">Signed in</div>
                   </div>
-                  <button
-                    onClick={() => setShowDropdown(false)}
+                    <button
+                    onClick={() => {
+                      setShowDropdown(false);
+                      navigate('/profile');
+                    }}
                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
                     Profile Settings

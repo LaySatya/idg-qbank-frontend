@@ -97,8 +97,8 @@ const CategoriesComponent = ({
   //  NEW: Check user preferences on mount
   useEffect(() => {
     if (!isOpen) return;
-    const savedCategoryId = localStorage.getItem('userPreferredCategoryId');
-    const savedCourseId = localStorage.getItem('userPreferredCourseId');
+    const savedCategoryId = localStorage.getItem('CourseCategoryId');
+    const savedCourseId = localStorage.getItem('CourseId');
     if (savedCategoryId) setDefaultCategory(parseInt(savedCategoryId));
     if (savedCourseId) setDefaultCourse(parseInt(savedCourseId));
   }, [isOpen]);
@@ -128,7 +128,7 @@ const CategoriesComponent = ({
         }
 
         const courseCategoriesData = await response.json();
-        console.log('🏛️ Course categories response:', courseCategoriesData);
+        console.log(' Course categories response:', courseCategoriesData);
         
         if (!cancelled) {
           if (Array.isArray(courseCategoriesData) && courseCategoriesData.length > 0) {
@@ -148,7 +148,7 @@ const CategoriesComponent = ({
             if (defaultCategory) {
               const categoryExists = courseCategoriesData.find(cat => cat.id === defaultCategory);
               if (categoryExists) {
-                console.log('🎯 Auto-selecting default category:', defaultCategory);
+                console.log(' Auto-selecting default category:', defaultCategory);
                 setSelectedCategory(defaultCategory);
                 // Don't load courses yet - wait for user interaction
               }
@@ -292,7 +292,7 @@ const CategoriesComponent = ({
       const categoryName = category?.name || `Category ${categoryId}`;
       
       // Save user preference
-      localStorage.setItem('userPreferredCategoryId', categoryId.toString());
+      localStorage.setItem('CourseCategoryId', categoryId.toString());
       
       setSuccess({ 
         type: 'success', 
@@ -325,22 +325,44 @@ const CategoriesComponent = ({
     const course = pendingCourseSelection;
     setSelectedCourse(course);
     // When selecting a category
-    localStorage.setItem('userPreferredCategoryId', selectedCategory?.toString() || '');
-    // Save user preference
-    localStorage.setItem('userPreferredCourseId', course.id.toString());
-    localStorage.setItem('userPreferredCourseName', course.name);
-    
+//  localStorage.setItem('userCourseCategoryId', selectedCategory?.toString() || '');
+// Save user preference
+// localStorage.setItem('userPreferredCourseId', course.id.toString());
+// localStorage.setItem('userPreferredCourseName', course.name);
+// Save question category name (if available)
+//const questionCategoryName = findCategoryById(selectedCategory)?.name || '';
+// localStorage.setItem('userPreferredQuestionCategoryName', questionCategoryName);
+// Optionally, save the question category id again for clarity
+//localStorage.setItem('userPreferredQuestionCategoryId', selectedCategory?.toString() || '');
     // Set filters for course-specific questions
+
+//     This means your questions are filtered by courseId only, not by the categories that belong to that course.
+// If your questions are organized by category, this may show questions from other categories as well.
+
+
+    // if (setFilters) {
+    //   setFilters({ 
+    //     category: 'All', 
+    //     status: 'All', 
+    //     type: 'All', 
+    //     courseId: course.id,
+    //     courseName: course.name
+    //   });
+    // }
+        // Find all categories for this course
+    const courseCategories = categories.filter(cat => cat.courseid === course.id || cat.course_id === course.id);
+    const categoryIds = courseCategories.map(cat => cat.id);
+    
     if (setFilters) {
       setFilters({ 
-        category: 'All', 
+        category: categoryIds.length === 1 ? categoryIds[0] : 'All',
+        categoryIds, 
         status: 'All', 
         type: 'All', 
         courseId: course.id,
         courseName: course.name
       });
     }
-    
     if (onCourseSelect) {
       onCourseSelect({
         id: course.id,

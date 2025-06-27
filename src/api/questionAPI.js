@@ -339,7 +339,7 @@ export const questionAPI = {
     const params = new URLSearchParams();
     params.append('page', page.toString());
     params.append('per_page', perPage.toString());
-    if (filters.category && filters.category !== 'All') params.append('categoryid', filters.category.toString());
+    params.append('categoryid', filters.categoryId);
     if (filters.status && filters.status !== 'All') params.append('status', filters.status.toLowerCase());
     if (filters.type && filters.type !== 'All') params.append('qtype', filters.type);
     if (filters.searchQuery) params.append('searchterm', filters.searchQuery.trim());

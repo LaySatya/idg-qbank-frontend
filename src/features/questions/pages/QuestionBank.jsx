@@ -1,6 +1,6 @@
 // ============================================================================
-// src/features/questions/pages/QuestionBank.jsx - OPTIMIZED VERSION
-// High-Performance Multi-Strategy Course Filtering
+// src/features/questions/pages/QuestionBank.jsx - FIXED VERSION
+// Fixed API URLs and Question Category Filtering
 // ============================================================================
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
@@ -55,13 +55,13 @@ class OptimizedAPIClient {
     // Check cache first
     const cached = this.cache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      console.log('📦 Cache hit:', url);
+      console.log('Cache hit:', url);
       return cached.data;
     }
 
     // Check if request is already pending
     if (this.pendingRequests.has(cacheKey)) {
-      console.log('⏳ Request deduplication:', url);
+      console.log(' Request deduplication:', url);
       return this.pendingRequests.get(cacheKey);
     }
 
@@ -164,7 +164,7 @@ const transformQuestion = (apiQuestion, courseId) => ({
 });
 
 // ============================================================================
-// OPTIMIZED FILTERING STRATEGIES
+// FIXED FILTERING STRATEGIES WITH CORRECT API URLS
 // ============================================================================
 
 class QuestionFilterService {
@@ -175,41 +175,48 @@ class QuestionFilterService {
   // Strategy 1: Question categories (fastest when available)
   async fetchByCategories(courseId, filters, page, perPage) {
     try {
-      console.log('🚀 Strategy 1: Categories approach');
-      
+      console.log(' Strategy 1: Categories approach');
       const categoriesUrl = `${API_BASE_URL}/questions/question_categories?courseid=${courseId}`;
       const categoriesData = await this.apiClient.request(categoriesUrl);
-      
-      // Extract categories
+  
       let categories = [];
       if (Array.isArray(categoriesData)) {
         categories = categoriesData;
       } else if (categoriesData.categories) {
         categories = categoriesData.categories;
       }
-
+  
       if (categories.length === 0) {
         return { success: false, reason: 'No categories found' };
       }
-
+  
       const categoryIds = categories.map(cat => cat.id || cat.categoryid).filter(Boolean);
-      
+  
       if (categoryIds.length === 0) {
-        return { success: false, reason: 'No valid category IDs' };s
+        return { success: false, reason: 'No valid category IDs' };
       }
-
-      // Get questions for first category (most questions are usually in the first one)
-      const primaryCategoryId = categoryIds[0];
-      const params = new URLSearchParams({
+  
+      // Build params
+      const filterParams = this.buildFilterParams(filters);
+      const paramsObj = {
         page: page.toString(),
         per_page: perPage.toString(),
-        categoryid: primaryCategoryId.toString(),
-        ...this.buildFilterParams(filters)
-      });
-
+        ...filterParams
+      };
+  
+      // Only add categoryids if filtering ALL categories
+      // if (
+      //   (!filters.category || filters.category === 'All') &&
+      //   categoryIds.length > 0
+      // ) {
+      //   paramsObj.categoryids = categoryIds.join(',');
+      // }
+  
+      const params = new URLSearchParams(paramsObj);
+  
       const questionsUrl = `${API_BASE_URL}/questions/filters?${params}`;
       const questionsData = await this.apiClient.request(questionsUrl);
-
+  
       if (questionsData.questions && questionsData.questions.length > 0) {
         return {
           success: true,
@@ -217,7 +224,7 @@ class QuestionFilterService {
           method: 'categories'
         };
       }
-
+  
       return { success: false, reason: 'No questions in categories' };
     } catch (error) {
       return { success: false, reason: error.message };
@@ -225,82 +232,84 @@ class QuestionFilterService {
   }
 
   // Strategy 2: Direct filtering (medium speed)
-  async fetchByDirectFilter(courseId, filters, page, perPage) {
-    try {
-      console.log('🚀 Strategy 2: Direct filtering');
+  // async fetchByDirectFilter(courseId, filters, page, perPage) {
+  //   try {
+  //     console.log(' Strategy 2: Direct filtering');
       
-      const params = new URLSearchParams({
-        page: page.toString(),
-        per_page: perPage.toString(),
-        courseid: courseId.toString(),
-        ...this.buildFilterParams(filters)
-      });
+  //     const params = new URLSearchParams({
+  //       page: page.toString(),
+  //       per_page: perPage.toString(),
+  //       courseid: courseId.toString(),
+  //       ...this.buildFilterParams(filters)
+  //     });
 
-      const questionsUrl = `${API_BASE_URL}/api/questions/filters?${params}`;
-      const questionsData = await this.apiClient.request(questionsUrl);
+  //     // FIXED: Correct API URL - single /api/
+  //     const questionsUrl = `${API_BASE_URL}/questions/filters?${params}`;
+  //     const questionsData = await this.apiClient.request(questionsUrl);
 
-      if (questionsData.questions && questionsData.questions.length > 0) {
-        return {
-          success: true,
-          data: questionsData,
-          method: 'direct'
-        };
-      }
+  //     if (questionsData.questions && questionsData.questions.length > 0) {
+  //       return {
+  //         success: true,
+  //         data: questionsData,
+  //         method: 'direct'
+  //       };
+  //     }
 
-      return { success: false, reason: 'No questions found' };
-    } catch (error) {
-      return { success: false, reason: error.message };
-    }
-  }
+  //     return { success: false, reason: 'No questions found' };
+  //   } catch (error) {
+  //     return { success: false, reason: error.message };
+  //   }
+  // }
 
   // Strategy 3: General with client-side filtering (slowest but most reliable)
-  async fetchWithClientFilter(courseId, filters, page, perPage) {
-    try {
-      console.log('🚀 Strategy 3: Client-side filtering');
+  // async fetchWithClientFilter(courseId, filters, page, perPage) {
+  //   try {
+  //     console.log(' Strategy 3: Client-side filtering');
       
-      // Get more questions to filter from
-      const params = new URLSearchParams({
-        page: '1',
-        per_page: '100', // Get larger batch
-        ...this.buildFilterParams(filters)
-      });
+  //     // Get more questions to filter from
+  //     const params = new URLSearchParams({
+  //       page: '1',
+  //       per_page: '100', // Get larger batch
+  //       ...this.buildFilterParams(filters)
+  //     });
 
-      const questionsUrl = `${API_BASE_URL}/api/questions/filters?${params}`;
-      const questionsData = await this.apiClient.request(questionsUrl);
+  //     // FIXED: Correct API URL - single /api/
+  //     const questionsUrl = `${API_BASE_URL}/questions/filters?${params}`;
+  //     const questionsData = await this.apiClient.request(questionsUrl);
 
-      if (!questionsData.questions || questionsData.questions.length === 0) {
-        return { success: false, reason: 'No questions available' };
-      }
+  //     if (!questionsData.questions || questionsData.questions.length === 0) {
+  //       return { success: false, reason: 'No questions available' };
+  //     }
 
-      // Filter by course on client side
-      const courseQuestions = questionsData.questions.filter(q => {
-        const qCourseId = q.courseid || q.course_id || q.contextid;
-        return qCourseId == courseId;
-      });
+  //     // Filter by course on client side
+  //     const courseQuestions = questionsData.questions.filter(q => {
+  //       const qCourseId = q.courseid || q.course_id || q.contextid;
+  //       return qCourseId == courseId;
+  //     });
 
-      if (courseQuestions.length === 0) {
-        // Fallback: create virtual course assignment
-        return this.createVirtualAssignment(courseId, questionsData.questions, page, perPage);
-      }
+  //     if (courseQuestions.length === 0) {
+  //       // Fallback: create virtual assignment
+  //       return this.createVirtualAssignment(courseId, questionsData.questions, page, perPage);
+  //     }
 
-      // Apply pagination
-      const startIdx = (page - 1) * perPage;
-      const paginatedQuestions = courseQuestions.slice(startIdx, startIdx + perPage);
+  //     // Apply pagination
+  //     const startIdx = (page - 1) * perPage;
+  //     const paginatedQuestions = courseQuestions.slice(startIdx, startIdx + perPage);
 
-      return {
-        success: true,
-        data: {
-          questions: paginatedQuestions,
-          total: courseQuestions.length,
-          current_page: page,
-          per_page: perPage
-        },
-        method: 'client-filter'
-      };
-    } catch (error) {
-      return { success: false, reason: error.message };
-    }
-  }
+  //     return {
+  //       success: true,
+  //       data: {
+  //         questions: paginatedQuestions,
+  //         total: courseQuestions.length,
+  //         current_page: page,
+  //         per_page: perPage
+  //       },
+  //       method: 'client-filter'
+  //     };
+  //   } catch (error) {
+  //     return { success: false, reason: error.message };
+  //   }
+  // }
 
   // Virtual assignment for courses without proper linking
   createVirtualAssignment(courseId, allQuestions, page, perPage) {
@@ -343,27 +352,56 @@ class QuestionFilterService {
     };
   }
 
-  buildFilterParams(filters) {
-    const params = {};
+  // buildFilterParams(filters) {
+  //   const params = {};
     
-    if (filters.status && filters.status !== 'All') {
-      params.status = filters.status.toLowerCase();
-    }
+  //   if (filters.status && filters.status !== 'All') {
+  //     params.status = filters.status.toLowerCase();
+  //   }
     
-    if (filters.type && filters.type !== 'All') {
-      params.qtype = filters.type;
-    }
+  //   if (filters.type && filters.type !== 'All') {
+  //     params.qtype = filters.type;
+  //   }
     
-    if (filters.searchQuery?.trim()) {
-      params.search = filters.searchQuery.trim();
-    }
+  //   if (filters.searchQuery?.trim()) {
+  //     params.search = filters.searchQuery.trim();
+  //   }
     
-    if (filters.tagFilter && filters.tagFilter !== 'All') {
-      params.tag = filters.tagFilter;
-    }
+  //   if (filters.tagFilter && filters.tagFilter !== 'All') {
+  //     params.tag = filters.tagFilter;
+  //   }
 
-    return params;
-  }
+  //   return params;
+  // }
+     buildFilterParams(filters) {
+      const params = {};
+    
+      // Only use categoryids if present and category is 'All'
+      if (
+        filters.categoryIds &&
+        filters.categoryIds.length > 0 &&
+        (filters.category === 'All' || !filters.category)
+      ) {
+        params.categoryid = filters.categoryIds ? filters.categoryIds : localStorage.getItem('questionCategoryId');
+      } else if (filters.category && filters.category !== 'All') {
+        params.categoryid = filters.category;
+      }
+    
+      if (filters.status && filters.status !== 'All') {
+        params.status = filters.status.toLowerCase();
+      }
+      if (filters.type && filters.type !== 'All') {
+        params.qtype = filters.type;
+      }
+      if (filters.searchQuery?.trim()) {
+        params.search = filters.searchQuery.trim();
+      }
+      if (filters.tagFilter && filters.tagFilter !== 'All') {
+        params.tag = filters.tagFilter;
+      }
+    
+      return params;
+    }
 }
 
 const questionFilterService = new QuestionFilterService(apiClient);
@@ -390,13 +428,14 @@ const QuestionBank = () => {
 
   // Filter state with localStorage persistence
   const [filters, setFilters] = useState(() => ({
-    category: localStorage.getItem('userPreferredCategoryId') || 'All',
+    category: localStorage.getItem('questionCategoryId'),
     status: 'All',
     type: 'All',
-    courseId: localStorage.getItem('userPreferredCourseId')
-      ? parseInt(localStorage.getItem('userPreferredCourseId'))
+    courseId: localStorage.getItem('CourseID')
+      ? parseInt(localStorage.getItem('CourseID'))
       : null,
-    courseName: localStorage.getItem('userPreferredCourseName') || ''
+    courseName: localStorage.getItem('CourseName') || ''
+
   }));
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -421,6 +460,10 @@ const QuestionBank = () => {
   // Static data
   const [availableQuestionTypes, setAvailableQuestionTypes] = useState([]);
   const [availableCategories, setAvailableCategories] = useState([]);
+
+  // NEW: Question categories for the selected course
+  const [questionCategories, setQuestionCategories] = useState([]);
+  const [loadingQuestionCategories, setLoadingQuestionCategories] = useState(false);
 
   // Memoized tags calculation
   const allTags = useMemo(() => {
@@ -452,69 +495,128 @@ const QuestionBank = () => {
   }, [questions, debouncedSearchQuery]);
 
   // ============================================================================
+  // NEW: FETCH QUESTION CATEGORIES FOR COURSE
+  // ============================================================================
+
+  const fetchQuestionCategoriesForCourse = useCallback(async (courseId) => {
+    if (!courseId || courseId === 'All') {
+      setQuestionCategories([]);
+      return;
+    }
+
+    try {
+      setLoadingQuestionCategories(true);
+      console.log('Fetching question categories for course:', courseId);
+      
+      // FIXED: Correct API URL
+      const categoriesUrl = `${API_BASE_URL}/questions/question_categories?courseid=${courseId}`;
+      const categoriesData = await apiClient.request(categoriesUrl);
+      
+      console.log('Question categories response:', categoriesData);
+      
+      // Process categories
+      let categories = [];
+      if (Array.isArray(categoriesData)) {
+        categories = categoriesData;
+      } else if (categoriesData.categories) {
+        categories = categoriesData.categories;
+      }
+
+      // Normalize categories
+      const normalizedCategories = categories.map(cat => ({
+        id: cat.id || cat.categoryid,
+        name: cat.name || cat.category_name || `Category ${cat.id}`,
+        questioncount: cat.questioncount || 0,
+        parent: cat.parent || 0,
+        contextid: cat.contextid || cat.context_id,
+        sortorder: cat.sortorder || 0
+      })).filter(cat => cat.id);
+
+      setQuestionCategories(normalizedCategories);
+      
+      console.log(' Question categories loaded:', normalizedCategories.length);
+      toast.success(`Loaded ${normalizedCategories.length} question categories for course`);
+      
+    } catch (error) {
+      console.error(' Error fetching question categories:', error);
+      setQuestionCategories([]);
+      toast.error(`Failed to load question categories: ${error.message}`);
+    } finally {
+      setLoadingQuestionCategories(false);
+    }
+  }, []);
+
+  // ============================================================================
   // OPTIMIZED API FUNCTIONS
   // ============================================================================
 
   // Main fetch function with multi-strategy approach
-  const fetchQuestionsFromAPI = useCallback(async (currentFilters = {}, page = 1, perPage = questionsPerPage) => {
-    console.log('🚀 OPTIMIZED API FETCH:', { currentFilters, page, perPage });
-    
-    try {
-      setLoading(true);
-      setError(null);
+const fetchQuestionsFromAPI = useCallback(async (currentFilters = {}, page = 1, perPage = questionsPerPage) => {
+  // Add this before every API call that uses filters
+  console.log('DEBUG FILTERS BEFORE API:', filters);
+  console.log(' OPTIMIZED API FETCH:', { currentFilters, page, perPage });
+  
+  try {
+    setLoading(true);
+    setError(null);
 
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('Authentication required. Please log in.');
-        return;
-      }
-
-      // Course filtering with multi-strategy approach
-      if (currentFilters.courseId && currentFilters.courseId !== 'All' && currentFilters.courseId !== null) {
-        console.log('🎓 COURSE FILTERING: Multi-strategy approach');
-        
-        // Try strategies in order of speed/reliability
-        const strategies = [
-          () => questionFilterService.fetchByCategories(currentFilters.courseId, currentFilters, page, perPage),
-          () => questionFilterService.fetchByDirectFilter(currentFilters.courseId, currentFilters, page, perPage),
-          () => questionFilterService.fetchWithClientFilter(currentFilters.courseId, currentFilters, page, perPage)
-        ];
-
-        for (const strategy of strategies) {
-          const result = await strategy();
-          if (result.success) {
-            console.log(`✅ Strategy succeeded: ${result.method}`);
-            await processQuestionsData(result.data, page, currentFilters.courseId, result.isVirtual);
-            
-            if (result.method === 'virtual') {
-              toast.info(`Showing virtual questions for course ${currentFilters.courseId}`);
-            } else {
-              toast.success(`Found questions for course ${currentFilters.courseId} (${result.method})`);
-            }
-            return;
-          }
-        }
-
-        // All strategies failed
-        setQuestions([]);
-        setTotalQuestions(0);
-        toast.error(`No questions found for course ${currentFilters.courseId}`);
-        return;
-      }
-
-      // General filtering (non-course specific)
-      await fetchGeneralQuestions(currentFilters, page, perPage);
-
-    } catch (error) {
-      console.error('❌ Error fetching questions:', error);
-      setError(error.message);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Authentication required. Please log in.');
+      return;
+    }
+    if (!currentFilters.courseId || currentFilters.courseId === 'All') {
       setQuestions([]);
       setTotalQuestions(0);
-      toast.error(`Failed to load questions: ${error.message}`);
-    } finally {
       setLoading(false);
+      return;
     }
-  }, [questionsPerPage]);
+
+    // Course filtering with multi-strategy approach
+    if (currentFilters.courseId && currentFilters.courseId !== 'All' && currentFilters.courseId !== null) {
+      console.log('COURSE FILTERING: Multi-strategy approach');
+      
+      // Try strategies in order of speed/reliability
+      const strategies = [
+        () => questionFilterService.fetchByCategories(currentFilters.courseId, currentFilters, page, perPage),
+        () => questionFilterService.fetchByDirectFilter(currentFilters.courseId, currentFilters, page, perPage),
+        () => questionFilterService.fetchWithClientFilter(currentFilters.courseId, currentFilters, page, perPage)
+      ];
+
+      for (const strategy of strategies) {
+        const result = await strategy();
+        if (result.success) {
+          console.log(`Strategy succeeded: ${result.method}`);
+          await processQuestionsData(result.data, page, currentFilters.courseId, result.isVirtual);
+          
+          if (result.method === 'virtual') {
+            toast.info(`Showing virtual questions for course ${currentFilters.courseId}`);
+          } else {
+            toast.success(`Found questions for course ${currentFilters.courseId} (${result.method})`);
+          }
+          return;
+        }
+      }
+
+      // All strategies failed
+      setQuestions([]);
+      setTotalQuestions(0);
+      toast.error(`No questions found for course ${currentFilters.courseId}`);
+      return;
+    }
+
+    // General filtering (non-course specific)
+    await fetchGeneralQuestions(currentFilters, page, perPage);
+  } catch (error) {
+    console.error(' Error fetching questions:', error);
+    setError(error.message);
+    setQuestions([]);
+    setTotalQuestions(0);
+    toast.error(`Failed to load questions: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+}, [questionsPerPage]);
 
   // General questions fetch
   const fetchGeneralQuestions = async (currentFilters, page, perPage) => {
@@ -524,7 +626,8 @@ const QuestionBank = () => {
       ...questionFilterService.buildFilterParams(currentFilters)
     });
 
-    const apiUrl = `${API_BASE_URL}/api/questions/filters?${params}`;
+    // FIXED: Correct API URL
+    const apiUrl = `${API_BASE_URL}/questions/filters?${params}`;
     const data = await apiClient.request(apiUrl);
 
     await processQuestionsData(data, page);
@@ -532,7 +635,8 @@ const QuestionBank = () => {
 
   // Optimized question data processing
   const processQuestionsData = async (data, page, courseId = null, isVirtual = false) => {
-    console.log('📊 Processing questions data:', { 
+    console.log('API returned:', data);
+    console.log(' Processing questions data:', { 
       total: data.total,
       count: data.questions?.length,
       page,
@@ -585,20 +689,20 @@ const QuestionBank = () => {
 
   // Navigation handler
   const handleNavigation = useCallback((view) => {
-    console.log('🧭 Navigating to:', view);
+    console.log(' Navigating to:', view);
     setCurrentView(view);
   }, []);
 
   // Enhanced setFilters with proper logging
   const setFiltersWithLogging = useCallback((newFilters) => {
-    console.log('🔧 Filters updated:', { old: filters, new: newFilters });
+    console.log(' Filters updated:', { old: filters, new: newFilters });
     setFilters(newFilters);
     
     // Persist course selection
     if (newFilters.courseId) {
-      localStorage.setItem('userPreferredCourseId', newFilters.courseId.toString());
+      localStorage.setItem('CourseID', newFilters.courseId.toString());
       if (newFilters.courseName) {
-        localStorage.setItem('userPreferredCourseName', newFilters.courseName);
+        localStorage.setItem('CourseName', newFilters.courseName);
       }
     } else {
       localStorage.removeItem('userPreferredCourseId');
@@ -606,38 +710,66 @@ const QuestionBank = () => {
     }
   }, [filters]);
 
-  // Course selection handler
-  const handleCourseSelect = useCallback((course) => {
-    console.log('🎓 Course selected:', course);
-    
+  // NEW: Enhanced course selection handler with question categories
+   const handleCourseSelect = useCallback(async (course) => {
+    console.log('Course selected:', course);
+  
     const courseId = course.id || course.courseId;
     const courseName = course.name || course.fullname || `Course ${courseId}`;
-    
+  
     if (!courseId) {
       toast.error('Invalid course selection');
       return;
     }
-    
+  
     setSelectedCourse({ id: courseId, name: courseName });
-    
+  
+    // 1. Fetch categories for this course
+    const categoriesUrl = `${API_BASE_URL}/questions/question_categories?courseid=${courseId}`;
+    let categoriesData = [];
+    try {
+      categoriesData = await apiClient.request(categoriesUrl);
+    } catch (error) {
+      toast.error('Failed to load categories for course');
+      setQuestionCategories([]);
+      return;
+    }
+  
+    let categories = [];
+    if (Array.isArray(categoriesData)) {
+      categories = categoriesData;
+    } else if (categoriesData.categories) {
+      categories = categoriesData.categories;
+    }
+    const normalizedCategories = categories.map(cat => ({
+      id: cat.id || cat.categoryid,
+      name: cat.name || cat.category_name || `Category ${cat.id}`,
+      questioncount: cat.questioncount || 0,
+      parent: cat.parent || 0,
+      contextid: cat.contextid || cat.context_id,
+      sortorder: cat.sortorder || 0
+    })).filter(cat => cat.id);
+  
+    setQuestionCategories(normalizedCategories);
+  
+    // 2. Now set filters with the correct categoryIds
     setFiltersWithLogging({
       category: 'All',
+      categoryIds: normalizedCategories.map(c => c.id),
       status: 'All',
       type: 'All',
       courseId: courseId,
       courseName: courseName
     });
-
+  
     setSearchQuery('');
     setTagFilter('All');
     setCurrentPage(1);
-    
-    // Clear relevant cache
+  
     apiClient.clearCache(`courseid=${courseId}`);
-    
+  
     toast.success(`Filtering questions for: ${courseName}`);
   }, [setFiltersWithLogging]);
-
   // Status change handlers
   const handleStatusChange = useCallback(async (questionId, newStatus) => {
     const prevQuestions = [...questions];
@@ -726,32 +858,65 @@ const QuestionBank = () => {
   // ============================================================================
 
   // Filter change effect
-  useEffect(() => {
-    if (currentView !== 'questions') return;
+  // useEffect(() => {
+  //   if (currentView !== 'questions') return;
 
-    console.log('🔄 Filters changed, fetching questions...');
+  //   console.log('Filters changed, fetching questions...');
     
-    const filterParams = {
-      category: filters.category,
-      courseId: filters.courseId,
-      status: filters.status,
-      type: filters.type,
-      searchQuery: debouncedSearchQuery,
-      tagFilter
-    };
+  //   const filterParams = {
+  //     category: filters.category,
+  //     courseId: filters.courseId,
+  //     status: filters.status,
+  //     type: filters.type,
+  //     searchQuery: debouncedSearchQuery,
+  //     tagFilter
+  //   };
 
-    if (currentPage !== 1) {
-      setCurrentPage(1);
-      fetchQuestionsFromAPI(filterParams, 1, questionsPerPage);
-    } else {
-      fetchQuestionsFromAPI(filterParams, currentPage, questionsPerPage);
-    }
-  }, [filters, debouncedSearchQuery, tagFilter, currentView, currentPage, questionsPerPage, fetchQuestionsFromAPI]);
+  //   if (currentPage !== 1) {
+  //     setCurrentPage(1);
+  //     fetchQuestionsFromAPI(filterParams, 1, questionsPerPage);
+  //   } else {
+  //     fetchQuestionsFromAPI(filterParams, currentPage, questionsPerPage);
+  //   }
+  // }, [filters, debouncedSearchQuery, tagFilter, currentView, currentPage, questionsPerPage, fetchQuestionsFromAPI]);
+useEffect(() => {
+  if (currentView !== 'questions') return;
+  if (!filters.courseId || filters.courseId === 'All') {
+    setQuestions([]);
+    setTotalQuestions(0);
+    setLoading(false);
+    return;
+  }
 
+  const filterParams = {
+    category: filters.category,
+    courseId: filters.courseId,
+    status: filters.status,
+    type: filters.type,
+    searchQuery: debouncedSearchQuery,
+    tagFilter
+  };
+
+  if (currentPage !== 1) {
+    setCurrentPage(1);
+    fetchQuestionsFromAPI(filterParams, 1, questionsPerPage);
+  } else {
+    fetchQuestionsFromAPI(filterParams, currentPage, questionsPerPage);
+  }
+}, [filters, debouncedSearchQuery, tagFilter, currentView, currentPage, questionsPerPage, fetchQuestionsFromAPI]);
   // Load static data on mount
   useEffect(() => {
     loadStaticData();
   }, [loadStaticData]);
+
+  // NEW: Load question categories when course changes
+  useEffect(() => {
+    if (filters.courseId && filters.courseId !== 'All') {
+      fetchQuestionCategoriesForCourse(filters.courseId);
+    } else {
+      setQuestionCategories([]);
+    }
+  }, [filters.courseId, fetchQuestionCategoriesForCourse]);
 
   // ============================================================================
   // MODAL AND UI STATE
@@ -807,43 +972,10 @@ const QuestionBank = () => {
             setFilters={setFiltersWithLogging}
           />
         );
-      
       case 'questions':
       default:
         return (
           <>
-            {/* Course filter indicator */}
-            {selectedCourse && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-blue-800 font-medium">
-                    🎓 Showing questions from: {selectedCourse.name}
-                  </span>
-                  <span className="text-blue-600 text-sm">
-                    (Course ID: {selectedCourse.id})
-                  </span>
-                  <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">
-                    Optimized Multi-Strategy
-                  </span>
-                </div>
-                <button
-                  onClick={() => {
-                    setSelectedCourse(null);
-                    setFiltersWithLogging({
-                      category: 'All',
-                      status: 'All',
-                      type: 'All',
-                      courseId: null
-                    });
-                    apiClient.clearCache();
-                  }}
-                  className="text-blue-600 hover:text-blue-800 px-2 py-1 rounded text-sm"
-                >
-                  ✕ Clear Course Filter
-                </button>
-              </div>
-            )}
-
             {/* Bulk actions */}
             {selectedQuestions.length > 0 && (
               <BulkActionsRow
@@ -864,7 +996,7 @@ const QuestionBank = () => {
                 setQuestions={setQuestions}
               />
             )}
-
+  
             {/* Filters */}
             <FiltersRow
               searchQuery={searchQuery}
@@ -875,75 +1007,47 @@ const QuestionBank = () => {
               setTagFilter={setTagFilter}
               allTags={allTags}
               availableQuestionTypes={availableQuestionTypes}
-              availableCategories={availableCategories}
+              availableCategories={questionCategories.length > 0 ? questionCategories : availableCategories}
               loadingQuestionTypes={loading}
+              loadingCategories={loadingQuestionCategories}
             />
-
-            {/* Loading state */}
-            {loading && (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <p className="mt-2 text-gray-600">
-                  {filters.courseId ? 'Loading course questions...' : 'Loading questions...'}
-                </p>
-                {filters.courseId && (
-                  <p className="mt-1 text-sm text-blue-600">
-                    🚀 Using optimized multi-strategy filtering
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Empty state */}
-            {!loading && questions.length === 0 && (
+  
+            {/* Guard: Require course selection */}
+            {!filters.courseId || filters.courseId === 'All' ? (
               <div className="text-center py-8 text-gray-500">
-                {selectedCourse ? (
-                  <div>
-                    <p className="text-lg font-medium text-gray-700 mb-2">
-                      No questions found for "{selectedCourse.name}"
+                <p>Please select a course to view questions.</p>
+              </div>
+            ) : (
+              <>
+                {/* Loading state */}
+                {loading && (
+                  <div className="text-center py-8">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p className="mt-2 text-gray-600">
+                      Loading course questions...
                     </p>
-                    <p className="text-sm mb-4">
-                      All filtering strategies have been exhausted.
+                    <p className="mt-1 text-sm text-blue-600">
+                      Using optimized multi-strategy filtering
                     </p>
-                    <div className="flex gap-3 justify-center">
-                      <button
-                        onClick={() => {
-                          apiClient.clearCache(`courseid=${selectedCourse.id}`);
-                          fetchQuestionsFromAPI(filters, 1, questionsPerPage);
-                        }}
-                        className="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                      >
-                        🔄 Retry (Clear Cache)
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedCourse(null);
-                          setFiltersWithLogging({
-                            category: 'All',
-                            status: 'All',
-                            type: 'All',
-                            courseId: null
-                          });
-                        }}
-                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                      >
-                        🧹 Clear Course Filter
-                      </button>
-                    </div>
                   </div>
-                ) : (
-                  <div>
+                )}
+  
+                {/* Empty state */}
+                {!loading && questions.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
                     <p>No questions found with current filters.</p>
                     <button
                       onClick={() => {
                         setSearchQuery('');
                         setFiltersWithLogging({ 
                           category: 'All', 
+                          categoryIds: [],
                           status: 'All', 
                           type: 'All', 
                           courseId: null 
                         });
                         setTagFilter('All');
+                        setQuestionCategories([]);
                         apiClient.clearCache();
                       }}
                       className="mt-2 text-blue-600 underline"
@@ -952,153 +1056,158 @@ const QuestionBank = () => {
                     </button>
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* Questions table */}
-            {!loading && questions.length > 0 && (
-              <>
-                <QuestionsTable
-                  questions={filteredQuestions}
-                  allQuestions={questions}
-                  filteredQuestions={filteredQuestions}
-                  selectedQuestions={selectedQuestions}
-                  setSelectedQuestions={setSelectedQuestions}
-                  showQuestionText={showQuestionText}
-                  editingQuestion={editingQuestion}
-                  setEditingQuestion={setEditingQuestion}
-                  newQuestionTitle={newQuestionTitle}
-                  setNewQuestionTitle={setNewQuestionTitle}
-                  setShowSaveConfirm={setShowSaveConfirm}
-                  openActionDropdown={openActionDropdown}
-                  setOpenActionDropdown={setOpenActionDropdown}
-                  openStatusDropdown={openStatusDropdown}
-                  setOpenStatusDropdown={setOpenStatusDropdown}
-                  dropdownRefs={dropdownRefs}
-                  onPreview={setPreviewQuestion}
-                  onEdit={(question) => {
-                    console.log('✏️ Editing question:', question.id);
-                    setEditingQuestionData(question);
-                  }}
-                  onDuplicate={handleDuplicateQuestion}
-                  onHistory={setHistoryModal}
-                  onDelete={handleDeleteQuestion}
-                  onStatusChange={handleStatusChange}
-                  username={username}
-                  setQuestions={setQuestions}
-                />
-
-                {/* Optimized Pagination */}
-                <div className="mt-4 flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-700">
-                        Showing <span className="font-medium">{((currentPage - 1) * questionsPerPage) + 1}</span> to{' '}
-                        <span className="font-medium">{Math.min(currentPage * questionsPerPage, totalQuestions)}</span> of{' '}
-                        <span className="font-medium">{totalQuestions}</span> results
-                        {selectedCourse && (
-                          <span className="text-blue-600 ml-2">
-                            (from {selectedCourse.name})
-                          </span>
-                        )}
-                        {debouncedSearchQuery && (
-                          <span className="text-green-600 ml-2">
-                            (filtered: {filteredQuestions.length})
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    {/* Items per page selector */}
-                    <div className="flex items-center space-x-2">
-                      <label className="text-sm text-gray-700">Per page:</label>
-                      <select
-                        value={questionsPerPage}
-                        onChange={(e) => {
-                          const newPerPage = Number(e.target.value);
-                          setQuestionsPerPage(newPerPage);
-                          setCurrentPage(1);
-                        }}
-                        className="border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                        disabled={loading}
-                      >
-                        <option value={10}>10</option>
-                        <option value={25}>25</option>
-                        <option value={50}>50</option>
-                        <option value={100}>100</option>
-                      </select>
-                    </div>
-
-                    {/* Pagination buttons */}
-                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                      <button
-                        onClick={() => setCurrentPage(1)}
-                        disabled={currentPage === 1 || loading}
-                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        First
-                      </button>
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                        disabled={currentPage === 1 || loading}
-                        className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Previous
-                      </button>
+  
+                {/* Questions table */}
+                {!loading && questions.length > 0 && (
+                  <>
+                    <QuestionsTable
+                      questions={filteredQuestions}
+                      allQuestions={questions}
+                      filteredQuestions={filteredQuestions}
+                      selectedQuestions={selectedQuestions}
+                      setSelectedQuestions={setSelectedQuestions}
+                      showQuestionText={showQuestionText}
+                      editingQuestion={editingQuestion}
+                      setEditingQuestion={setEditingQuestion}
+                      newQuestionTitle={newQuestionTitle}
+                      setNewQuestionTitle={setNewQuestionTitle}
+                      setShowSaveConfirm={setShowSaveConfirm}
+                      openActionDropdown={openActionDropdown}
+                      setOpenActionDropdown={setOpenActionDropdown}
+                      openStatusDropdown={openStatusDropdown}
+                      setOpenStatusDropdown={setOpenStatusDropdown}
+                      dropdownRefs={dropdownRefs}
+                      onPreview={setPreviewQuestion}
+                      onEdit={(question) => {
+                        console.log('Editing question:', question.id);
+                        setEditingQuestionData(question);
+                      }}
+                      onDuplicate={handleDuplicateQuestion}
+                      onHistory={setHistoryModal}
+                      onDelete={handleDeleteQuestion}
+                      onStatusChange={handleStatusChange}
+                      username={username}
+                      setQuestions={setQuestions}
+                    />
+  
+                    {/* Pagination and cache info */}
+                    <div className="mt-4 flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-700">
+                            Showing <span className="font-medium">{((currentPage - 1) * questionsPerPage) + 1}</span> to{' '}
+                            <span className="font-medium">{Math.min(currentPage * questionsPerPage, totalQuestions)}</span> of{' '}
+                            <span className="font-medium">{totalQuestions}</span> results
+                            {selectedCourse && (
+                              <span className="text-blue-600 ml-2">
+                                (from {selectedCourse.name})
+                              </span>
+                            )}
+                            {filters.category !== 'All' && questionCategories.length > 0 && (
+                              <span className="text-green-600 ml-2">
+                                (category: {questionCategories.find(c => c.id == filters.category)?.name || filters.category})
+                              </span>
+                            )}
+                            {debouncedSearchQuery && (
+                              <span className="text-green-600 ml-2">
+                                (filtered: {filteredQuestions.length})
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
                       
-                      {/* Smart page numbers */}
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNum;
-                        if (totalPages <= 5) {
-                          pageNum = i + 1;
-                        } else if (currentPage <= 3) {
-                          pageNum = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i;
-                        } else {
-                          pageNum = currentPage - 2 + i;
-                        }
-                        
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => setCurrentPage(pageNum)}
+                      <div className="flex items-center space-x-2">
+                        {/* Items per page selector */}
+                        <div className="flex items-center space-x-2">
+                          <label className="text-sm text-gray-700">Per page:</label>
+                          <select
+                            value={questionsPerPage}
+                            onChange={(e) => {
+                              const newPerPage = Number(e.target.value);
+                              setQuestionsPerPage(newPerPage);
+                              setCurrentPage(1);
+                            }}
+                            className="border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
                             disabled={loading}
-                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium disabled:cursor-not-allowed ${
-                              currentPage === pageNum
-                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                            }`}
                           >
-                            {pageNum}
+                            <option value={10}>10</option>
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                          </select>
+                        </div>
+  
+                        {/* Pagination buttons */}
+                        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                          <button
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1 || loading}
+                            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            First
                           </button>
-                        );
-                      })}
-
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages || loading}
-                        className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Next
-                      </button>
-                      <button
-                        onClick={() => setCurrentPage(totalPages)}
-                        disabled={currentPage === totalPages || loading}
-                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Last
-                      </button>
-                    </nav>
-                    
-                    {/* Performance indicator */}
-                    <div className="ml-4 text-xs text-gray-500">
-                      Cache: {apiClient.cache.size} items
+                          <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1 || loading}
+                            className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Previous
+                          </button>
+                          
+                          {/* Smart page numbers */}
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNum;
+                            if (totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNum = totalPages - 4 + i;
+                            } else {
+                              pageNum = currentPage - 2 + i;
+                            }
+                            
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => setCurrentPage(pageNum)}
+                                disabled={loading}
+                                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium disabled:cursor-not-allowed ${
+                                  currentPage === pageNum
+                                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                }`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          })}
+  
+                          <button
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages || loading}
+                            className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Next
+                          </button>
+                          <button
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage === totalPages || loading}
+                            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Last
+                          </button>
+                        </nav>
+                        
+                        {/* Performance indicator */}
+                        <div className="ml-4 text-xs text-gray-500">
+                          Cache: {apiClient.cache.size} items
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </>
+                )}
               </>
             )}
           </>
@@ -1135,13 +1244,13 @@ const QuestionBank = () => {
                 }}
                 className="px-3 py-1 bg-red-200 text-red-800 rounded hover:bg-red-300"
               >
-                🔄 Retry (Clear Cache)
+                 Retry (Clear Cache)
               </button>
               <button
                 onClick={() => setError(null)}
                 className="px-3 py-1 bg-red-200 text-red-800 rounded hover:bg-red-300"
               >
-                ✕ Dismiss
+                 Dismiss
               </button>
             </div>
           </div>
@@ -1243,30 +1352,9 @@ const QuestionBank = () => {
         />
       )}
 
-      {/* Performance Debug (Development only) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 right-4 bg-black bg-opacity-75 text-white text-xs p-2 rounded max-w-xs">
-          <div className="font-semibold mb-1">🚀 Performance Monitor</div>
-          <div>Cache: {apiClient.cache.size} items</div>
-          <div>Pending: {apiClient.pendingRequests.size} requests</div>
-          <div>Questions: {questions.length} loaded</div>
-          <div>Filtered: {filteredQuestions.length} shown</div>
-          <div>Search: {debouncedSearchQuery ? `"${debouncedSearchQuery}"` : 'None'}</div>
-          <div>Course: {selectedCourse ? selectedCourse.name : 'All'}</div>
-          <button
-            onClick={() => {
-              apiClient.clearCache();
-              toast.success('Cache cleared!');
-            }}
-            className="mt-1 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
-          >
-            Clear Cache
-          </button>
-        </div>
-      )}
+    
     </div>
   );
 };
 
 export default QuestionBank;
-

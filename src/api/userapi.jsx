@@ -30,7 +30,8 @@ export const loginUser = async (username, password) => {
     return {
       token: data.token,
       username: data.username || username,
-      userid: data.userid || data.id // Make sure your backend returns this
+      userid: data.userid || data.id, // Make sure your backend returns this
+      profileimageurl: data.profileimageurl,
     };
   } catch (error) {
     console.error('Login error:', error);

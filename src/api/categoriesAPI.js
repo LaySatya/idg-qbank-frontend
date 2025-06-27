@@ -293,32 +293,7 @@ export const categoriesAPI = {
     }
   },
 
-  /**
-   * Delete a question category
-   * @param {number} categoryId - The category ID
-   * @returns {Promise<boolean>} Success status
-   */
-  deleteQuestionCategory: async (categoryId) => {
-    try {
-      console.log('🗑️ Deleting question category:', categoryId);
-      if (!categoryId) {
-        throw new Error('Category ID is required');
-      }
-      const response = await fetch(`${API_BASE_URL}/categories/${categoryId}`, {
-        method: 'DELETE',
-        headers: getHeaders()
-      });
-      if (response.ok) {
-        console.log(' Question category deleted successfully');
-        return true;
-      } else {
-        await handleResponse(response);
-      }
-    } catch (error) {
-      console.error(' Error deleting question category:', error);
-      throw error;
-    }
-  },
+
 
   /**
    * Move category to different parent

@@ -22,7 +22,7 @@ const App = () => {
       const token = localStorage.getItem('token');
       const usernameoremail = localStorage.getItem('usernameoremail');
       const userid = localStorage.getItem('userid');
-      
+      const profileimageurl = localStorage.getItem('profileimageurl');
       if (token && usernameoremail && usernameoremail !== 'undefined' && userid) {
         try {
           // Add token verification API call if needed
@@ -32,9 +32,19 @@ const App = () => {
           setCurrentUser({ 
             token, 
             username: usernameoremail,
-            id: userid 
+            id: userid,
+            profileImageUrl: profileimageurl // or provide a value if available
           });
         } catch (error) {
+          // Optionally, fetch the user's profile image URL here if available
+          // For example, if you have an API to get user details:
+          // const userDetails = await fetchUserDetails(userid, token);
+          // setCurrentUser({ 
+          //   token, 
+          //   username: usernameoremail,
+          //   id: userid,
+          //   profileimageurl: userDetails.profileimageurl
+          // });
           // If token is invalid, clear storage
           localStorage.removeItem('token');
           localStorage.removeItem('usernameoremail');
@@ -49,18 +59,19 @@ const App = () => {
     verifyAuth();
   }, [navigate]);
 
-  const handleLogin = (token, username, userid) => {
+  const handleLogin = (token, username, userid, profileimageurl) => {
     console.log('Handling login with:', { token, username, userid });
     
     localStorage.setItem('token', token);
     localStorage.setItem('usernameoremail', username);
     localStorage.setItem('userid', userid);
-    
+    localStorage.setItem('profileimageurl', profileimageurl || ''); // Store profile image URL if available
     setIsAuthenticated(true);
     setCurrentUser({
       token,
       username,
-      id: userid
+      id: userid,
+      profileimageurl
     });
     
     // Navigate to dashboard by default
@@ -99,11 +110,12 @@ const App = () => {
     <div className="flex h-screen bg-gray-50">
       {isAuthenticated && <Sidebar collapsed={sidebarCollapsed} />}
       <div className="flex flex-col flex-1 overflow-hidden">
-        {isAuthenticated && (
+          {isAuthenticated && (
           <Header 
             toggleSidebar={() => setSidebarCollapsed(prev => !prev)} 
             onLogout={handleLogout}
             username={currentUser?.username}
+            profileImageUrl={currentUser?.profileimageurl}
           />
         )}
         <main className="flex-1 overflow-auto p-4">
