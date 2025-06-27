@@ -246,7 +246,7 @@ const TopButtonsRow = ({
 
   return (
     <div className="w-full bg-gradient-to-br from-white to-sky-50 border-b border-gray-200 shadow-sm mb-7">
-      <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="py-3 px-5 flex flex-col justify-between md:flex-row md:items-center md:justify-between gap-4">
         {/* Navigation Dropdown */}
         <div className="flex items-center gap-3">
           <label htmlFor="url_select" className="sr-only">
@@ -284,45 +284,16 @@ const TopButtonsRow = ({
   
         {/* Main Actions */}
                 
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-4">
           {/* Create new question - only show in questions view */}
-          {(currentView === 'questions' || !currentView) && (
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-md bg-gray-200 text-black px-4 py-2 font-semibold shadow hover:bg-gray-300 transition-colors duration-200"
-                onClick={handleCreateQuestion}
-              >
-                <Plus size={18} />
-                Create a new question ...
-              </button>
-        
-              {/* Show question text selector */}
-              <div className="flex items-center gap-2">
-                <label htmlFor="qbshowtext" className="text-gray-700 text-sm font-medium">
-                  Show question text?
-                </label>
-                <select
-                  id="qbshowtext"
-                  name="qbshowtext"
-                  className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                  value={showQuestionText ? "1" : "0"}
-                  onChange={(e) => handleQuestionTextChange(e.target.value)}
-                >
-                  <option value="0">No</option>
-                  <option value="1">Yes, text only</option>
-                  <option value="2">Yes, with images, media, etc.</option>
-                </select>
-              </div>
-            </div>
-          )}
+          
         
           {/* Open Categories Modal Button */}
           {(currentView === 'questions' || !currentView) && (
             <button
               type="button"
               onClick={() => setShowCategoriesModal(true)}
-              className="inline-flex items-center gap-2 rounded-md bg-sky-600 text-black px-4 py-2 font-semibold shadow hover:bg-sky-700 transition"
+              className="inline-flex text-white items-center gap-2 rounded-md bg-sky-600 text-black px-4 py-2 font-semibold shadow hover:bg-sky-700 transition"
             >
               <FolderOpen size={18} />
               Open Categories
@@ -331,17 +302,17 @@ const TopButtonsRow = ({
           )}
         
           {/* Import Button - show in questions view */}
-          {(currentView === 'questions' || !currentView) && (
+          {/* {(currentView === 'questions' || !currentView) && (
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-md bg-sky-600 text-black px-4 py-2 font-semibold shadow hover:bg-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-white inline-flex items-center gap-2 rounded-md bg-sky-600 text-black px-4 py-2 font-semibold shadow hover:bg-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleImportClick}
               disabled={isImporting}
             >
               <Upload size={18} />
               {isImporting ? 'Importing...' : 'Import Questions'}
             </button>
-          )}
+          )} */}
         
           {/* Hidden file input */}
           <input
@@ -356,7 +327,7 @@ const TopButtonsRow = ({
       </div>
 
       {/* Status Message */}
-      {importStatus && (
+      {/* {importStatus && (
         <div
           className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-md shadow-lg flex items-center gap-2 text-white font-semibold transition-all duration-300
             ${importStatus.type === 'info' ? 'bg-blue-600' : ''}
@@ -375,7 +346,7 @@ const TopButtonsRow = ({
             ×
           </button>
         </div>
-      )}
+      )} */}
     </div>
   );
 };

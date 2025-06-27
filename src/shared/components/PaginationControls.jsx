@@ -1,371 +1,239 @@
+// /Users/piseytep/Desktop/ReactJs/moodleQB/moodle/src/shared/components/PaginationControls.jsx
+
 import React from 'react';
 
-const PaginationControls = ({ 
-  currentPage, 
-  setCurrentPage, 
-  startIdx, 
-  endIdx, 
-  totalQuestions, 
-  questionsPerPage = 10 
-}) => {
-  const totalPages = Math.ceil(totalQuestions / questionsPerPage) || 1;
+//  FIXED: Simple SVG icons instead of @heroicons/react
+const ChevronLeftIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+  </svg>
+);
 
-  // Generate page numbers with ellipsis logic
-  const getPageNumbers = () => {
+const ChevronRightIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+  </svg>
+);
+
+const PaginationControls = ({
+  currentPage,
+  totalPages,
+  totalItems,
+  itemsPerPage,
+  onPageChange,
+  onItemsPerPageChange,
+  isLoading = false,
+  className = ''
+}) => {
+  //  FIXED: Handle edge cases based on your API structure
+  const safeTotalPages = Math.max(1, totalPages || 1);
+  const safeCurrentPage = Math.max(1, Math.min(currentPage || 1, safeTotalPages));
+  const safeTotalItems = Math.max(0, totalItems || 0);
+  const safeItemsPerPage = Math.max(1, itemsPerPage || 5);
+
+  //  FIXED: Calculate display info based on your API response structure
+  // Your API returns: { current_page: 1, per_page: 5, total: 39, last_page: 8 }
+  const startItem = safeTotalItems === 0 ? 0 : (safeCurrentPage - 1) * safeItemsPerPage + 1;
+  const endItem = Math.min(safeCurrentPage * safeItemsPerPage, safeTotalItems);
+
+  // FIXED: Generate page numbers with smart truncation
+  const generatePageNumbers = () => {
     const pages = [];
-    const maxPagesToShow = 7; // Reduced for better mobile experience
+    const maxVisible = 7; // Show max 7 page numbers
     
-    if (totalPages <= maxPagesToShow) {
+    if (safeTotalPages <= maxVisible) {
       // Show all pages if total is small
-      for (let i = 1; i <= totalPages; i++) {
+      for (let i = 1; i <= safeTotalPages; i++) {
         pages.push(i);
       }
     } else {
-      // Always show first page
-      pages.push(1);
-      
-      if (currentPage <= 4) {
+      // Smart pagination with ellipsis
+      if (safeCurrentPage <= 4) {
         // Near beginning: 1 2 3 4 5 ... last
-        for (let i = 2; i <= 5; i++) {
+        for (let i = 1; i <= 5; i++) {
           pages.push(i);
         }
-        pages.push('ellipsis-end');
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 3) {
-        // Near end: 1 ... n-4 n-3 n-2 n-1 n
-        pages.push('ellipsis-start');
-        for (let i = totalPages - 4; i <= totalPages; i++) {
-          pages.push(i);
+        if (safeTotalPages > 6) {
+          pages.push('...');
+          pages.push(safeTotalPages);
+        }
+      } else if (safeCurrentPage >= safeTotalPages - 3) {
+        // Near end: 1 ... last-4 last-3 last-2 last-1 last
+        pages.push(1);
+        if (safeTotalPages > 6) {
+          pages.push('...');
+        }
+        for (let i = safeTotalPages - 4; i <= safeTotalPages; i++) {
+          if (i > 1) pages.push(i);
         }
       } else {
-        // In middle: 1 ... current-1 current current+1 ... last
-        pages.push('ellipsis-start');
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+        // Middle: 1 ... current-1 current current+1 ... last
+        pages.push(1);
+        pages.push('...');
+        for (let i = safeCurrentPage - 1; i <= safeCurrentPage + 1; i++) {
           pages.push(i);
         }
-        pages.push('ellipsis-end');
-        pages.push(totalPages);
+        pages.push('...');
+        pages.push(safeTotalPages);
       }
     }
     
     return pages;
   };
 
-  const pageNumbers = getPageNumbers();
-
+  //  FIXED: Handle page change with validation
   const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
+    if (isLoading) return;
+    
+    const newPage = Math.max(1, Math.min(page, safeTotalPages));
+    if (newPage !== safeCurrentPage && onPageChange) {
+      console.log(` Pagination: Changing from page ${safeCurrentPage} to ${newPage}`);
+      onPageChange(newPage);
     }
   };
 
-  // Keyboard navigation
-  const handleKeyDown = (e, page) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handlePageChange(page);
-    }
+  //  FIXED: Handle items per page change
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    if (isLoading || !onItemsPerPageChange) return;
+    
+    const validItemsPerPage = Math.max(1, parseInt(newItemsPerPage) || 5);
+    console.log(` Pagination: Changing items per page to ${validItemsPerPage}`);
+    onItemsPerPageChange(validItemsPerPage);
   };
 
-  const PaginationButton = ({ page, isActive, isDisabled, children, ariaLabel, onClick }) => (
-    <button
-      className={`
-        pagination-btn
-        ${isActive ? 'active' : ''}
-        ${isDisabled ? 'disabled' : ''}
-      `}
-      onClick={onClick}
-      disabled={isDisabled}
-      aria-label={ariaLabel}
-      aria-current={isActive ? 'page' : undefined}
-      onKeyDown={(e) => !isDisabled && handleKeyDown(e, page)}
-    >
-      {children}
-    </button>
-  );
-
-  if (totalQuestions === 0) {
+  //  FIXED: Don't render if no data
+  if (safeTotalItems === 0) {
     return (
-      <div className="pagination-container">
-        <style jsx>{`
-          .pagination-container {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            padding: 1.5rem;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-top: 1px solid #dee2e6;
-            border-radius: 0 0 8px 8px;
-          }
-
-          .question-info {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 2rem;
-            background: white;
-            border: 1px solid #e9ecef;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          }
-
-          .info-text {
-            color: #6c757d;
-            font-size: 1rem;
-            font-weight: 500;
-            text-align: center;
-          }
-        `}</style>
-        <div className="question-info">
-          <span className="info-text">No questions found</span>
-        </div>
+      <div className={`flex items-center justify-center py-4 text-gray-500 ${className}`}>
+        <span className="text-sm">No items to display</span>
       </div>
     );
   }
 
+  const pageNumbers = generatePageNumbers();
+
   return (
-    <div className="pagination-container">
-      <style jsx>{`
-        .pagination-container {
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
-          padding: 1.5rem;
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-          border-top: 1px solid #dee2e6;
-          border-radius: 0 0 8px 8px;
-        }
+    <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-2 bg-white border-t border-gray-200 ${className}`}>
+      {/*  Items Info - Left Side */}
+      <div className="flex items-center gap-4">
+        <div className="text-sm text-gray-700">
+          <span className="font-medium">
+            Showing {startItem.toLocaleString()}-{endItem.toLocaleString()}
+          </span>
+          <span className="mx-1">of</span>
+          <span className="font-medium">{safeTotalItems.toLocaleString()}</span>
+          <span className="ml-1">results</span>
+        </div>
 
-        .pagination-wrapper {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 0.5rem;
-        }
+        {/*  Items Per Page Selector */}
+        <div className="flex items-center gap-2">
+          <label htmlFor="itemsPerPage" className="text-sm text-gray-600">
+            Show:
+          </label>
+          <select
+            id="itemsPerPage"
+            value={safeItemsPerPage}
+            onChange={(e) => handleItemsPerPageChange(e.target.value)}
+            disabled={isLoading}
+            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </div>
+      </div>
 
-        .pagination-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-width: 2.5rem;
-          height: 2.5rem;
-          padding: 0.5rem;
-          background: white;
-          border: 1px solid #dee2e6;
-          border-radius: 6px;
-          color: #495057;
-          font-size: 0.875rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          text-decoration: none;
-          user-select: none;
-        }
+      {/*  Pagination Controls - Right Side */}
+      <div className="flex items-center gap-2">
+        {/* Previous Button */}
+        <button
+          onClick={() => handlePageChange(safeCurrentPage - 1)}
+          disabled={safeCurrentPage <= 1 || isLoading}
+          className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-500 transition-colors"
+          title="Previous page"
+        >
+          <ChevronLeftIcon />
+          <span className="ml-1">Previous</span>
+        </button>
 
-        .pagination-btn:hover:not(.disabled) {
-          background: #e9ecef;
-          border-color: #adb5bd;
-          transform: translateY(-1px);
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .pagination-btn:active:not(.disabled) {
-          transform: translateY(0);
-          box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-
-        .pagination-btn.active {
-          background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-          border-color: #0056b3;
-          color: white;
-          box-shadow: 0 2px 4px rgba(0,123,255,0.25);
-        }
-
-        .pagination-btn.active:hover {
-          background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
-          transform: none;
-        }
-
-        .pagination-btn.disabled {
-          background: #f8f9fa;
-          border-color: #e9ecef;
-          color: #6c757d;
-          cursor: not-allowed;
-          opacity: 0.6;
-        }
-
-        .ellipsis {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-width: 2.5rem;
-          height: 2.5rem;
-          color: #6c757d;
-          font-weight: bold;
-        }
-
-        .question-info {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 1rem;
-          padding: 1rem;
-          background: white;
-          border: 1px solid #e9ecef;
-          border-radius: 6px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .info-text {
-          color: #495057;
-          font-size: 0.875rem;
-          font-weight: 500;
-        }
-
-        .page-info {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          color: #6c757d;
-          font-size: 0.875rem;
-        }
-
-        .page-badge {
-          background: #e9ecef;
-          color: #495057;
-          padding: 0.25rem 0.5rem;
-          border-radius: 4px;
-          font-weight: 500;
-          font-size: 0.75rem;
-        }
-
-        .nav-buttons {
-          display: flex;
-          gap: 0.25rem;
-        }
-
-        .nav-btn {
-          min-width: 2.5rem;
-          font-size: 1rem;
-        }
-
-        @media (max-width: 768px) {
-          .pagination-container {
-            padding: 1rem;
-          }
-          
-          .pagination-btn {
-            min-width: 2.25rem;
-            height: 2.25rem;
-            font-size: 0.8rem;
-          }
-          
-          .question-info {
-            flex-direction: column;
-            text-align: center;
-            gap: 0.5rem;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .pagination-wrapper {
-            gap: 0.25rem;
-          }
-          
-          .pagination-btn {
-            min-width: 2rem;
-            height: 2rem;
-            font-size: 0.75rem;
-          }
-        }
-      `}</style>
-
-      {totalPages > 1 && (
-        <div className="pagination-wrapper" role="navigation" aria-label="Pagination Navigation">
-          <div className="nav-buttons">
-            <PaginationButton
-              page={1}
-              isDisabled={currentPage === 1}
-              ariaLabel="Go to first page"
-              onClick={() => handlePageChange(1)}
-            >
-              ⟪
-            </PaginationButton>
-            
-            <PaginationButton
-              page={currentPage - 1}
-              isDisabled={currentPage === 1}
-              ariaLabel="Go to previous page"
-              onClick={() => handlePageChange(currentPage - 1)}
-            >
-              ⟨
-            </PaginationButton>
-          </div>
-
-          {pageNumbers.map((pageNum, index) => {
-            if (pageNum === 'ellipsis-start' || pageNum === 'ellipsis-end') {
+        {/* Page Numbers */}
+        <div className="hidden sm:flex items-center gap-1">
+          {pageNumbers.map((page, index) => {
+            if (page === '...') {
               return (
-                <div key={`ellipsis-${index}`} className="ellipsis" aria-hidden="true">
-                  ⋯
-                </div>
+                <span
+                  key={`ellipsis-${index}`}
+                  className="px-3 py-2 text-sm text-gray-500"
+                >
+                  ...
+                </span>
               );
             }
-            
+
+            const isCurrentPage = page === safeCurrentPage;
+
             return (
-              <PaginationButton
-                key={pageNum}
-                page={pageNum}
-                isActive={currentPage === pageNum}
-                ariaLabel={`Go to page ${pageNum}`}
-                onClick={() => handlePageChange(pageNum)}
+              <button
+                key={page}
+                onClick={() => handlePageChange(page)}
+                disabled={isLoading}
+                className={`
+                  inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors
+                  ${isCurrentPage
+                    ? 'bg-blue-600 text-white border border-blue-600 cursor-default'
+                    : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed'
+                  }
+                `}
+                aria-current={isCurrentPage ? 'page' : undefined}
+                title={`Go to page ${page}`}
               >
-                {pageNum}
-              </PaginationButton>
+                {page}
+              </button>
             );
           })}
+        </div>
 
-          <div className="nav-buttons">
-            <PaginationButton
-              page={currentPage + 1}
-              isDisabled={currentPage >= totalPages}
-              ariaLabel="Go to next page"
-              onClick={() => handlePageChange(currentPage + 1)}
-            >
-              ⟩
-            </PaginationButton>
-            
-            <PaginationButton
-              page={totalPages}
-              isDisabled={currentPage >= totalPages}
-              ariaLabel="Go to last page"
-              onClick={() => handlePageChange(totalPages)}
-            >
-              ⟫
-            </PaginationButton>
+        {/* Mobile Page Indicator */}
+        <div className="sm:hidden text-sm text-gray-700 px-3 py-2">
+          Page {safeCurrentPage} of {safeTotalPages}
+        </div>
+
+        {/* Next Button */}
+        <button
+          onClick={() => handlePageChange(safeCurrentPage + 1)}
+          disabled={safeCurrentPage >= safeTotalPages || isLoading}
+          className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-500 transition-colors"
+          title="Next page"
+        >
+          <span className="mr-1">Next</span>
+          <ChevronRightIcon />
+        </button>
+      </div>
+
+      {/* Loading Indicator */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            Loading...
           </div>
         </div>
       )}
-
-      <div className="question-info">
-        <span className="info-text">
-          Showing <strong>{totalQuestions === 0 ? 0 : startIdx + 1}</strong> to{' '}
-          <strong>{Math.min(endIdx, totalQuestions)}</strong> of{' '}
-          <strong>{totalQuestions}</strong> questions
-        </span>
-        
-        {totalPages > 1 && (
-          <div className="page-info">
-            <span>Page</span>
-            <span className="page-badge">{currentPage}</span>
-            <span>of</span>
-            <span className="page-badge">{totalPages}</span>
-          </div>
-        )}
-      </div>
     </div>
   );
+};
+
+//  FIXED: Prop validation with exact API structure
+PaginationControls.defaultProps = {
+  currentPage: 1,
+  totalPages: 1,
+  totalItems: 0,
+  itemsPerPage: 5,
+  isLoading: false,
+  className: ''
 };
 
 export default PaginationControls;

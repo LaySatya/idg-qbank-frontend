@@ -18,7 +18,7 @@ const CategoriesComponent = ({
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState(new Set());
   const [categories, setCategories] = useState([]);
-  const [coursesMap, setCoursesMap] = useState(new Map()); // Map categoryId -> courses
+  const [coursesMap, setCoursesMap] = useState(new Map()); 
   const [searchTerm, setSearchTerm] = useState('');
   const [success, setSuccess] = useState(null);
   const [viewMode, setViewMode] = useState('categories');
@@ -642,9 +642,9 @@ const CategoriesComponent = ({
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Course Categories & Courses</h2>
-                <p className="text-sm text-gray-600">
+                {/* <p className="text-sm text-gray-600">
                   Select a category to view its courses, then choose a course to filter questions
-                </p>
+                </p> */}
               </div>
               <div className="flex items-center gap-2">
                 {selectedCategory && (
@@ -714,17 +714,17 @@ const CategoriesComponent = ({
                 <div className="flex gap-2">
                   {selectedCategory && (
                     <>
-                      <button
+                      {/* <button
                         onClick={() => handleRefreshCourses(selectedCategory)}
                         disabled={loadingStates.courses.has(selectedCategory)}
                         className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-sm transition-colors flex items-center gap-1"
                       >
                         <RefreshCw size={14} className={loadingStates.courses.has(selectedCategory) ? 'animate-spin' : ''} />
                         Refresh Courses
-                      </button>
+                      </button> */}
                       <button
                         onClick={handleClearSelection}
-                        className="bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1 rounded text-sm transition-colors"
+                        className="bg-red-500 text-black hover:bg-red px-3 py-1 rounded text-sm transition-colors"
                       >
                         Clear Selection
                       </button>
@@ -814,7 +814,7 @@ const CategoriesComponent = ({
               }
             </div>
             <div className="flex items-center gap-3">
-              <button
+              {/* <button
                 onClick={() => {
                   if (setFilters) setFilters({ category: 'All', status: 'All', type: 'All', courseId: null });
                   if (onNavigateToQuestions) onNavigateToQuestions();
@@ -824,7 +824,7 @@ const CategoriesComponent = ({
               >
                 <Eye size={14} />
                 View All Questions
-              </button>
+              </button> */}
               <button
                 onClick={onClose}
                 className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
@@ -842,33 +842,18 @@ const CategoriesComponent = ({
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
             <div className="text-center mb-6">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
-                <GraduationCap className="h-6 w-6 text-blue-600" />
+                <BookOpen className="h-6 w-6 text-blue-600" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Navigate to Question Categories?
+              <h3 className="text-lg font-medium text-gray-900 mb-2 ">
+                Let's go to QuestionCategories!!!
               </h3>
               <p className="text-sm text-gray-600">
-                You've selected <strong>"{pendingCourseSelection.name}"</strong>. 
-                Do you want to proceed to view questions from this course?
+                You are in <strong>"{pendingCourseSelection.name}"</strong>. 
+               
               </p>
             </div>
 
-            {/* <div className="bg-sky-50 rounded-lg p-4 mb-6">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  <AlertCircle className="h-5 w-5 text-blue-400" />
-                </div>
-                <div className="ml-3">
-                  <h4 className="text-sm font-medium text-blue-800">What happens next:</h4>
-                  <ul className="mt-2 text-sm text-blue-700 list-disc list-inside space-y-1">
-                    <li>Load questions from this specific course</li>
-                    <li>Apply course-specific filters</li>
-                    <li>Save this as your preferred course</li>
-                    <li>Navigate to the questions view</li>
-                  </ul>
-                </div>
-              </div>
-            </div> */}
+        
 
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -898,11 +883,7 @@ const CategoriesComponent = ({
               </button>
             </div>
 
-            <div className="mt-4 text-center">
-              <p className="text-xs text-gray-500">
-                This selection will be saved as your default course
-              </p>
-            </div>
+            
           </div>
         </div>
       )}

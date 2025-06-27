@@ -3,6 +3,27 @@
 // ============================================================================
 // const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
+export const validateEnvironmentConfig = () => {
+  const requiredEnvVars = [
+    'VITE_API_BASE_URL'
+  ];
+  
+  const missing = requiredEnvVars.filter(varName => !import.meta.env[varName]);
+  
+  if (missing.length > 0) {
+    console.error(' Missing required environment variables:', missing);
+    console.error('Please check your .env file contains:');
+    missing.forEach(varName => {
+      console.error(`${varName}=http://127.0.0.1:8000/api`);
+    });
+    return false;
+  }
+  
+  console.log(' Environment configuration is valid');
+  console.log(' API Base URL:', import.meta.env.VITE_API_BASE_URL);
+  return true;
+};
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 
@@ -183,32 +204,189 @@ export const questionAPI = {
     }
   },
 
-  // Bulk tag operations
-  async bulkTagOperations(questionIds, tagIds, operation = 'add') {
-    try {
-      console.log(` Bulk ${operation} tags:`, { questionIds, tagIds });
-      
-      const url = `${API_BASE_URL}/questions/bulk-tags`;
-      const method = operation === 'add' ? 'POST' : 'DELETE';
-      
-      const response = await fetch(url, {
-        method,
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          questionids: questionIds,
-          tagids: tagIds
-        })
-      });
-      
-      const data = await handleAPIResponse(response);
-      console.log(` Bulk ${operation} tags successful:`, data);
-      
-      return data;
-    } catch (error) {
-      console.error(` Bulk ${operation} tags failed:`, error);
-      throw error;
+async getTagsForMultipleQuestions(questionIds) {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('Authentication required');
+
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+    const results = {};
+    
+    // Your API doesn't have batch endpoint, so fetch individually
+    for (const questionId of questionIds) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/questions/question-tags?questionid=${questionId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Your API returns: { questionid: 99235, tags: [] }
+          results[questionId] = data.tags || [];
+        } else {
+          results[questionId] = [];
+        }
+      } catch (error) {
+        console.error(`Error fetching tags for question ${questionId}:`, error);
+        results[questionId] = [];
+      }
     }
-  },
+
+    return results;
+  } catch (err) {
+    console.error('Error in batch tag fetching:', err);
+    return {};
+  }
+},
+
+
+//  IMPROVED: Enhanced individual tag fetching
+async getQuestionTags(questionId) {
+  try {
+    console.log(` Fetching tags for question ${questionId}...`);
+    
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+    const response = await fetch(`${API_BASE_URL}/questions/question-tags?questionid=${questionId}`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    
+    const data = await handleAPIResponse(response);
+    console.log(` Tags for question ${questionId}:`, data);
+    
+    // Handle different response formats
+    let tags = [];
+    if (Array.isArray(data.tags)) {
+      tags = data.tags;
+    } else if (Array.isArray(data.questiontags)) {
+      tags = data.questiontags;
+    } else if (Array.isArray(data)) {
+      tags = data;
+    }
+
+    // Normalize tag format
+    return tags.map(tag => {
+      if (typeof tag === 'string') {
+        return {
+          id: tag,
+          name: tag,
+          rawname: tag,
+          isstandard: false
+        };
+      } else if (typeof tag === 'object' && tag !== null) {
+        return {
+          id: tag.id || tag.name || tag.rawname,
+          name: tag.name || tag.rawname || tag.text || tag.value,
+          rawname: tag.rawname || tag.name || tag.text || tag.value,
+          isstandard: tag.isstandard || false,
+          // Include any additional properties from your API
+          description: tag.description || '',
+          flag: tag.flag || 0
+        };
+      }
+      return null;
+    }).filter(Boolean);
+
+  } catch (error) {
+    console.error(` Failed to fetch tags for question ${questionId}:`, error);
+    return [];
+  }
+},
+
+//  IMPROVED: Enhanced getTags method for better performance
+async getTags() {
+  try {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+    const response = await fetch(`${API_BASE_URL}/questions/tags`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    
+    const data = await handleAPIResponse(response);
+    
+    // Your API returns array directly: [{ id: 36, name: "c1", rawname: "c1", ... }]
+    if (Array.isArray(data)) {
+      return data.map(tag => ({
+        id: tag.id,
+        name: tag.name,
+        rawname: tag.rawname,
+        isstandard: tag.isstandard || false,
+        description: tag.description || '',
+        flag: tag.flag || 0
+      }));
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Failed to fetch tags:', error);
+    return [];
+  }
+},
+
+//  NEW: Cache management for tags
+clearTagCache() {
+  // If you're using any tag caching, clear it here
+  console.log('🗑️ Clearing tag cache');
+  // Implementation depends on your caching strategy
+},
+//  NEW: Bulk tag operations with proper error handling
+async bulkTagOperations(questionIds, tagIds, operation = 'add') {
+  try {
+    console.log(` Bulk ${operation} tags:`, { questionIds, tagIds });
+    
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+    const url = `${API_BASE_URL}/questions/bulk-tags`;
+    const method = operation === 'add' ? 'POST' : 'DELETE';
+    
+    const response = await fetch(url, {
+      method,
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        questionids: questionIds,
+        tagids: tagIds
+      })
+    });
+    
+    const data = await handleAPIResponse(response);
+    console.log(` Bulk ${operation} tags successful:`, data);
+    
+    return data;
+  } catch (error) {
+    console.error(` Bulk ${operation} tags failed:`, error);
+    throw error;
+  }
+},
+
+  // // Bulk tag operations
+  // async bulkTagOperations(questionIds, tagIds, operation = 'add') {
+  //   try {
+  //     console.log(` Bulk ${operation} tags:`, { questionIds, tagIds });
+      
+  //     const url = `${API_BASE_URL}/questions/bulk-tags`;
+  //     const method = operation === 'add' ? 'POST' : 'DELETE';
+      
+  //     const response = await fetch(url, {
+  //       method,
+  //       headers: getAuthHeaders(),
+  //       body: JSON.stringify({
+  //         questionids: questionIds,
+  //         tagids: tagIds
+  //       })
+  //     });
+      
+  //     const data = await handleAPIResponse(response);
+  //     console.log(` Bulk ${operation} tags successful:`, data);
+      
+  //     return data;
+  //   } catch (error) {
+  //     console.error(` Bulk ${operation} tags failed:`, error);
+  //     throw error;
+  //   }
+  // },
 
   // Get all categories
   async getCategories() {
@@ -231,6 +409,7 @@ export const questionAPI = {
       return [{ value: 1, label: 'Default Category' }];
     }
   },
+
 
   // Get question types
   async getQuestionTypes() {
@@ -342,8 +521,10 @@ export const questionAPI = {
     params.append('categoryid', filters.categoryId);
     if (filters.status && filters.status !== 'All') params.append('status', filters.status.toLowerCase());
     if (filters.type && filters.type !== 'All') params.append('qtype', filters.type);
-    if (filters.searchQuery) params.append('searchterm', filters.searchQuery.trim());
-    
+ if (filters.tag && Array.isArray(filters.tag) && filters.tag.length > 0 && !filters.tag.includes('All')) {
+  filters.tag.forEach(tag => params.append('tags[]', tag));
+}
+
     try {
       const response = await fetch(`${API_BASE_URL}/questions/filters?${params}`, {
         method: 'GET',

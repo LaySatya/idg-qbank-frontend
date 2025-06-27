@@ -2,7 +2,7 @@
 // src/features/questions/pages/QuestionBank.jsx - FIXED VERSION
 // Fixed API URLs and Question Category Filtering
 // ============================================================================
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 // CORRECTED IMPORTS
 import { useQuestionBank } from '../../../shared/hooks/useQuestionBank';
@@ -19,7 +19,7 @@ import Modals from '../../../shared/components/Modals';
 import CategoriesComponent from '../../../shared/components/CategoriesComponent';
 import { EDIT_COMPONENTS, BULK_EDIT_COMPONENTS } from '../../../shared/constants/questionConstants';
 import { Toaster, toast } from 'react-hot-toast';
-
+import PaginationControls from '../../../shared/components/PaginationControls';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 // ============================================================================
@@ -131,17 +131,14 @@ const transformQuestion = (apiQuestion, courseId) => ({
   title: apiQuestion.name || `Question ${apiQuestion.id}`,
   questionText: apiQuestion.questiontext || '',
   qtype: apiQuestion.qtype || 'multichoice',
-  questionType: apiQuestion.qtype || 'multichoice',
   status: apiQuestion.status || 'ready',
   version: `v${apiQuestion.version || 1}`,
-  comments: 0,
-  usage: 0,
-  lastUsed: '-',
+  
+  //  FIXED: Handle your exact API structure
   createdBy: {
     name: apiQuestion.createdbyuser ? 
       `${apiQuestion.createdbyuser.firstname} ${apiQuestion.createdbyuser.lastname}` : 
       'Unknown',
-    role: '',
     date: apiQuestion.timecreated ? 
       new Date(apiQuestion.timecreated * 1000).toLocaleDateString() : 
       ''
@@ -150,17 +147,37 @@ const transformQuestion = (apiQuestion, courseId) => ({
     name: apiQuestion.modifiedbyuser ? 
       `${apiQuestion.modifiedbyuser.firstname} ${apiQuestion.modifiedbyuser.lastname}` : 
       'Unknown',
-    role: '',
     date: apiQuestion.timemodified ? 
       new Date(apiQuestion.timemodified * 1000).toLocaleDateString() : 
       ''
   },
-  choices: apiQuestion.answers || [],
+  
+  //  FIXED: Your API returns answers array, map to choices
+  choices: (apiQuestion.answers || []).map(answer => ({
+    id: answer.id,
+    text: answer.answer,
+    isCorrect: answer.fraction > 0,
+    feedback: answer.feedback || ''
+  })),
+  
+  //  FIXED: Your API returns empty tags array initially
   tags: apiQuestion.tags || [],
-  idNumber: apiQuestion.id,
-  categoryId: apiQuestion.category || apiQuestion.categoryid || apiQuestion.category_id,
-  categoryName: apiQuestion.category_name || apiQuestion.categoryname || '',
-  courseId: courseId || apiQuestion.courseid || apiQuestion.course_id || apiQuestion.contextid,
+  
+  //  FIXED: Map your category structure
+  categoryId: apiQuestion.category,
+  categoryName: apiQuestion.category_name || '',
+  contextid: apiQuestion.contextid,
+  
+  //  FIXED: Map usage data
+  usage: (apiQuestion.usages || []).length,
+  lastUsed: apiQuestion.usages && apiQuestion.usages.length > 0 ? 'Recently' : 'Never',
+  comments: 0,
+  
+  // Additional fields from your API
+  stamp: apiQuestion.stamp,
+  versionid: apiQuestion.versionid,
+  questionbankentryid: apiQuestion.questionbankentryid,
+  idnumber: apiQuestion.idnumber || apiQuestion.id
 });
 
 // ============================================================================
@@ -196,7 +213,7 @@ class QuestionFilterService {
         return { success: false, reason: 'No valid category IDs' };
       }
   
-      // Build params
+      // Build params with pagination
       const filterParams = this.buildFilterParams(filters);
       const paramsObj = {
         page: page.toString(),
@@ -204,16 +221,7 @@ class QuestionFilterService {
         ...filterParams
       };
   
-      // Only add categoryids if filtering ALL categories
-      // if (
-      //   (!filters.category || filters.category === 'All') &&
-      //   categoryIds.length > 0
-      // ) {
-      //   paramsObj.categoryids = categoryIds.join(',');
-      // }
-  
       const params = new URLSearchParams(paramsObj);
-  
       const questionsUrl = `${API_BASE_URL}/questions/filters?${params}`;
       const questionsData = await this.apiClient.request(questionsUrl);
   
@@ -231,87 +239,91 @@ class QuestionFilterService {
     }
   }
 
-  // Strategy 2: Direct filtering (medium speed)
-  // async fetchByDirectFilter(courseId, filters, page, perPage) {
-  //   try {
-  //     console.log(' Strategy 2: Direct filtering');
+
+// Strategy 2: Direct filtering (medium speed) - ADD THIS METHOD
+async fetchByDirectFilter(courseId, filters, page, perPage) {
+    try {
+      console.log('Strategy 2: Direct filtering');
       
-  //     const params = new URLSearchParams({
-  //       page: page.toString(),
-  //       per_page: perPage.toString(),
-  //       courseid: courseId.toString(),
-  //       ...this.buildFilterParams(filters)
-  //     });
+      const filterParams = this.buildFilterParams(filters);
+      const params = new URLSearchParams({
+        page: page.toString(),
+        per_page: perPage.toString(),
+        courseid: courseId.toString(),
+        ...filterParams
+      });
 
-  //     // FIXED: Correct API URL - single /api/
-  //     const questionsUrl = `${API_BASE_URL}/questions/filters?${params}`;
-  //     const questionsData = await this.apiClient.request(questionsUrl);
+      //  FIXED: Correct API URL
+      const questionsUrl = `${API_BASE_URL}/questions/filters?${params}`;
+      const questionsData = await this.apiClient.request(questionsUrl);
 
-  //     if (questionsData.questions && questionsData.questions.length > 0) {
-  //       return {
-  //         success: true,
-  //         data: questionsData,
-  //         method: 'direct'
-  //       };
-  //     }
+      if (questionsData.questions && questionsData.questions.length > 0) {
+        return {
+          success: true,
+          data: questionsData,
+          method: 'direct'
+        };
+      }
 
-  //     return { success: false, reason: 'No questions found' };
-  //   } catch (error) {
-  //     return { success: false, reason: error.message };
-  //   }
-  // }
+      return { success: false, reason: 'No questions found' };
+    } catch (error) {
+      return { success: false, reason: error.message };
+    }
+  }
+
 
   // Strategy 3: General with client-side filtering (slowest but most reliable)
-  // async fetchWithClientFilter(courseId, filters, page, perPage) {
-  //   try {
-  //     console.log(' Strategy 3: Client-side filtering');
+ async fetchWithClientFilter(courseId, filters, page, perPage) {
+    try {
+      console.log(' Strategy 3: Client-side filtering');
       
-  //     // Get more questions to filter from
-  //     const params = new URLSearchParams({
-  //       page: '1',
-  //       per_page: '100', // Get larger batch
-  //       ...this.buildFilterParams(filters)
-  //     });
+      // Get more questions to filter from
+      const filterParams = this.buildFilterParams(filters);
+      const params = new URLSearchParams({
+        page: '1',
+        per_page: '100', // Get larger batch for client filtering
+        ...filterParams
+      });
 
-  //     // FIXED: Correct API URL - single /api/
-  //     const questionsUrl = `${API_BASE_URL}/questions/filters?${params}`;
-  //     const questionsData = await this.apiClient.request(questionsUrl);
+      const questionsUrl = `${API_BASE_URL}/questions/filters?${params}`;
+      const questionsData = await this.apiClient.request(questionsUrl);
 
-  //     if (!questionsData.questions || questionsData.questions.length === 0) {
-  //       return { success: false, reason: 'No questions available' };
-  //     }
+      if (!questionsData.questions || questionsData.questions.length === 0) {
+        return { success: false, reason: 'No questions available' };
+      }
 
-  //     // Filter by course on client side
-  //     const courseQuestions = questionsData.questions.filter(q => {
-  //       const qCourseId = q.courseid || q.course_id || q.contextid;
-  //       return qCourseId == courseId;
-  //     });
+      // Filter by course on client side
+      const courseQuestions = questionsData.questions.filter(q => {
+        const qCourseId = q.courseid || q.course_id || q.contextid;
+        return qCourseId == courseId;
+      });
 
-  //     if (courseQuestions.length === 0) {
-  //       // Fallback: create virtual assignment
-  //       return this.createVirtualAssignment(courseId, questionsData.questions, page, perPage);
-  //     }
+      if (courseQuestions.length === 0) {
+        // Fallback: create virtual assignment
+        return this.createVirtualAssignment(courseId, questionsData.questions, page, perPage);
+      }
 
-  //     // Apply pagination
-  //     const startIdx = (page - 1) * perPage;
-  //     const paginatedQuestions = courseQuestions.slice(startIdx, startIdx + perPage);
+      // Apply pagination
+      const startIdx = (page - 1) * perPage;
+      const paginatedQuestions = courseQuestions.slice(startIdx, startIdx + perPage);
 
-  //     return {
-  //       success: true,
-  //       data: {
-  //         questions: paginatedQuestions,
-  //         total: courseQuestions.length,
-  //         current_page: page,
-  //         per_page: perPage
-  //       },
-  //       method: 'client-filter'
-  //     };
-  //   } catch (error) {
-  //     return { success: false, reason: error.message };
-  //   }
-  // }
+      return {
+        success: true,
+        data: {
+          questions: paginatedQuestions,
+          total: courseQuestions.length,
+          current_page: page,
+          per_page: perPage
+        },
+        method: 'client-filter'
+      };
+    } catch (error) {
+      return { success: false, reason: error.message };
+    }
+  }
 
-  // Virtual assignment for courses without proper linking
+
+ // Virtual assignment for courses without proper linking
   createVirtualAssignment(courseId, allQuestions, page, perPage) {
     const courseInt = parseInt(courseId);
     let virtualQuestions = [];
@@ -373,37 +385,56 @@ class QuestionFilterService {
 
   //   return params;
   // }
-     buildFilterParams(filters) {
-      const params = {};
+
+  //  IMPROVED: buildFilterParams with better logic
+buildFilterParams(filters) {
+  const params = {};
+
+  if (filters.category && filters.category !== 'All') {
+    params.categoryid = filters.category;
+  }
+
+  if (filters.status && filters.status !== 'All') {
+    params.status = filters.status.toLowerCase();
+  }
+
+  if (filters.type && filters.type !== 'All') {
+    params.qtype = filters.type;
+  }
+
+  if (filters.searchQuery?.trim()) {
+    params.search = filters.searchQuery.trim();
+  }
+
+  //  ADD THIS BLOCK FOR TAG FILTERING:
+  if (filters.tagFilter && Array.isArray(filters.tagFilter) && filters.tagFilter.length > 0) {
+    // Option 1: Send as comma-separated string (most common)
+    params.tags = filters.tagFilter.join(',');
     
-      // Only use categoryids if present and category is 'All'
-      if (
-        filters.categoryIds &&
-        filters.categoryIds.length > 0 &&
-        (filters.category === 'All' || !filters.category)
-      ) {
-        params.categoryid = filters.categoryIds ? filters.categoryIds : localStorage.getItem('questionCategoryId');
-      } else if (filters.category && filters.category !== 'All') {
-        params.categoryid = filters.category;
-      }
+    // Option 2: If your backend expects individual tag parameters, use this instead:
+    // filters.tagFilter.forEach((tag, index) => {
+    //   params[`tags[${index}]`] = tag;
+    // });
     
-      if (filters.status && filters.status !== 'All') {
-        params.status = filters.status.toLowerCase();
-      }
-      if (filters.type && filters.type !== 'All') {
-        params.qtype = filters.type;
-      }
-      if (filters.searchQuery?.trim()) {
-        params.search = filters.searchQuery.trim();
-      }
-      if (filters.tagFilter && filters.tagFilter !== 'All') {
-        params.tag = filters.tagFilter;
-      }
-    
-      return params;
-    }
+    console.log(' Adding tag filter to API params:', params.tags);
+  }
+
+  return params;
 }
 
+
+
+
+}
+//  CRITICAL FIX 5: Performance monitoring
+const PerformanceMonitor = ({ questionsCount, loading, currentPage, totalPages }) => (
+  <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded mb-2">
+    Performance: {questionsCount} questions loaded | Page {currentPage}/{totalPages}
+    {loading ? ' |  Loading...' : ' |  Ready'}
+    | Last update: {new Date().toLocaleTimeString()}
+  </div>
+);
+export { QuestionFilterService };
 const questionFilterService = new QuestionFilterService(apiClient);
 
 // ============================================================================
@@ -413,7 +444,8 @@ const questionFilterService = new QuestionFilterService(apiClient);
 const QuestionBank = () => {
   // Navigation state
   const [currentView, setCurrentView] = useState('questions');
-
+ const fetchInProgressRef = useRef(false);
+  const lastFetchParamsRef = useRef(null);
   // State management using custom hooks
   const {
     questions,
@@ -439,8 +471,8 @@ const QuestionBank = () => {
   }));
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [tagFilter, setTagFilter] = useState('All');
-
+  const [tagFilter, setTagFilter] = useState([]); 
+const [debugInfo, setDebugInfo] = useState({});
   // Debounced search for better performance
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
@@ -466,22 +498,41 @@ const QuestionBank = () => {
   const [loadingQuestionCategories, setLoadingQuestionCategories] = useState(false);
 
   // Memoized tags calculation
-  const allTags = useMemo(() => {
-    const tagSet = new Set(['All']);
+ const allTags = useMemo(() => {
+  // Skip computation if no questions
+  if (!questions || questions.length === 0) {
+    console.log('⚡ Skipping tag computation - no questions');
+    return ['All'];
+  }
+
+  console.log(' Computing tags from questions:', questions.length);
+  
+  const tagSet = new Set(['All']);
+  
+  questions.forEach(question => {
+    if (Array.isArray(question.tags)) {
+      question.tags.forEach(tag => {
+        const tagName = typeof tag === 'string' ? tag : (tag?.name || tag?.text || tag?.tag || '');
+        if (tagName && tagName.trim()) {
+          tagSet.add(tagName.trim());
+        }
+      });
+    }
     
-    questions.forEach(question => {
-      if (Array.isArray(question.tags)) {
-        question.tags.forEach(tag => {
-          const tagName = typeof tag === 'string' ? tag : (tag?.name || tag?.text || '');
-          if (tagName && tagName.trim()) {
-            tagSet.add(tagName.trim());
-          }
-        });
-      }
-    });
-    
-    return Array.from(tagSet).sort();
-  }, [questions]);
+    if (question.questiontags && Array.isArray(question.questiontags)) {
+      question.questiontags.forEach(tag => {
+        const tagName = tag.name || tag.text || tag.tag || '';
+        if (tagName && tagName.trim()) {
+          tagSet.add(tagName.trim());
+        }
+      });
+    }
+  });
+  
+  const finalTags = Array.from(tagSet).sort();
+  console.log(' Final computed tags:', finalTags);
+  return finalTags;
+}, [questions?.length]);
 
   // Memoized filtered questions for better performance
   const filteredQuestions = useMemo(() => {
@@ -498,63 +549,120 @@ const QuestionBank = () => {
   // NEW: FETCH QUESTION CATEGORIES FOR COURSE
   // ============================================================================
 
-  const fetchQuestionCategoriesForCourse = useCallback(async (courseId) => {
-    if (!courseId || courseId === 'All') {
-      setQuestionCategories([]);
-      return;
+ 
+const fetchQuestionCategoriesForCourse = useCallback(async (courseId) => {
+  if (!courseId || courseId === 'All') {
+    setQuestionCategories([]);
+    return;
+  }
+
+  //  CHECK CACHE FIRST
+  const cacheKey = `categories-${courseId}`;
+  const cached = apiClient.cache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < 300000) { // 5 minutes
+    console.log('⚡ Using cached categories for course:', courseId);
+    setQuestionCategories(cached.data);
+    return;
+  }
+
+  try {
+    setLoadingQuestionCategories(true);
+    console.log(' Fetching question categories for course:', courseId);
+    
+    const categoriesUrl = `${API_BASE_URL}/questions/question_categories?courseid=${courseId}`;
+    const categoriesData = await apiClient.request(categoriesUrl);
+    
+    console.log(' Question categories response:', categoriesData);
+    
+    let categories = [];
+    if (Array.isArray(categoriesData)) {
+      categories = categoriesData;
+    } else if (categoriesData.categories) {
+      categories = categoriesData.categories;
     }
 
-    try {
-      setLoadingQuestionCategories(true);
-      console.log('Fetching question categories for course:', courseId);
-      
-      // FIXED: Correct API URL
-      const categoriesUrl = `${API_BASE_URL}/questions/question_categories?courseid=${courseId}`;
-      const categoriesData = await apiClient.request(categoriesUrl);
-      
-      console.log('Question categories response:', categoriesData);
-      
-      // Process categories
-      let categories = [];
-      if (Array.isArray(categoriesData)) {
-        categories = categoriesData;
-      } else if (categoriesData.categories) {
-        categories = categoriesData.categories;
-      }
+    const normalizedCategories = categories.map(cat => ({
+      id: cat.id,
+      name: cat.name,
+      contextid: cat.contextid,
+      parent: cat.parent,
+      sortorder: cat.sortorder,
+      info: cat.info || '',
+      infoformat: cat.infoformat || 0,
+      stamp: cat.stamp,
+      idnumber: cat.idnumber || ''
+    })).filter(cat => cat.id);
 
-      // Normalize categories
-      const normalizedCategories = categories.map(cat => ({
-        id: cat.id || cat.categoryid,
-        name: cat.name || cat.category_name || `Category ${cat.id}`,
-        questioncount: cat.questioncount || 0,
-        parent: cat.parent || 0,
-        contextid: cat.contextid || cat.context_id,
-        sortorder: cat.sortorder || 0
-      })).filter(cat => cat.id);
+    //  CACHE THE RESULT
+    apiClient.cache.set(cacheKey, {
+      data: normalizedCategories,
+      timestamp: Date.now()
+    });
 
-      setQuestionCategories(normalizedCategories);
-      
-      console.log(' Question categories loaded:', normalizedCategories.length);
-      toast.success(`Loaded ${normalizedCategories.length} question categories for course`);
-      
-    } catch (error) {
-      console.error(' Error fetching question categories:', error);
-      setQuestionCategories([]);
-      toast.error(`Failed to load question categories: ${error.message}`);
-    } finally {
-      setLoadingQuestionCategories(false);
-    }
-  }, []);
+    setQuestionCategories(normalizedCategories);
+    console.log(' Question categories loaded:', normalizedCategories.length);
+    
+  } catch (error) {
+    console.error('Error fetching question categories:', error);
+    setQuestionCategories([]);
+  } finally {
+    setLoadingQuestionCategories(false);
+  }
+}, []);
 
   // ============================================================================
   // OPTIMIZED API FUNCTIONS
   // ============================================================================
 
   // Main fetch function with multi-strategy approach
-const fetchQuestionsFromAPI = useCallback(async (currentFilters = {}, page = 1, perPage = questionsPerPage) => {
-  // Add this before every API call that uses filters
-  console.log('DEBUG FILTERS BEFORE API:', filters);
-  console.log(' OPTIMIZED API FETCH:', { currentFilters, page, perPage });
+//  CRITICAL FIX 5: Performance monitoring
+const PerformanceMonitor = ({ questionsCount, loading, currentPage, totalPages }) => (
+  <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded mb-2">
+     Performance: {questionsCount} questions loaded | Page {currentPage}/{totalPages}
+    {loading ? ' |  Loading...' : ' |  Ready'}
+    | Last update: {new Date().toLocaleTimeString()}
+  </div>
+);
+
+//  CRITICAL FIX 6: Enhanced API error handling - Add this to your fetchQuestionsFromAPI:
+ const fetchQuestionsFromAPI = useCallback(async (currentFilters = {}, page = 1, perPage = questionsPerPage) => {
+  console.log(' FETCH DEBUG - Current Filters:', {
+    tagFilter: currentFilters.tagFilter,
+    isArray: Array.isArray(currentFilters.tagFilter),
+    hasTagFilters: currentFilters.tagFilter && Array.isArray(currentFilters.tagFilter) && currentFilters.tagFilter.length > 0,
+    allFilters: currentFilters
+  });
+
+  // Create unique key for this request
+  const requestKey = JSON.stringify({ 
+    courseId: currentFilters.courseId,
+    page, 
+    perPage,
+    filters: {
+      category: currentFilters.category,
+      status: currentFilters.status,
+      type: currentFilters.type,
+      search: currentFilters.searchQuery,
+      tags: currentFilters.tagFilter
+    }
+  });
+  
+  //  PREVENT DUPLICATE CALLS
+  if (fetchInProgressRef.current && lastFetchParamsRef.current === requestKey) {
+    console.log(' DUPLICATE CALL PREVENTED:', { page, currentFilters });
+    return;
+  }
+
+  fetchInProgressRef.current = true;
+  lastFetchParamsRef.current = requestKey;
+
+  console.log(' API FETCH START:', { 
+    key: requestKey,
+    currentFilters, 
+    page, 
+    perPage, 
+    timestamp: Date.now() 
+  });
   
   try {
     setLoading(true);
@@ -565,6 +673,7 @@ const fetchQuestionsFromAPI = useCallback(async (currentFilters = {}, page = 1, 
       setError('Authentication required. Please log in.');
       return;
     }
+
     if (!currentFilters.courseId || currentFilters.courseId === 'All') {
       setQuestions([]);
       setTotalQuestions(0);
@@ -572,52 +681,67 @@ const fetchQuestionsFromAPI = useCallback(async (currentFilters = {}, page = 1, 
       return;
     }
 
-    // Course filtering with multi-strategy approach
-    if (currentFilters.courseId && currentFilters.courseId !== 'All' && currentFilters.courseId !== null) {
-      console.log('COURSE FILTERING: Multi-strategy approach');
+    // PERFORMANCE: Add timeout for slow requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      console.log(' COURSE FILTERING: Multi-strategy approach');
       
-      // Try strategies in order of speed/reliability
       const strategies = [
         () => questionFilterService.fetchByCategories(currentFilters.courseId, currentFilters, page, perPage),
         () => questionFilterService.fetchByDirectFilter(currentFilters.courseId, currentFilters, page, perPage),
         () => questionFilterService.fetchWithClientFilter(currentFilters.courseId, currentFilters, page, perPage)
       ];
 
+      let result = null;
       for (const strategy of strategies) {
-        const result = await strategy();
-        if (result.success) {
-          console.log(`Strategy succeeded: ${result.method}`);
-          await processQuestionsData(result.data, page, currentFilters.courseId, result.isVirtual);
-          
-          if (result.method === 'virtual') {
-            toast.info(`Showing virtual questions for course ${currentFilters.courseId}`);
-          } else {
-            toast.success(`Found questions for course ${currentFilters.courseId} (${result.method})`);
+        try {
+          result = await strategy();
+          if (result.success) {
+            console.log(` Strategy succeeded: ${result.method}`);
+            break;
           }
-          return;
+        } catch (strategyError) {
+          console.warn(` Strategy failed:`, strategyError);
+          continue;
         }
       }
 
-      // All strategies failed
-      setQuestions([]);
-      setTotalQuestions(0);
-      toast.error(`No questions found for course ${currentFilters.courseId}`);
-      return;
+      clearTimeout(timeoutId);
+
+      if (result && result.success) {
+        await processQuestionsData(result.data, page, currentFilters.courseId, result.isVirtual);
+        console.log(' API FETCH SUCCESS:', { 
+          method: result.method, 
+          questionsLoaded: result.data.questions?.length || 0,
+          total: result.data.total 
+        });
+      } else {
+        setQuestions([]);
+        setTotalQuestions(0);
+        console.warn(' All strategies failed for course:', currentFilters.courseId);
+      }
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        setError('Request timeout. Please try again.');
+      } else {
+        throw fetchError;
+      }
     }
 
-    // General filtering (non-course specific)
-    await fetchGeneralQuestions(currentFilters, page, perPage);
   } catch (error) {
     console.error(' Error fetching questions:', error);
     setError(error.message);
     setQuestions([]);
     setTotalQuestions(0);
-    toast.error(`Failed to load questions: ${error.message}`);
   } finally {
     setLoading(false);
+    fetchInProgressRef.current = false;
+    console.log(' API FETCH END:', { timestamp: Date.now() });
   }
-}, [questionsPerPage]);
-
+}, []);
   // General questions fetch
   const fetchGeneralQuestions = async (currentFilters, page, perPage) => {
     const params = new URLSearchParams({
@@ -634,40 +758,30 @@ const fetchQuestionsFromAPI = useCallback(async (currentFilters = {}, page = 1, 
   };
 
   // Optimized question data processing
-  const processQuestionsData = async (data, page, courseId = null, isVirtual = false) => {
-    console.log('API returned:', data);
-    console.log(' Processing questions data:', { 
-      total: data.total,
-      count: data.questions?.length,
-      page,
-      courseId,
-      isVirtual
-    });
-    
-    if (data && Array.isArray(data.questions)) {
-      // Transform questions in batches for better performance
-      const batchSize = 10;
-      const transformedQuestions = [];
-      
-      for (let i = 0; i < data.questions.length; i += batchSize) {
-        const batch = data.questions.slice(i, i + batchSize);
-        const transformedBatch = batch.map(q => transformQuestion(q, courseId));
-        transformedQuestions.push(...transformedBatch);
-        
-        // Allow UI to update between batches
-        if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, 0));
-        }
-      }
+const processQuestionsData = async (data, page, courseId = null, isVirtual = false) => {
+  console.log(' Processing API response:', {
+    total: data.total,
+    current_page: data.current_page,
+    per_page: data.per_page,
+    last_page: data.last_page,
+    questions_count: data.questions?.length
+  });
 
-      setQuestions(transformedQuestions);
-      setTotalQuestions(data.total || transformedQuestions.length);
-      setCurrentPage(data.current_page || page);
-    } else {
-      setQuestions([]);
-      setTotalQuestions(0);
-    }
-  };
+  if (data && Array.isArray(data.questions)) {
+    const transformedQuestions = data.questions.map(q => transformQuestion(q, courseId));
+    
+    setQuestions(transformedQuestions);
+    setTotalQuestions(data.total);
+    setCurrentPage(data.current_page);
+    
+    // Calculate total pages from your API response
+    const totalPages = data.last_page || Math.ceil(data.total / data.per_page);
+    console.log(` Loaded ${transformedQuestions.length} questions, page ${data.current_page}/${totalPages}`);
+  } else {
+    setQuestions([]);
+    setTotalQuestions(0);
+  }
+};
 
   // Load static data with caching
   const loadStaticData = useCallback(async () => {
@@ -718,7 +832,7 @@ const fetchQuestionsFromAPI = useCallback(async (currentFilters = {}, page = 1, 
     const courseName = course.name || course.fullname || `Course ${courseId}`;
   
     if (!courseId) {
-      toast.error('Invalid course selection');
+      // toast.error('Invalid course selection');
       return;
     }
   
@@ -730,7 +844,7 @@ const fetchQuestionsFromAPI = useCallback(async (currentFilters = {}, page = 1, 
     try {
       categoriesData = await apiClient.request(categoriesUrl);
     } catch (error) {
-      toast.error('Failed to load categories for course');
+      // toast.error('Failed to load categories for course');
       setQuestionCategories([]);
       return;
     }
@@ -763,12 +877,12 @@ const fetchQuestionsFromAPI = useCallback(async (currentFilters = {}, page = 1, 
     });
   
     setSearchQuery('');
-    setTagFilter('All');
+    setTagFilter([]);
     setCurrentPage(1);
   
     apiClient.clearCache(`courseid=${courseId}`);
   
-    toast.success(`Filtering questions for: ${courseName}`);
+    // toast.success(`Filtering questions for: ${courseName}`);
   }, [setFiltersWithLogging]);
   // Status change handlers
   const handleStatusChange = useCallback(async (questionId, newStatus) => {
@@ -856,30 +970,18 @@ const fetchQuestionsFromAPI = useCallback(async (currentFilters = {}, page = 1, 
   // ============================================================================
   // EFFECTS
   // ============================================================================
-
-  // Filter change effect
-  // useEffect(() => {
-  //   if (currentView !== 'questions') return;
-
-  //   console.log('Filters changed, fetching questions...');
-    
-  //   const filterParams = {
-  //     category: filters.category,
-  //     courseId: filters.courseId,
-  //     status: filters.status,
-  //     type: filters.type,
-  //     searchQuery: debouncedSearchQuery,
-  //     tagFilter
-  //   };
-
-  //   if (currentPage !== 1) {
-  //     setCurrentPage(1);
-  //     fetchQuestionsFromAPI(filterParams, 1, questionsPerPage);
-  //   } else {
-  //     fetchQuestionsFromAPI(filterParams, currentPage, questionsPerPage);
-  //   }
-  // }, [filters, debouncedSearchQuery, tagFilter, currentView, currentPage, questionsPerPage, fetchQuestionsFromAPI]);
-useEffect(() => {
+ useEffect(() => {
+  const triggerInfo = {
+    timestamp: Date.now(),
+    courseId: filters.courseId,
+    currentPage,
+    tagFilter: Array.isArray(tagFilter) ? tagFilter.length : 'NOT_ARRAY',
+    searchQuery: debouncedSearchQuery,
+    lastFetch: lastFetchParamsRef.current ? 'EXISTS' : 'NULL'
+  };
+  
+  setDebugInfo(triggerInfo);
+  
   if (currentView !== 'questions') return;
   if (!filters.courseId || filters.courseId === 'All') {
     setQuestions([]);
@@ -887,6 +989,14 @@ useEffect(() => {
     setLoading(false);
     return;
   }
+
+  console.log(' Filter Effect Triggered:', { 
+    courseId: filters.courseId, 
+    page: currentPage, 
+    search: debouncedSearchQuery,
+    tag: tagFilter,
+    timestamp: Date.now()
+  });
 
   const filterParams = {
     category: filters.category,
@@ -897,13 +1007,47 @@ useEffect(() => {
     tagFilter
   };
 
-  if (currentPage !== 1) {
+  //  FIXED: Correct shouldResetPage logic
+  const shouldResetPage = 
+    lastFetchParamsRef.current && 
+    !lastFetchParamsRef.current.includes(`"page":${currentPage}`) &&
+    (
+      debouncedSearchQuery !== '' || 
+      (Array.isArray(tagFilter) && tagFilter.length > 0) || //  FIXED: Check array length
+      filters.status !== 'All' || 
+      filters.type !== 'All'
+    );
+
+  console.log(' shouldResetPage check:', {
+    hasLastFetch: !!lastFetchParamsRef.current,
+    pageInLastFetch: lastFetchParamsRef.current ? lastFetchParamsRef.current.includes(`"page":${currentPage}`) : false,
+    hasSearch: debouncedSearchQuery !== '',
+    hasTagFilter: Array.isArray(tagFilter) && tagFilter.length > 0,
+    hasStatusFilter: filters.status !== 'All',
+    hasTypeFilter: filters.type !== 'All',
+    result: shouldResetPage
+  });
+
+  if (shouldResetPage && currentPage !== 1) {
+    console.log(' Resetting to page 1 due to filter change');
     setCurrentPage(1);
     fetchQuestionsFromAPI(filterParams, 1, questionsPerPage);
   } else {
+    console.log(' Fetching current page:', currentPage);
     fetchQuestionsFromAPI(filterParams, currentPage, questionsPerPage);
   }
-}, [filters, debouncedSearchQuery, tagFilter, currentView, currentPage, questionsPerPage, fetchQuestionsFromAPI]);
+}, [
+  filters.courseId, 
+  filters.category, 
+  filters.status, 
+  filters.type,
+  debouncedSearchQuery, 
+  tagFilter, 
+  currentView, 
+  currentPage, 
+  questionsPerPage, 
+  fetchQuestionsFromAPI
+]);
   // Load static data on mount
   useEffect(() => {
     loadStaticData();
@@ -960,260 +1104,205 @@ useEffect(() => {
   // RENDER VIEWS
   // ============================================================================
 
-  const renderCurrentView = () => {
-    switch (currentView) {
-      case 'categories':
-        return (
-          <CategoriesComponent 
-            isOpen={true}
-            onClose={() => setCurrentView('questions')}
-            onNavigateToQuestions={() => setCurrentView('questions')}
-            onCourseSelect={handleCourseSelect}
-            setFilters={setFiltersWithLogging}
-          />
-        );
-      case 'questions':
-      default:
-        return (
-          <>
-            {/* Bulk actions */}
-            {selectedQuestions.length > 0 && (
-              <BulkActionsRow
-                selectedQuestions={selectedQuestions}
-                setSelectedQuestions={setSelectedQuestions}
-                setShowBulkEditModal={setShowBulkEditModal}
-                onBulkDelete={() => {
-                  if (window.confirm(`Delete ${selectedQuestions.length} questions?`)) {
-                    setQuestions(prev => prev.filter(q => !selectedQuestions.includes(q.id)));
-                    setSelectedQuestions([]);
-                  }
-                }}
-                onBulkStatusChange={handleBulkStatusChange}
-                onReloadQuestions={() =>
-                  fetchQuestionsFromAPI(filters, 1, questionsPerPage)
-                }
-                questions={questions}
-                setQuestions={setQuestions}
-              />
-            )}
-  
-            {/* Filters */}
-            <FiltersRow
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              filters={filters}
-              setFilters={setFiltersWithLogging}
-              tagFilter={tagFilter}
-              setTagFilter={setTagFilter}
-              allTags={allTags}
-              availableQuestionTypes={availableQuestionTypes}
-              availableCategories={questionCategories.length > 0 ? questionCategories : availableCategories}
-              loadingQuestionTypes={loading}
-              loadingCategories={loadingQuestionCategories}
-            />
-  
-            {/* Guard: Require course selection */}
-            {!filters.courseId || filters.courseId === 'All' ? (
-              <div className="text-center py-8 text-gray-500">
-                <p>Please select a course to view questions.</p>
-              </div>
-            ) : (
-              <>
-                {/* Loading state */}
-                {loading && (
-                  <div className="text-center py-8">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    <p className="mt-2 text-gray-600">
-                      Loading course questions...
-                    </p>
-                    <p className="mt-1 text-sm text-blue-600">
-                      Using optimized multi-strategy filtering
-                    </p>
-                  </div>
-                )}
-  
-                {/* Empty state */}
-                {!loading && questions.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No questions found with current filters.</p>
-                    <button
-                      onClick={() => {
-                        setSearchQuery('');
-                        setFiltersWithLogging({ 
-                          category: 'All', 
-                          categoryIds: [],
-                          status: 'All', 
-                          type: 'All', 
-                          courseId: null 
-                        });
-                        setTagFilter('All');
-                        setQuestionCategories([]);
-                        apiClient.clearCache();
-                      }}
-                      className="mt-2 text-blue-600 underline"
-                    >
-                      Clear all filters & cache
-                    </button>
-                  </div>
-                )}
-  
-                {/* Questions table */}
-                {!loading && questions.length > 0 && (
-                  <>
-                    <QuestionsTable
-                      questions={filteredQuestions}
-                      allQuestions={questions}
-                      filteredQuestions={filteredQuestions}
-                      selectedQuestions={selectedQuestions}
-                      setSelectedQuestions={setSelectedQuestions}
-                      showQuestionText={showQuestionText}
-                      editingQuestion={editingQuestion}
-                      setEditingQuestion={setEditingQuestion}
-                      newQuestionTitle={newQuestionTitle}
-                      setNewQuestionTitle={setNewQuestionTitle}
-                      setShowSaveConfirm={setShowSaveConfirm}
-                      openActionDropdown={openActionDropdown}
-                      setOpenActionDropdown={setOpenActionDropdown}
-                      openStatusDropdown={openStatusDropdown}
-                      setOpenStatusDropdown={setOpenStatusDropdown}
-                      dropdownRefs={dropdownRefs}
-                      onPreview={setPreviewQuestion}
-                      onEdit={(question) => {
-                        console.log('Editing question:', question.id);
-                        setEditingQuestionData(question);
-                      }}
-                      onDuplicate={handleDuplicateQuestion}
-                      onHistory={setHistoryModal}
-                      onDelete={handleDeleteQuestion}
-                      onStatusChange={handleStatusChange}
-                      username={username}
-                      setQuestions={setQuestions}
-                    />
-  
-                    {/* Pagination and cache info */}
-                    <div className="mt-4 flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-700">
-                            Showing <span className="font-medium">{((currentPage - 1) * questionsPerPage) + 1}</span> to{' '}
-                            <span className="font-medium">{Math.min(currentPage * questionsPerPage, totalQuestions)}</span> of{' '}
-                            <span className="font-medium">{totalQuestions}</span> results
-                            {selectedCourse && (
-                              <span className="text-blue-600 ml-2">
-                                (from {selectedCourse.name})
-                              </span>
-                            )}
-                            {filters.category !== 'All' && questionCategories.length > 0 && (
-                              <span className="text-green-600 ml-2">
-                                (category: {questionCategories.find(c => c.id == filters.category)?.name || filters.category})
-                              </span>
-                            )}
-                            {debouncedSearchQuery && (
-                              <span className="text-green-600 ml-2">
-                                (filtered: {filteredQuestions.length})
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        {/* Items per page selector */}
-                        <div className="flex items-center space-x-2">
-                          <label className="text-sm text-gray-700">Per page:</label>
-                          <select
-                            value={questionsPerPage}
-                            onChange={(e) => {
-                              const newPerPage = Number(e.target.value);
-                              setQuestionsPerPage(newPerPage);
-                              setCurrentPage(1);
-                            }}
-                            className="border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                            disabled={loading}
-                          >
-                            <option value={10}>10</option>
-                            <option value={25}>25</option>
-                            <option value={50}>50</option>
-                            <option value={100}>100</option>
-                          </select>
-                        </div>
-  
-                        {/* Pagination buttons */}
-                        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                          <button
-                            onClick={() => setCurrentPage(1)}
-                            disabled={currentPage === 1 || loading}
-                            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            First
-                          </button>
-                          <button
-                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                            disabled={currentPage === 1 || loading}
-                            className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Previous
-                          </button>
-                          
-                          {/* Smart page numbers */}
-                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                            let pageNum;
-                            if (totalPages <= 5) {
-                              pageNum = i + 1;
-                            } else if (currentPage <= 3) {
-                              pageNum = i + 1;
-                            } else if (currentPage >= totalPages - 2) {
-                              pageNum = totalPages - 4 + i;
-                            } else {
-                              pageNum = currentPage - 2 + i;
-                            }
-                            
-                            return (
-                              <button
-                                key={pageNum}
-                                onClick={() => setCurrentPage(pageNum)}
-                                disabled={loading}
-                                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium disabled:cursor-not-allowed ${
-                                  currentPage === pageNum
-                                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                                }`}
-                              >
-                                {pageNum}
-                              </button>
-                            );
-                          })}
-  
-                          <button
-                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                            disabled={currentPage === totalPages || loading}
-                            className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Next
-                          </button>
-                          <button
-                            onClick={() => setCurrentPage(totalPages)}
-                            disabled={currentPage === totalPages || loading}
-                            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Last
-                          </button>
-                        </nav>
-                        
-                        {/* Performance indicator */}
-                        <div className="ml-4 text-xs text-gray-500">
-                          Cache: {apiClient.cache.size} items
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-          </>
-        );
+ const renderPaginationSection = () => {
+    if (loading || questions.length === 0 || totalQuestions === 0) {
+      return null;
     }
+
+    return (
+      <div className="mt-6">
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalQuestions}
+          itemsPerPage={questionsPerPage}
+          onPageChange={(page) => {
+            console.log(` Pagination: Changing to page ${page}`);
+            
+            //  CRITICAL: Prevent multiple calls
+            if (fetchInProgressRef.current) {
+              console.log(' Pagination blocked - fetch in progress');
+              return;
+            }
+            
+            setCurrentPage(page);
+            // Note: Don't call fetchQuestionsFromAPI here - let useEffect handle it
+          }}
+          onItemsPerPageChange={(newPerPage) => {
+            console.log(` Items per page: Changing to ${newPerPage}`);
+            
+            if (fetchInProgressRef.current) {
+              console.log(' Items per page change blocked - fetch in progress');
+              return;
+            }
+            
+            setQuestionsPerPage(newPerPage);
+            setCurrentPage(1);
+            // Note: Let useEffect handle the API call
+          }}
+          isLoading={loading}
+          className="border-t bg-gray-50"
+        />
+      </div>
+    );
   };
+ //  CRITICAL FIX 7: Use this improved renderCurrentView function:
+const renderCurrentView = () => {
+  switch (currentView) {
+    case 'categories':
+      return (
+        <CategoriesComponent 
+          isOpen={true}
+          onClose={() => setCurrentView('questions')}
+          onNavigateToQuestions={() => setCurrentView('questions')}
+          onCourseSelect={handleCourseSelect}
+          setFilters={setFiltersWithLogging}
+        />
+      );
+    case 'questions':
+    default:
+      return (
+        <>
+          {/* Performance Monitor - Remove in production */}
+          {process.env.NODE_ENV === 'development' && (
+            <PerformanceMonitor 
+              questionsCount={questions.length}
+              loading={loading}
+              currentPage={currentPage}
+              totalPages={totalPages}
+            />
+          )}
+
+          {/* Bulk actions */}
+          {selectedQuestions.length > 0 && (
+            <BulkActionsRow
+              selectedQuestions={selectedQuestions}
+              setSelectedQuestions={setSelectedQuestions}
+              setShowBulkEditModal={setShowBulkEditModal}
+              onBulkDelete={() => {
+                if (window.confirm(`Delete ${selectedQuestions.length} questions?`)) {
+                  setQuestions(prev => prev.filter(q => !selectedQuestions.includes(q.id)));
+                  setSelectedQuestions([]);
+                }
+              }}
+              onBulkStatusChange={handleBulkStatusChange}
+              onReloadQuestions={() =>
+                fetchQuestionsFromAPI(filters, currentPage, questionsPerPage)
+              }
+              questions={questions}
+              setQuestions={setQuestions}
+            />
+          )}
+
+          {/* Filters */}
+          <FiltersRow
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            filters={filters}
+            setFilters={setFiltersWithLogging}
+            tagFilter={tagFilter}
+            setTagFilter={setTagFilter}
+            allTags={allTags}
+            availableQuestionTypes={availableQuestionTypes}
+            availableCategories={questionCategories.length > 0 ? questionCategories : availableCategories}
+            loadingQuestionTypes={loading}
+            loadingCategories={loadingQuestionCategories}
+          />
+
+          {/* Guard: Require course selection */}
+          {!filters.courseId || filters.courseId === 'All' ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>Please select a course to view questions.</p>
+              <button
+                onClick={() => setCurrentView('categories')}
+                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Select Course
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Loading state */}
+              {loading && (
+                <div className="text-center py-8">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <p className="mt-2 text-gray-600">
+                    Loading course questions...
+                  </p>
+                  <p className="mt-1 text-sm text-blue-600">
+                    Using optimized multi-strategy filtering
+                  </p>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!loading && questions.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No questions found with current filters.</p>
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setFiltersWithLogging({ 
+                        category: 'All', 
+                        categoryIds: filters.categoryIds || [],
+                        status: 'All', 
+                        type: 'All', 
+                        courseId: filters.courseId,
+                        courseName: filters.courseName
+                      });
+                      setTagFilter([]);
+                      apiClient.clearCache();
+                    }}
+                    className="mt-2 text-blue-600 underline"
+                  >
+                    Clear filters & cache
+                  </button>
+                </div>
+              )}
+
+              {/* Questions table */}
+              {!loading && questions.length > 0 && (
+                <>
+                  <QuestionsTable
+                    questions={filteredQuestions}
+                    allQuestions={questions}
+                    filteredQuestions={filteredQuestions}
+                    selectedQuestions={selectedQuestions}
+                    setSelectedQuestions={setSelectedQuestions}
+                    showQuestionText={showQuestionText}
+                    editingQuestion={editingQuestion}
+                    setEditingQuestion={setEditingQuestion}
+                    newQuestionTitle={newQuestionTitle}
+                    setNewQuestionTitle={setNewQuestionTitle}
+                    setShowSaveConfirm={setShowSaveConfirm}
+                    openActionDropdown={openActionDropdown}
+                    setOpenActionDropdown={setOpenActionDropdown}
+                    openStatusDropdown={openStatusDropdown}
+                    setOpenStatusDropdown={setOpenStatusDropdown}
+                    dropdownRefs={dropdownRefs}
+                    onPreview={setPreviewQuestion}
+                    onEdit={(question) => {
+                      console.log('Editing question:', question.id);
+                      setEditingQuestionData(question);
+                    }}
+                    onDuplicate={handleDuplicateQuestion}
+                    onHistory={setHistoryModal}
+                    onDelete={handleDeleteQuestion}
+                    onStatusChange={handleStatusChange}
+                    username={username}
+                    setQuestions={setQuestions}
+                  />
+
+                  {/*  FIXED: Working pagination */}
+                  {renderPaginationSection()}
+                </>
+              )}
+            </>
+          )}
+        </>
+      );
+  }
+};
 
   // ============================================================================
   // MAIN RENDER
@@ -1229,7 +1318,7 @@ useEffect(() => {
       )}
 
       {/* Error message */}
-      {error && (
+      {/* {error && (
         <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
           <div className="flex justify-between items-center">
             <span><strong>Error:</strong> {error}</span>
@@ -1255,7 +1344,7 @@ useEffect(() => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Top Navigation Bar */}
       <TopButtonsRow
@@ -1296,7 +1385,7 @@ useEffect(() => {
       <Toaster
         position="top-center"
         toastOptions={{
-          duration: 3000,
+          duration: 300,
           style: {
             background: '#363636',
             color: '#fff',
@@ -1358,3 +1447,4 @@ useEffect(() => {
 };
 
 export default QuestionBank;
+

@@ -6,6 +6,17 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 
 import { RefreshCcw, X, AlertCircle } from 'lucide-react';
 
+// import React from 'react';
+import Select from 'react-select';
+
+const colourOptions = [
+  { value: 'red', label: 'Red' },
+  { value: 'green', label: 'Green' },
+  { value: 'blue', label: 'Blue' },
+  { value: 'yellow', label: 'Yellow' },
+  { value: 'purple', label: 'Purple' },
+  { value: 'orange', label: 'Orange' },
+];
 // OPTIMIZATION: Create a memoized debounce function
 const useDebounce = (callback, delay) => {
   const timeoutRef = useRef(null);
@@ -41,6 +52,7 @@ const FiltersRow = ({
   availableQuestionTypes = [],
   availableCategories = [], // NEW: This can now be question categories for a course
   loadingQuestionTypes = false,
+  loadingQuestionTags = false,
   loadingCategories = false, // NEW: Loading state for categories
   onSearch = null, // New callback for parent notification of search changes
 }) => {
@@ -66,10 +78,10 @@ const FiltersRow = ({
   ], []);
 
 
-  const handleQuestionCategoryChange = (qCategoryId) => {
-    // localStorage.setItem('questionCategoryId', qCategoryId);
-    console.log('Selected question category:', qCategoryId);
-  }
+  // const handleQuestionCategoryChange = (qCategoryId) => {
+  //   // localStorage.setItem('questionCategoryId', qCategoryId);
+  //   console.log('Selected question category:', qCategoryId);
+  // }
   // OPTIMIZATION: Memoize tag computation with proper dependencies
   const combinedTags = useMemo(() => {
     const systemTags = ['easy', 'medium', 'hard', 'ready', 'draft', 'multichoice', 'essay'];
@@ -180,10 +192,21 @@ const FiltersRow = ({
     const newType = e.target.value;
     setFilters(prev => ({ ...prev, type: newType }));
   }, [setFilters]);
-
+const debouncedSetTagFilter = useDebounce((values) => {
+  setTagFilter(values);
+}, 300);
+  const tagOptions = useMemo(() => {
+    if (!Array.isArray(allTags)) return [];
+    return allTags.map(tag => ({
+      value: tag,
+      label: tag.charAt(0).toUpperCase() + tag.slice(1)
+    }));
+  }, [allTags]);
   const handleTagChange = useCallback((e) => {
-    setTagFilter(e.target.value);
-  }, [setTagFilter]);
+    const newTag = e.target.value;  
+    setTagFilter(prev => ({...prev, tag: newTag }));
+  },[setTagFilter]);
+
 
   // Search change handler with debouncing
   const handleSearchChange = useCallback((e) => {
@@ -262,39 +285,13 @@ const FiltersRow = ({
 
   return (
     <div className="p-4 border-t border-b border-gray-200 bg-gray-50">
-      {/* Course Filter Display */}
-      {filters.courseId && filters.courseName && (
-        <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-800 rounded-lg border border-blue-200">
-          <span className="font-medium"> Course:</span>
-          <span className="flex-1">{filters.courseName}</span>
-          <span className="text-sm text-blue-600">(ID: {filters.courseId})</span>
-          <button
-            onClick={handleClearCourse}
-            className="text-blue-600 hover:text-blue-800 p-1 rounded transition-colors"
-            title="Clear course filter"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
-
-      {/* Debugging info - can be removed in production */}
-      {/* {process.env.NODE_ENV === 'development' && filters.courseId && (
-        <div className="mb-3 text-xs bg-gray-100 p-2 rounded">
-          <strong>Debug:</strong> Course ID: {filters.courseId} | 
-          Categories: {availableCategories.length} | 
-          Selected Category: {filters.category} |
-          {filters.categoryid && <span> Category ID: {filters.categoryid} |</span>}
-          {filters.categoryids && <span> Category IDs: {filters.categoryids} |</span>}
-          {filters._filterChangeTimestamp && <span> Filter changed: {new Date(filters._filterChangeTimestamp).toLocaleTimeString()} |</span>}
-        </div>
-      )} */}
+   
 
       {/* Main Filters Row */}
       <div className="flex flex-wrap gap-3 items-center">
         {/* Search Input */}
         <div className="relative flex-grow max-w-md">
-          <input
+                   <input
             type="text"
             placeholder={
               filters.courseId && filters.courseName
@@ -303,14 +300,11 @@ const FiltersRow = ({
                   ? `Search in course ${filters.courseId}...`
                   : "Search questions..."
             }
-            className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${filters.courseId
-                ? 'border-blue-300 bg-blue-50'
-                : 'border-gray-300'
-              }`}
+            className="w-full pl-10 pr-4 py-2 border rounded-lg border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400 transition-all duration-200"
             value={internalSearchQuery}
             onChange={handleSearchChange}
           />
-          <div className={`absolute left-3 top-2.5 ${filters.courseId ? 'text-blue-500' : 'text-gray-400'}`}>
+          <div className="absolute left-3 top-2.5 text-gray-400">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
@@ -325,61 +319,40 @@ const FiltersRow = ({
         {/* Question Category Filter - ENHANCED for course-specific categories */}
 
         <div className="relative">
-          <select
-            className={`border rounded-lg py-2 px-3 pr-8 min-w-[180px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${loadingCategories
-                ? 'bg-gray-50 cursor-wait'
-                : filters.courseId
-                  ? 'bg-white border-blue-300'
-                  : 'bg-white border-gray-300'
-              }`}
-            value={filters.category ? filters.category : localStorage.getItem('questionCategoryId')}
-            onChange={handleCategoryChange}
-            disabled={loadingCategories || (filters.courseId && availableCategories.length === 0)}
-          >
-            {/* <option value="All">
-                                {loadingCategories
-                                  ? 'Loading categories...'
-                                  : ''}
-                              </option> */}
+         <select
+              className="border rounded-lg py-2 px-3 pr-8 min-w-[180px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={filters.category || 'All'}
+              onChange={handleCategoryChange}
+              disabled={loadingCategories}
+            >
+              <option value="All">All Categories</option>
+              
+              {/* Group by contextid like your API structure */}
+              {(() => {
+                // Group categories by contextid
+                const grouped = {};
+                availableCategories.forEach(cat => {
+                  if (!grouped[cat.contextid]) grouped[cat.contextid] = [];
+                  grouped[cat.contextid].push(cat);
+                });
 
-            {/* Group by context level */}
-            {(() => {
-              // Group categories by contextid
-              const grouped = {};
-              availableCategories.forEach(cat => {
-                if (!grouped[cat.contextid]) grouped[cat.contextid] = [];
-                grouped[cat.contextid].push(cat);
-              });
-
-              // Helper to get context label
-              const getContextLabel = (contextid) => {
-                if (contextid === 1) return 'System';
-                // You can map course contextids to course names if you have them
-                return `Course`;
-              };
-
-              // Tree builder
-              const buildTree = (cats, parentId = 0) =>
-                cats
-                  .filter(cat => cat.parent === parentId)
-                  .sort((a, b) => (a.sortorder ?? 0) - (b.sortorder ?? 0))
-                  .map(cat => ({
-                    ...cat,
-                    children: buildTree(cats, cat.id)
-                  }));
-
-              // Render options for each context group
-              return Object.entries(grouped).map(([contextid, cats]) => {
-                const tree = buildTree(cats);
-                const contextLabel = getContextLabel(Number(contextid));
-                return (
-                  <optgroup key={contextid} label={contextLabel === 'System' ? 'System Categories' : contextLabel}>
-                    {renderOptions(tree, 0, '', contextLabel)}
-                  </optgroup>
-                );
-              });
-            })()}
-          </select>
+                // Render groups
+                return Object.entries(grouped).map(([contextid, cats]) => {
+                  // Sort by sortorder
+                  const sortedCats = cats.sort((a, b) => a.sortorder - b.sortorder);
+                  
+                  return (
+                    <optgroup key={contextid} label={contextid === '1' ? 'System' : `Course Context`}>
+                      {sortedCats.map(cat => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                });
+              })()}
+            </select>
           {/* Category loading indicator */}
           {loadingCategories && (
             <div className="absolute right-8 top-2.5">
@@ -442,25 +415,27 @@ const FiltersRow = ({
           )}
         </div>
 
-        {/* Tag Filter */}
-        <div className="relative">
-          <select
-            className="border rounded-lg py-2 px-3 pr-8 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            value={tagFilter}
-            onChange={handleTagChange}
-          >
-            {combinedTags.map(tag => (
-              <option key={tag.toLowerCase()} value={tag}>
-                {tag}
-              </option>
-            ))}
-          </select>
-        </div>
+
+
+
+
+
+
+<Select
+  isMulti
+  name="tags"
+  options={tagOptions}
+  value={tagOptions.filter(opt => tagFilter.includes(opt.value))}
+  onChange={selected => debouncedSetTagFilter(selected.map(opt => opt.value))}
+  className="basic-multi-select"
+  classNamePrefix="select"
+/>
+
 
         {/* Action Buttons */}
         <div className="flex gap-2 ml-auto">
           {/* Refresh Categories Button - Enhanced */}
-          <button
+          {/* <button
             onClick={() => {
               // If we have a course selected, this could trigger a refresh of course categories
               if (filters.courseId) {
@@ -473,7 +448,7 @@ const FiltersRow = ({
           >
             <RefreshCcw size={16} className={loadingCategories ? 'animate-spin' : ''} />
             Refresh
-          </button>
+          </button> */}
 
           {hasActiveFilters && (
             <button
@@ -520,11 +495,11 @@ const FiltersRow = ({
               Tag: {tagFilter}
             </span>
           )}
-          {filters.courseId && (
+          {/* {filters.courseId && (
             <span className="bg-sky-100 text-sky-800 px-2 py-1 rounded">
               Course: {filters.courseName || filters.courseId}
             </span>
-          )}
+          )} */}
         </div>
       )}
 
