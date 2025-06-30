@@ -375,9 +375,10 @@ export const questionAPI = {
     if (filters.search) params.append('search', filters.search);
     
     // Handle tags array
-    if (filters.tag && Array.isArray(filters.tag) && filters.tag.length > 0 && !filters.tag.includes('All')) {
-      filters.tag.forEach(tag => params.append('tags[]', tag));
-    }
+   if (filters.tag && Array.isArray(filters.tag) && filters.tag.length > 0 && !filters.tag.includes('All')) {
+  filters.tag.forEach(tag => params.append('tags[id][]', tag)); 
+}
+
 
     try {
       // Fixed: Use correct endpoint
