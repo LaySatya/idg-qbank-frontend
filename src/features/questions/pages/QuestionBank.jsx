@@ -427,13 +427,13 @@ buildFilterParams(filters) {
 
 }
 //  CRITICAL FIX 5: Performance monitoring
-const PerformanceMonitor = ({ questionsCount, loading, currentPage, totalPages }) => (
-  <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded mb-2">
-    Performance: {questionsCount} questions loaded | Page {currentPage}/{totalPages}
-    {loading ? ' |  Loading...' : ' |  Ready'}
-    | Last update: {new Date().toLocaleTimeString()}
-  </div>
-);
+// const PerformanceMonitor = ({ questionsCount, loading, currentPage, totalPages }) => (
+//   <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded mb-2">
+//     Performance: {questionsCount} questions loaded | Page {currentPage}/{totalPages}
+//     {loading ? ' |  Loading...' : ' |  Ready'}
+//     | Last update: {new Date().toLocaleTimeString()}
+//   </div>
+// );
 export { QuestionFilterService };
 const questionFilterService = new QuestionFilterService(apiClient);
 
@@ -1061,6 +1061,20 @@ const processQuestionsData = async (data, page, courseId = null, isVirtual = fal
       setQuestionCategories([]);
     }
   }, [filters.courseId, fetchQuestionCategoriesForCourse]);
+const [availableCourses, setAvailableCourses] = useState([]);
+
+useEffect(() => {
+  async function fetchCourses() {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/questions/courses?categoryid=0'); // adjust endpoint if needed
+      const data = await res.json();
+      setAvailableCourses(data.courses || []);
+    } catch (err) {
+      console.error("Failed to load courses", err);
+    }
+  }
+  fetchCourses();
+}, []);
 
   // ============================================================================
   // MODAL AND UI STATE
@@ -1164,14 +1178,14 @@ const renderCurrentView = () => {
       return (
         <>
           {/* Performance Monitor - Remove in production */}
-          {process.env.NODE_ENV === 'development' && (
+          {/* {process.env.NODE_ENV === 'development' && (
             <PerformanceMonitor 
               questionsCount={questions.length}
               loading={loading}
               currentPage={currentPage}
               totalPages={totalPages}
             />
-          )}
+          )} */}
 
           {/* Bulk actions */}
           {selectedQuestions.length > 0 && (
@@ -1205,6 +1219,7 @@ const renderCurrentView = () => {
             allTags={allTags}
             availableQuestionTypes={availableQuestionTypes}
             availableCategories={questionCategories.length > 0 ? questionCategories : availableCategories}
+            availableCourses={availableCourses}
             loadingQuestionTypes={loading}
             loadingCategories={loadingQuestionCategories}
           />
@@ -1382,7 +1397,7 @@ const renderCurrentView = () => {
       </main>
 
       {/* Toast notifications */}
-      <Toaster
+      {/* <Toaster
         position="top-center"
         toastOptions={{
           duration: 300,
@@ -1406,7 +1421,7 @@ const renderCurrentView = () => {
             duration: Infinity,
           },
         }}
-      />
+      /> */}
 
       {/* Modals */}
       {currentView === 'questions' && (

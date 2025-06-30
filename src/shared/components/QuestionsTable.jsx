@@ -4,7 +4,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { questionAPI } from '../../api/questionAPI'; 
 import { toast } from 'react-hot-toast';
-
+import ReactModal from 'react-modal';
+ReactModal.setAppElement('#root');
 const QuestionsTable = ({
   questions,
   allQuestions,
@@ -35,7 +36,11 @@ const QuestionsTable = ({
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [pendingSaveQuestionId, setPendingSaveQuestionId] = useState(null);
   const [pendingSaveTitle, setPendingSaveTitle] = useState('');
-  
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editModalQuestion, setEditModalQuestion] = useState(null);
+  const [editModalName, setEditModalName] = useState('');
+  const [editModalText, setEditModalText] = useState('');
+
   //  CRITICAL FIX: Track fetched questions to prevent infinite loops
   const fetchedQuestionsRef = useRef(new Set());
   const isFetchingRef = useRef(false);
@@ -227,7 +232,55 @@ const QuestionsTable = ({
         return <span className="icon text-gray-400">?</span>;
     }
   };
+// Open modal when clicking question name
+const openEditModal = (question) => {
+  setEditModalQuestion(question);
+  setEditModalName(question.name || question.title || '');
+  setEditModalText(question.questiontext || question.questionText || '');
+  setEditModalOpen(true);
+};
 
+
+const handleEditModalSave = async () => {
+  if (!editModalName.trim()) {
+    toast.error('Question name cannot be empty');
+    return;
+  }
+  try {
+    const userid = localStorage.getItem('userid');
+    const result = await questionAPI.updateQuestionName(
+      editModalQuestion.id,
+      editModalName,
+      editModalText,
+      Number(userid)
+    );
+    if (result.status) {
+      setQuestions(prev =>
+        prev.map(q =>
+          q.id === editModalQuestion.id
+            ? {
+                ...q,
+                name: editModalName,
+                questiontext: editModalText,
+                questionText: editModalText,
+                modifiedBy: {
+                  name: result.modifiedby?.name || q.modifiedBy?.name || '',
+                  date: result.modifiedby?.date || q.modifiedBy?.date || '',
+                }
+              }
+            : q
+        )
+      );
+      toast.success(result.message || 'Question updated successfully');
+      setEditModalOpen(false);
+      setEditModalQuestion(null);
+    } else {
+      toast.error(result.message || 'Failed to update question');
+    }
+  } catch (error) {
+    toast.error(`Failed to update: ${error.message}`);
+  }
+};
   // Toggle question selection
   const toggleQuestionSelection = (id) => {
     setSelectedQuestions(prev => 
@@ -247,7 +300,7 @@ const QuestionsTable = ({
   };
 
   // Initiate question save
-  const initiateQuestionSave = async (questionId) => {
+ const initiateQuestionSave = async (questionId) => {
     if (newQuestionTitle.trim() === '') {
       alert('Question title cannot be empty');
       return;
@@ -264,27 +317,32 @@ const QuestionsTable = ({
       const question = questions.find(q => q.id === questionId);
       if (!question) return;
 
-      await questionAPI.updateQuestionName(
+      // Use the updated API method
+      const result = await questionAPI.updateQuestionName(
         questionId,
         newQuestionTitle,
         question.questiontext || '',
         Number(userid)
       );
 
-      // Update local state
-      setQuestions(prev => 
-        prev.map(q => 
-          q.id === questionId ? { ...q, name: newQuestionTitle } : q
-        )
-      );
-      setEditingQuestion(null);
-      toast.success('Question updated successfully');
+      if (result.status) {
+        setQuestions(prev => 
+          prev.map(q => 
+            q.id === questionId
+              ? { ...q, name: newQuestionTitle, modifiedBy: result.modifiedby }
+              : q
+          )
+        );
+        setEditingQuestion(null);
+        toast.success(result.message || 'Question updated successfully');
+      } else {
+        toast.error(result.message || 'Failed to update question');
+      }
     } catch (error) {
       console.error('Update error:', error);
       toast.error(`Failed to update: ${error.message}`);
     }
   };
-
   if (!questions || questions.length === 0) {
     return (
       <div className="p-8 text-center text-gray-500">
@@ -407,20 +465,22 @@ const QuestionsTable = ({
                             }}
                           />
                         ) : (
-                          <span 
-                            className="inline-flex items-center group cursor-pointer"
-                            onClick={() => {
-                              setEditingQuestion(question.id);
-                              setNewQuestionTitle(question.name || question.title || '');
-                            }}
-                          >
-                            <a href="#" className="ml-2 text-black text-semibold hover:text-black-900 flex items-center">
-                              {question.name || question.title || '(No title)'}
-                              <span className="ml-2">
-                                <i className="fa-regular fa-pen-to-square text-gray-400"></i>
-                              </span>
-                            </a>
-                          </span>
+                        <span
+                      className="inline-flex items-center group cursor-pointer"
+                      onClick={() => openEditModal(question)}
+                    >
+                      <span className="ml-2 text-black font-semibold hover:text-blue-700 flex items-center">
+                        {question.name || question.title || '(No title)'}
+                        <span className="ml-2">
+                          <i className="fa-regular fa-pen-to-square text-gray-400"></i>
+                        </span>
+                      </span>
+                      {question.questiontext && (
+              <div className="text-xs text-gray-600 mt-1">
+                {question.questiontext}
+              </div>
+            )}
+                    </span>
                         )}
                       </label>
                       
@@ -624,39 +684,104 @@ const QuestionsTable = ({
       </div>
 
       {/* Save confirmation modal */}
-      {showSaveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-60">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-            <h3 className="font-bold text-lg mb-2">Save Changes?</h3>
-            <p className="mb-4">
-              Do you want to save the new question name: 
-              <span className="font-semibold text-blue-700"> "{pendingSaveTitle}"</span>?
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
-                onClick={() => {
-                  setShowSaveModal(false);
-                  setEditingQuestion(null); 
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded bg-sky-600 text-white hover:bg-sky-700"
-                onClick={async () => {
-                  await initiateQuestionSave(pendingSaveQuestionId);
-                  setShowSaveModal(false);
-                }}
-              >
-                Save
-              </button>
-            </div>
+         {showSaveModal && pendingSaveQuestionId && (
+        <div className="absolute z-50 bg-white border border-gray-300 rounded shadow-lg p-4"
+             style={{
+               left: '50%',
+               top: '50%',
+               transform: 'translate(-50%, -50%)'
+             }}>
+          <h3 className="font-bold text-lg mb-2">Save Changes?</h3>
+          <p className="mb-4">
+            Do you want to save the new question name: 
+            <span className="font-semibold text-blue-700"> "{pendingSaveTitle}"</span>?
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+              onClick={() => {
+                setShowSaveModal(false);
+                setEditingQuestion(null); 
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-4 py-2 rounded bg-sky-600 text-white hover:bg-sky-700"
+              onClick={async () => {
+                await initiateQuestionSave(pendingSaveQuestionId);
+                setShowSaveModal(false);
+              }}
+            >
+              Save
+            </button>
           </div>
         </div>
       )}
+{/* Edit Question Modal */}
+<ReactModal
+  isOpen={editModalOpen}
+  onRequestClose={() => setEditModalOpen(false)}
+  contentLabel="Edit Question"
+  style={{
+    overlay: { zIndex: 1000 },
+    content: {
+      maxWidth: 500,
+      margin: 'auto',
+      maxHeight: '40vh',
+      overflowY: 'auto',
+      inset: '40px',
+      padding: '32px', 
+      borderRadius: '8px', 
+      border: '1px solid #e5e7eb', 
+      boxShadow: '0 10px 25px rgba(0,0,0,0.1)', 
+    }
+  }}
+>
+  <h3 className="text-xl font-bold mb-6">Edit Question</h3>
+  <form className="space-y-5">
+    <div>
+      <label className="block text-sm font-medium mb-1">Question Name</label>
+      <input
+        type="text"
+        value={editModalName}
+        onChange={e => setEditModalName(e.target.value)}
+        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium mb-1">Question Text</label>
+      <textarea
+        value={editModalText}
+        onChange={e => setEditModalText(e.target.value)}
+        rows={4}
+        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+      />
+    </div>
+    <div className="flex justify-end gap-2 pt-2">
+      <button
+        type="button"
+        className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+        onClick={() => setEditModalOpen(false)}
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        className="px-4 py-2 rounded bg-sky-600 text-white hover:bg-sky-700"
+        onClick={handleEditModalSave}
+      >
+        Save
+      </button>
+    </div>
+  </form>
+</ReactModal>
     </>
-  );
+ 
+
+);
+
+
 };
 
 export default QuestionsTable;

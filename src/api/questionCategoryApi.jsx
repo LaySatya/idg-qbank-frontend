@@ -228,7 +228,7 @@ export const questionCategoryAPI = {
    */
 //   async deleteQuestionCategory(categoryId) {
 //     try {
-//       console.log('🗑️ Deleting question category:', categoryId);
+//       console.log(' Deleting question category:', categoryId);
       
 //       const response = await fetch(
 //         `${API_BASE_URL}/questions/categories/${categoryId}`,

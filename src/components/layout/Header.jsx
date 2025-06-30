@@ -1,14 +1,22 @@
-
-// Header.jsx - Updated with logout confirmation
-import React, { useState } from 'react';
+// Header.jsx - Fixed profile image display
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import LogoutConfirmationModal from '../LogoutConfirmationModal';
-// import { useNavigate } from 'react-router-dom';
-const Header = ({ toggleSidebar, onLogout, username,  profileImageUrl}) => {
+
+const Header = ({ toggleSidebar, onLogout, username, profileImageUrl }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [imgError, setImgError] = useState(false);
-//  const navigate = useNavigate();
+  const navigate = useNavigate();
+  
+  // Reset image error when profileImageUrl changes
+  useEffect(() => {
+    if (profileImageUrl) {
+      setImgError(false);
+    }
+  }, [profileImageUrl]);
+
   const handleLogoutClick = () => {
     setShowDropdown(false);
     setShowLogoutModal(true);
@@ -31,6 +39,11 @@ const Header = ({ toggleSidebar, onLogout, username,  profileImageUrl}) => {
     setShowLogoutModal(false);
   };
 
+  // Log profile image URL for debugging
+  useEffect(() => {
+    console.log("Profile image URL in Header:", profileImageUrl);
+  }, [profileImageUrl]);
+
   return (
     <>
       <header className="bg-white shadow-sm border-b border-gray-200 px-4 py-3">
@@ -49,24 +62,28 @@ const Header = ({ toggleSidebar, onLogout, username,  profileImageUrl}) => {
             
             {/* User dropdown menu */}
             <div className="relative">
-                            <button
+              <button
                 onClick={() => setShowDropdown(!showDropdown)}
                 className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-md transition-colors"
               >
-               {profileImageUrl && !imgError ? (
-                <img
-                  src={profileImageUrl + `?token=ba8735e43d5f1baf2382a99806bf9deb`}
-                  alt="Profile"
-                  className="w-8 h-8 rounded-full object-cover"
-                  onError={() => setImgError(true)}
-                />
-              ) : (
-                <span className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/>
-                  </svg>
-                </span>
-              )}
+                {/* Profile Image: Only try to render if we have a URL and no error */}
+                {profileImageUrl && !imgError ? (
+                  <img
+                    src={profileImageUrl}
+                    alt="Profile"
+                    className="w-8 h-8 rounded-full object-cover"
+                    onError={() => {
+                      console.log("Image failed to load:", profileImageUrl);
+                      setImgError(true);
+                    }}
+                  />
+                ) : (
+                  <span className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                    <span className="text-indigo-800 font-medium text-sm">
+                      {username ? username.charAt(0).toUpperCase() : "U"}
+                    </span>
+                  </span>
+                )}
                 <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
@@ -78,7 +95,7 @@ const Header = ({ toggleSidebar, onLogout, username,  profileImageUrl}) => {
                     <div className="font-medium">{username}</div>
                     <div className="text-gray-500">Signed in</div>
                   </div>
-                    <button
+                  <button
                     onClick={() => {
                       setShowDropdown(false);
                       navigate('/profile');

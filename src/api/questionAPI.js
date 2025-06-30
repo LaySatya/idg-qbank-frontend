@@ -1,20 +1,16 @@
 // ============================================================================
-// Enhanced: src/api/questionAPI.js - API Service with Bulk Operations & Better Error Handling
+// Enhanced: src/api/questionAPI.js - FIXED API URLs and Error Handling
 // ============================================================================
-// const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
 export const validateEnvironmentConfig = () => {
-  const requiredEnvVars = [
-    'VITE_API_BASE_URL'
-  ];
-  
+  const requiredEnvVars = ['VITE_API_BASE_URL'];
   const missing = requiredEnvVars.filter(varName => !import.meta.env[varName]);
   
   if (missing.length > 0) {
     console.error(' Missing required environment variables:', missing);
     console.error('Please check your .env file contains:');
     missing.forEach(varName => {
-      console.error(`${varName}=http://127.0.0.1:8000/api`);
+      console.error(`${varName}=http://localhost:8000/api`);
     });
     return false;
   }
@@ -24,8 +20,11 @@ export const validateEnvironmentConfig = () => {
   return true;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// Fixed: Use your env variable correctly
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
+// Validate on module load
+validateEnvironmentConfig();
 
 // Helper: Auth headers
 const getAuthHeaders = () => {
@@ -69,7 +68,14 @@ const handleAPIResponse = async (response) => {
     
     throw new Error(errorMessage);
   }
-  return response.json();
+  
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return response.json();
+  } else {
+    const text = await response.text();
+    return text || null;
+  }
 };
 
 // Helper: Map API qtype to internal type
@@ -146,7 +152,7 @@ export const questionAPI = {
   // Get all tags with better normalization
   async getTags() {
     try {
-      console.log('Fetching all tags from API...');
+      console.log(' Fetching all tags from API...');
       
       const response = await fetch(`${API_BASE_URL}/questions/tags`, {
         method: 'GET',
@@ -156,38 +162,31 @@ export const questionAPI = {
       const data = await handleAPIResponse(response);
       console.log(' Raw tags response:', data);
       
-      let tags = [];
+      // Handle your API response format: [{ id: 36, name: "c1", rawname: "c1", ... }]
       if (Array.isArray(data)) {
-        tags = data;
-      } else if (data.tags && Array.isArray(data.tags)) {
-        tags = data.tags;
-      } else if (data.data && Array.isArray(data.data)) {
-        tags = data.data;
+        return data.map(tag => ({
+          id: tag.id,
+          name: tag.name,
+          rawname: tag.rawname,
+          isstandard: tag.isstandard || false,
+          description: tag.description || '',
+          flag: tag.flag || 0
+        }));
       }
       
-      // Better tag normalization
-      const normalizedTags = tags.map(tag => {
-        if (typeof tag === 'string') {
-          return tag.trim();
-        } else if (typeof tag === 'object' && tag !== null) {
-          return tag.rawname || tag.name || tag.tag_name || tag.text || tag.displayname || String(tag.id);
-        }
-        return String(tag);
-      }).filter(tag => tag && tag.trim() !== '');
-      
-      console.log(' Normalized tags:', normalizedTags);
-      return normalizedTags;
+      console.log(' Processed tags:', data.length);
+      return [];
     } catch (error) {
       console.error(' Failed to fetch tags:', error);
       // Return fallback tags
-      return ['exam', 'quiz', 'general', 'l1', 'l2', 'l3', 'hardware', 'software'];
+      return [];
     }
   },
 
   // Get tags for a specific question
   async getQuestionTags(questionId) {
     try {
-      console.log(`Fetching tags for question ${questionId}...`);
+      console.log(` Fetching tags for question ${questionId}...`);
       
       const response = await fetch(`${API_BASE_URL}/questions/question-tags?questionid=${questionId}`, {
         method: 'GET',
@@ -197,196 +196,103 @@ export const questionAPI = {
       const data = await handleAPIResponse(response);
       console.log(` Tags for question ${questionId}:`, data);
       
-      return Array.isArray(data.tags) ? data.tags : [];
+      // Handle your API response format: { questionid: 99235, tags: [] }
+      let tags = [];
+      if (Array.isArray(data.tags)) {
+        tags = data.tags;
+      } else if (Array.isArray(data.questiontags)) {
+        tags = data.questiontags;
+      } else if (Array.isArray(data)) {
+        tags = data;
+      }
+
+      // Normalize tag format
+      return tags.map(tag => {
+        if (typeof tag === 'string') {
+          return {
+            id: tag,
+            name: tag,
+            rawname: tag,
+            isstandard: false
+          };
+        } else if (typeof tag === 'object' && tag !== null) {
+          return {
+            id: tag.id || tag.name || tag.rawname,
+            name: tag.name || tag.rawname || tag.text || tag.value,
+            rawname: tag.rawname || tag.name || tag.text || tag.value,
+            isstandard: tag.isstandard || false,
+            description: tag.description || '',
+            flag: tag.flag || 0
+          };
+        }
+        return null;
+      }).filter(Boolean);
+
     } catch (error) {
-      console.error(` Failed to fetch tags for question ${questionId}:`, error);
+      console.error(`Failed to fetch tags for question ${questionId}:`, error);
       return [];
     }
   },
 
-async getTagsForMultipleQuestions(questionIds) {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) throw new Error('Authentication required');
+  // Get tags for multiple questions
+  async getTagsForMultipleQuestions(questionIds) {
+    try {
+      const results = {};
+      
+      // Your API doesn't have batch endpoint, so fetch individually
+      for (const questionId of questionIds) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/questions/question-tags?questionid=${questionId}`, {
+            method: 'GET',
+            headers: getAuthHeaders()
+          });
 
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-    const results = {};
-    
-    // Your API doesn't have batch endpoint, so fetch individually
-    for (const questionId of questionIds) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/questions/question-tags?questionid=${questionId}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
+          if (response.ok) {
+            const data = await response.json();
+            // Your API returns: { questionid: 99235, tags: [] }
+            results[questionId] = data.tags || [];
+          } else {
+            results[questionId] = [];
           }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          // Your API returns: { questionid: 99235, tags: [] }
-          results[questionId] = data.tags || [];
-        } else {
+        } catch (error) {
+          console.error(`Error fetching tags for question ${questionId}:`, error);
           results[questionId] = [];
         }
-      } catch (error) {
-        console.error(`Error fetching tags for question ${questionId}:`, error);
-        results[questionId] = [];
       }
+
+      return results;
+    } catch (err) {
+      console.error('Error in batch tag fetching:', err);
+      return {};
     }
+  },
 
-    return results;
-  } catch (err) {
-    console.error('Error in batch tag fetching:', err);
-    return {};
-  }
-},
-
-
-//  IMPROVED: Enhanced individual tag fetching
-async getQuestionTags(questionId) {
-  try {
-    console.log(` Fetching tags for question ${questionId}...`);
-    
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-    const response = await fetch(`${API_BASE_URL}/questions/question-tags?questionid=${questionId}`, {
-      method: 'GET',
-      headers: getAuthHeaders()
-    });
-    
-    const data = await handleAPIResponse(response);
-    console.log(` Tags for question ${questionId}:`, data);
-    
-    // Handle different response formats
-    let tags = [];
-    if (Array.isArray(data.tags)) {
-      tags = data.tags;
-    } else if (Array.isArray(data.questiontags)) {
-      tags = data.questiontags;
-    } else if (Array.isArray(data)) {
-      tags = data;
+  // Bulk tag operations with proper error handling
+  async bulkTagOperations(questionIds, tagIds, operation = 'add') {
+    try {
+      console.log(` Bulk ${operation} tags:`, { questionIds, tagIds });
+      
+      const url = `${API_BASE_URL}/questions/bulk-tags`;
+      const method = operation === 'add' ? 'POST' : 'DELETE';
+      
+      const response = await fetch(url, {
+        method,
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          questionids: questionIds,
+          tagids: tagIds
+        })
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(` Bulk ${operation} tags successful:`, data);
+      
+      return data;
+    } catch (error) {
+      console.error(` Bulk ${operation} tags failed:`, error);
+      throw error;
     }
-
-    // Normalize tag format
-    return tags.map(tag => {
-      if (typeof tag === 'string') {
-        return {
-          id: tag,
-          name: tag,
-          rawname: tag,
-          isstandard: false
-        };
-      } else if (typeof tag === 'object' && tag !== null) {
-        return {
-          id: tag.id || tag.name || tag.rawname,
-          name: tag.name || tag.rawname || tag.text || tag.value,
-          rawname: tag.rawname || tag.name || tag.text || tag.value,
-          isstandard: tag.isstandard || false,
-          // Include any additional properties from your API
-          description: tag.description || '',
-          flag: tag.flag || 0
-        };
-      }
-      return null;
-    }).filter(Boolean);
-
-  } catch (error) {
-    console.error(` Failed to fetch tags for question ${questionId}:`, error);
-    return [];
-  }
-},
-
-//  IMPROVED: Enhanced getTags method for better performance
-async getTags() {
-  try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-    const response = await fetch(`${API_BASE_URL}/questions/tags`, {
-      method: 'GET',
-      headers: getAuthHeaders()
-    });
-    
-    const data = await handleAPIResponse(response);
-    
-    // Your API returns array directly: [{ id: 36, name: "c1", rawname: "c1", ... }]
-    if (Array.isArray(data)) {
-      return data.map(tag => ({
-        id: tag.id,
-        name: tag.name,
-        rawname: tag.rawname,
-        isstandard: tag.isstandard || false,
-        description: tag.description || '',
-        flag: tag.flag || 0
-      }));
-    }
-    
-    return [];
-  } catch (error) {
-    console.error('Failed to fetch tags:', error);
-    return [];
-  }
-},
-
-//  NEW: Cache management for tags
-clearTagCache() {
-  // If you're using any tag caching, clear it here
-  console.log('🗑️ Clearing tag cache');
-  // Implementation depends on your caching strategy
-},
-//  NEW: Bulk tag operations with proper error handling
-async bulkTagOperations(questionIds, tagIds, operation = 'add') {
-  try {
-    console.log(` Bulk ${operation} tags:`, { questionIds, tagIds });
-    
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-    const url = `${API_BASE_URL}/questions/bulk-tags`;
-    const method = operation === 'add' ? 'POST' : 'DELETE';
-    
-    const response = await fetch(url, {
-      method,
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        questionids: questionIds,
-        tagids: tagIds
-      })
-    });
-    
-    const data = await handleAPIResponse(response);
-    console.log(` Bulk ${operation} tags successful:`, data);
-    
-    return data;
-  } catch (error) {
-    console.error(` Bulk ${operation} tags failed:`, error);
-    throw error;
-  }
-},
-
-  // // Bulk tag operations
-  // async bulkTagOperations(questionIds, tagIds, operation = 'add') {
-  //   try {
-  //     console.log(` Bulk ${operation} tags:`, { questionIds, tagIds });
-      
-  //     const url = `${API_BASE_URL}/questions/bulk-tags`;
-  //     const method = operation === 'add' ? 'POST' : 'DELETE';
-      
-  //     const response = await fetch(url, {
-  //       method,
-  //       headers: getAuthHeaders(),
-  //       body: JSON.stringify({
-  //         questionids: questionIds,
-  //         tagids: tagIds
-  //       })
-  //     });
-      
-  //     const data = await handleAPIResponse(response);
-  //     console.log(` Bulk ${operation} tags successful:`, data);
-      
-  //     return data;
-  //   } catch (error) {
-  //     console.error(` Bulk ${operation} tags failed:`, error);
-  //     throw error;
-  //   }
-  // },
+  },
 
   // Get all categories
   async getCategories() {
@@ -410,10 +316,10 @@ async bulkTagOperations(questionIds, tagIds, operation = 'add') {
     }
   },
 
-
-  // Get question types
+  // Get question types - Fixed URL
   async getQuestionTypes() {
     try {
+      // Fixed: Use correct URL path
       const response = await fetch(`${API_BASE_URL}/questions/qtypes`, {
         method: 'GET',
         headers: getAuthHeaders()
@@ -441,6 +347,7 @@ async bulkTagOperations(questionIds, tagIds, operation = 'add') {
     }
   },
 
+  // Get all users
   async getAllUsers() {
     try {
       const response = await fetch(`${API_BASE_URL}/users`, {
@@ -452,6 +359,308 @@ async bulkTagOperations(questionIds, tagIds, operation = 'add') {
       console.error('Failed to fetch users:', error);
       return [];
     }
+  },
+
+  // Get questions with filters - Fixed URL
+  async getQuestions(filters = {}, page = 1, perPage = 10) {
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    params.append('per_page', perPage.toString());
+    
+    // Fixed: Use correct parameter names
+    if (filters.categoryId) params.append('categoryid', filters.categoryId);
+    if (filters.courseId) params.append('courseid', filters.courseId);
+    if (filters.status && filters.status !== 'All') params.append('status', filters.status.toLowerCase());
+    if (filters.type && filters.type !== 'All') params.append('qtype', filters.type);
+    if (filters.search) params.append('search', filters.search);
+    
+    // Handle tags array
+    if (filters.tag && Array.isArray(filters.tag) && filters.tag.length > 0 && !filters.tag.includes('All')) {
+      filters.tag.forEach(tag => params.append('tags[]', tag));
+    }
+
+    try {
+      // Fixed: Use correct endpoint
+      const response = await fetch(`${API_BASE_URL}/questions/filters?${params}`, {
+        method: 'GET',
+        headers: getAuthHeaders()
+      });
+      const data = await handleAPIResponse(response);
+      
+      // Enhanced processing to include user information
+      if (data && data.questions && Array.isArray(data.questions)) {
+        await getUserById(1); // Preload users
+        for (let question of data.questions) {
+          if (question.createdby && !question.creator_name) {
+            const creator = await getUserById(question.createdby);
+            if (creator) {
+              question.creator_name = creator.fullname;
+              question.creator_firstname = creator.firstname;
+              question.creator_lastname = creator.lastname;
+            }
+          }
+          if (question.modifiedby && !question.modifier_name) {
+            const modifier = await getUserById(question.modifiedby);
+            if (modifier) {
+              question.modifier_name = modifier.fullname;
+              question.modifier_firstname = modifier.firstname;
+              question.modifier_lastname = modifier.lastname;
+            }
+          }
+        }
+      }
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch questions:', error);
+      throw error;
+    }
+  },
+
+  // Get question categories for course - Fixed URL
+  async getQuestionCategories(courseId) {
+    try {
+      console.log('🎓 Fetching question categories for course:', courseId);
+      
+      // Fixed: Use correct endpoint path
+      const response = await fetch(`${API_BASE_URL}/questions/question_categories?courseid=${courseId}`, {
+        method: 'GET',
+        headers: getAuthHeaders()
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(' Question categories response:', data);
+      
+      // Handle different response formats
+      let categories = [];
+      if (Array.isArray(data)) {
+        categories = data;
+      } else if (data.categories && Array.isArray(data.categories)) {
+        categories = data.categories;
+      } else if (data.data && Array.isArray(data.data)) {
+        categories = data.data;
+      }
+
+      return categories.map(cat => ({
+        id: cat.id || cat.categoryid,
+        name: cat.name || cat.category_name || `Category ${cat.id}`,
+        info: cat.info || cat.description || '',
+        parent: cat.parent || 0,
+        contextid: cat.contextid || cat.context_id,
+        sortorder: cat.sortorder || 0,
+        questioncount: cat.questioncount || 0
+      })).filter(cat => cat.id);
+      
+    } catch (error) {
+      console.error(' Error fetching question categories:', error);
+      throw error;
+    }
+  },
+
+  // Get courses - Fixed URL
+  async getCourses(categoryId = null) {
+    try {
+      console.log('🎓 Fetching courses:', categoryId ? `for category ${categoryId}` : 'all');
+      
+      const url = categoryId 
+        ? `${API_BASE_URL}/questions/courses?categoryid=${categoryId}`
+        : `${API_BASE_URL}/questions/courses`;
+        
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: getAuthHeaders()
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(' Courses response:', data);
+      
+      // Handle different response formats
+      if (data && data.courses && Array.isArray(data.courses)) {
+        return data.courses;
+      } else if (Array.isArray(data)) {
+        return data;
+      } else {
+        console.warn('Unexpected courses response format:', data);
+        return [];
+      }
+    } catch (error) {
+      console.error(' Error fetching courses:', error);
+      throw error;
+    }
+  },
+
+  // Update question status
+  async updateQuestionStatus(questionId, status) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/questions/set-question-status`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          questionid: questionId,
+          newstatus: status
+        })
+      });
+      return handleAPIResponse(response);
+    } catch (error) {
+      console.error('Failed to update question status:', error);
+      throw error;
+    }
+  },
+
+
+  
+  async updateQuestionName(questionid, name, questiontext, userid) {
+    try {
+      if (!questionid || !name || !userid) {
+        throw new Error('questionid, name, and userid are required');
+      }
+  
+      const params = new URLSearchParams({
+        questionid,
+        name,
+        questiontext: questiontext || '',
+        userid,
+      });
+  
+      const response = await fetch(`http://127.0.0.1:8000/api/questions?${params.toString()}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        }
+        // No body for this PUT request
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to update question');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to update question name:', error);
+      throw error;
+    }
+  },
+
+  // Bulk update question status
+  async bulkUpdateQuestionStatus(questionIds, newStatus) {
+    try {
+      console.log(' Bulk updating question status:', { questionIds, newStatus });
+      
+      const response = await fetch(`${API_BASE_URL}/questions/status`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          questionids: questionIds,
+          newstatus: newStatus
+        })
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(' Bulk status update successful:', data);
+      
+      return data;
+    } catch (error) {
+      console.error(' Failed to bulk update question status:', error);
+      throw error;
+    }
+  },
+
+  // Bulk delete questions
+  async bulkDeleteQuestions(questionIds) {
+    try {
+      console.log(' Bulk deleting questions:', questionIds);
+      
+      const response = await fetch(`${API_BASE_URL}/questions/bulk-delete`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ questionids: questionIds })
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(' Bulk delete successful:', data);
+      
+      return data;
+    } catch (error) {
+      console.error('Failed to bulk delete questions:', error);
+      throw error;
+    }
+  },
+
+  // Export questions
+  async exportQuestions(questionIds, format = 'xml') {
+    try {
+      console.log(' Exporting questions:', { questionIds, format });
+      
+      const response = await fetch(`${API_BASE_URL}/questions/export`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          questionids: questionIds,
+          format: format
+        })
+      });
+      
+      if (format === 'xml' || format === 'json') {
+        return await response.text();
+      } else {
+        return await response.blob();
+      }
+    } catch (error) {
+      console.error(' Failed to export questions:', error);
+      throw error;
+    }
+  },
+
+  // Duplicate questions
+  async duplicateQuestions(questionIds) {
+    try {
+      console.log(' Duplicating questions:', questionIds);
+      
+      const response = await fetch(`${API_BASE_URL}/questions/duplicate`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          questionids: questionIds
+        })
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(' Questions duplicated:', data);
+      
+      return data;
+    } catch (error) {
+      console.error(' Failed to duplicate questions:', error);
+      throw error;
+    }
+  },
+
+  // Get question statistics
+  async getQuestionStatistics(questionIds = null) {
+    try {
+      console.log(' Fetching question statistics:', questionIds);
+      
+      const url = `${API_BASE_URL}/questions/statistics`;
+      
+      const response = await fetch(url, {
+        method: questionIds ? 'POST' : 'GET',
+        headers: getAuthHeaders(),
+        body: questionIds ? JSON.stringify({ questionids: questionIds }) : undefined
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(' Question statistics fetched:', data);
+      
+      return data;
+    } catch (error) {
+      console.error(' Failed to fetch question statistics:', error);
+      throw error;
+    }
+  },
+
+  // Clear tag cache
+  clearTagCache() {
+    console.log(' Clearing tag cache');
+    // Implementation depends on your caching strategy
   },
 
   // Create True/False Question
@@ -509,273 +718,6 @@ async bulkTagOperations(questionIds, tagIds, operation = 'add') {
       return await handleAPIResponse(response);
     } catch (error) {
       console.error('Failed to create Multiple Choice question:', error);
-      throw error;
-    }
-  },
-
-  // Get questions with filters
-  async getQuestions(filters = {}, page = 1, perPage = 10) {
-    const params = new URLSearchParams();
-    params.append('page', page.toString());
-    params.append('per_page', perPage.toString());
-    params.append('categoryid', filters.categoryId);
-    if (filters.status && filters.status !== 'All') params.append('status', filters.status.toLowerCase());
-    if (filters.type && filters.type !== 'All') params.append('qtype', filters.type);
- if (filters.tag && Array.isArray(filters.tag) && filters.tag.length > 0 && !filters.tag.includes('All')) {
-  filters.tag.forEach(tag => params.append('tags[]', tag));
-}
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/questions/filters?${params}`, {
-        method: 'GET',
-        headers: getAuthHeaders()
-      });
-      const data = await handleAPIResponse(response);
-      
-      // Enhanced processing to include user information
-      if (data && data.questions && Array.isArray(data.questions)) {
-        await getUserById(1); // Preload users
-        for (let question of data.questions) {
-          if (question.createdby && !question.creator_name) {
-            const creator = await getUserById(question.createdby);
-            if (creator) {
-              question.creator_name = creator.fullname;
-              question.creator_firstname = creator.firstname;
-              question.creator_lastname = creator.lastname;
-            }
-          }
-          if (question.modifiedby && !question.modifier_name) {
-            const modifier = await getUserById(question.modifiedby);
-            if (modifier) {
-              question.modifier_name = modifier.fullname;
-              question.modifier_firstname = modifier.firstname;
-              question.modifier_lastname = modifier.lastname;
-            }
-          }
-        }
-      }
-      return data;
-    } catch (error) {
-      console.error('Failed to fetch questions:', error);
-      throw error;
-    }
-  },
-
-  // Update question status
-  async updateQuestionStatus(questionId, status) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/questions/set-question-status`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          questionid: questionId,
-          newstatus: status
-        })
-      });
-      return handleAPIResponse(response);
-    } catch (error) {
-      console.error('Failed to update question status:', error);
-      throw error;
-    }
-  },
-
-
-
-// Update question name and text (no version change)
-async updateQuestionName(questionId, name, questiontext, userId) {
-  try {
-    // Validate required fields
-    if (!questionId || !name || !userId) {
-      throw new Error('questionid, name, and userid are required');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/questions`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        questionid: questionId,
-        name: name,
-        questiontext: questiontext || '', // Ensure questiontext is provided
-        userid: userId
-      })
-    });
-
-    const data = await handleAPIResponse(response);
-    
-    if (data.status !== true) {
-      throw new Error(data.message || 'Update failed');
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Failed to update question name:', error);
-    throw error;
-  }
-},
-
-  // Bulk update question status with better error handling
-  async bulkUpdateQuestionStatus(questionIds, newStatus) {
-    try {
-      console.log(' Bulk updating question status:', { questionIds, newStatus });
-      
-      const response = await fetch(`${API_BASE_URL}/questions/status`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          questionids: questionIds,
-          newstatus: newStatus
-        })
-      });
-      
-      const data = await handleAPIResponse(response);
-      console.log(' Bulk status update successful:', data);
-      
-      return data;
-    } catch (error) {
-      console.error(' Failed to bulk update question status:', error);
-      throw error;
-    }
-  },
-
-  // Bulk delete questions with better error handling
-  async bulkDeleteQuestions(questionIds) {
-    try {
-      console.log(' Bulk deleting questions:', questionIds);
-      
-      const response = await fetch(`${API_BASE_URL}/questions/bulk-delete`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ questionids: questionIds })
-      });
-      
-      const data = await handleAPIResponse(response);
-      console.log(' Bulk delete successful:', data);
-      
-      return data;
-    } catch (error) {
-      console.error(' Failed to bulk delete questions:', error);
-      throw error;
-    }
-  },
-
-  // Bulk edit questions (multiple fields at once)
-  async bulkEditQuestions(questionIds, updates) {
-    try {
-      console.log(' Bulk editing questions:', { questionIds, updates });
-      
-      const response = await fetch(`${API_BASE_URL}/questions/bulk-edit`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          questionids: questionIds,
-          updates: updates
-        })
-      });
-      
-      const data = await handleAPIResponse(response);
-      console.log(' Bulk edit successful:', data);
-      
-      return data;
-    } catch (error) {
-      console.error(' Failed to bulk edit questions:', error);
-      throw error;
-    }
-  },
-
-  // Get questions by IDs (for bulk operations)
-  async getQuestionsByIds(questionIds) {
-    try {
-      console.log(' Fetching questions by IDs:', questionIds);
-      
-      const response = await fetch(`${API_BASE_URL}/questions/by-ids`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          questionids: questionIds
-        })
-      });
-      
-      const data = await handleAPIResponse(response);
-      console.log(' Questions by IDs fetched:', data);
-      
-      return data;
-    } catch (error) {
-      console.error(' Failed to fetch questions by IDs:', error);
-      throw error;
-    }
-  },
-
-  // Export questions in various formats
-  async exportQuestions(questionIds, format = 'xml') {
-    try {
-      console.log('Exporting questions:', { questionIds, format });
-      
-      const response = await fetch(`${API_BASE_URL}/questions/export`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          questionids: questionIds,
-          format: format
-        })
-      });
-      
-      if (format === 'xml' || format === 'json') {
-        // For text-based formats, return the content
-        return await response.text();
-      } else {
-        // For binary formats, return blob
-        return await response.blob();
-      }
-    } catch (error) {
-      console.error(' Failed to export questions:', error);
-      throw error;
-    }
-  },
-
-  // Duplicate questions
-  async duplicateQuestions(questionIds) {
-    try {
-      console.log(' Duplicating questions:', questionIds);
-      
-      const response = await fetch(`${API_BASE_URL}/questions/duplicate`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          questionids: questionIds
-        })
-      });
-      
-      const data = await handleAPIResponse(response);
-      console.log(' Questions duplicated:', data);
-      
-      return data;
-    } catch (error) {
-      console.error(' Failed to duplicate questions:', error);
-      throw error;
-    }
-  },
-
-  // Get question statistics
-  async getQuestionStatistics(questionIds = null) {
-    try {
-      console.log(' Fetching question statistics:', questionIds);
-      
-      const url = questionIds 
-        ? `${API_BASE_URL}/questions/statistics`
-        : `${API_BASE_URL}/questions/statistics`;
-      
-      const response = await fetch(url, {
-        method: questionIds ? 'POST' : 'GET',
-        headers: getAuthHeaders(),
-        body: questionIds ? JSON.stringify({ questionids: questionIds }) : undefined
-      });
-      
-      const data = await handleAPIResponse(response);
-      console.log('Question statistics fetched:', data);
-      
-      return data;
-    } catch (error) {
-      console.error(' Failed to fetch question statistics:', error);
       throw error;
     }
   }
@@ -959,3 +901,5 @@ export function generateDemoTags(question) {
   // Remove duplicates and return
   return [...new Set(tags.filter(tag => tag && tag.length > 0))];
 }
+
+export default questionAPI;

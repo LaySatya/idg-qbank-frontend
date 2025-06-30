@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast'; // ← ADD THIS IMPORT
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import Dashboard from './pages/Dashboard';
@@ -108,6 +109,42 @@ const App = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
+      {/* ADD TOASTER COMPONENT HERE ↓ */}
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        gutter={8}
+        containerClassName=""
+        containerStyle={{}}
+        toastOptions={{
+          // Define default options
+          className: '',
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+            fontWeight: '500',
+            fontSize: '14px',
+            minWidth: '300px'
+          },
+          // Default options for specific types
+          success: {
+            duration: 4000,
+            theme: {
+              primary: '#10B981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 4000,
+            theme: {
+              primary: '#EF4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
+      
       {isAuthenticated && <Sidebar collapsed={sidebarCollapsed} />}
       <div className="flex flex-col flex-1 overflow-hidden">
           {isAuthenticated && (

@@ -123,14 +123,14 @@ export const categoriesAPI = {
   },
 
   /**
-   * 🔧 FIXED: Fetch courses by category ID using the correct endpoint
+   *  FIXED: Fetch courses by category ID using the correct endpoint
    * @param {number} categoryId - Course category ID (not question category ID)
    * @returns {Promise<Array>} Courses array
    */
   fetchCoursesByCategoryId: async (categoryId) => {
     try {
-      console.log('🎓 Fetching courses for course category:', categoryId);
-      // 🔧 FIXED: Use the correct endpoint for courses by course category
+      console.log(' Fetching courses for course category:', categoryId);
+      //  FIXED: Use the correct endpoint for courses by course category
       const response = await fetch(`${API_BASE_URL}/courses?categoryid=${categoryId}`, {
         method: 'GET',
         headers: getHeaders()
@@ -138,7 +138,7 @@ export const categoriesAPI = {
       const data = await handleResponse(response);
       console.log('🎓 Courses fetched for course category:', categoryId, data);
       
-      // 🔧 FIXED: Handle the correct response structure
+      // FIXED: Handle the correct response structure
       if (data && data.courses && Array.isArray(data.courses)) {
         return data.courses;
       } else if (Array.isArray(data)) {
@@ -148,13 +148,13 @@ export const categoriesAPI = {
         return [];
       }
     } catch (error) {
-      console.error('❌ Error fetching courses by course category:', error);
+      console.error(' Error fetching courses by course category:', error);
       throw error;
     }
   },
 
   /**
-   * 🔧 NEW: Fetch all courses across all categories
+   *  NEW: Fetch all courses across all categories
    * Useful for getting a complete list of courses
    * @returns {Promise<Array>} All courses array
    */
@@ -189,7 +189,7 @@ export const categoriesAPI = {
    */
   fetchQuestionCategoriesByCourse: async (courseId) => {
     try {
-      console.log('🎓 Fetching question categories for course:', courseId);
+      console.log(' Fetching question categories for course:', courseId);
       if (!courseId) {
         throw new Error('Course ID is required');
       }
@@ -207,13 +207,13 @@ export const categoriesAPI = {
   },
 
   /**
-   * 🔧 NEW: Get course details by course ID
+   *  NEW: Get course details by course ID
    * @param {number} courseId - The course ID
    * @returns {Promise<Object>} Course details
    */
   fetchCourseById: async (courseId) => {
     try {
-      console.log('🎓 Fetching course details for:', courseId);
+      console.log(' Fetching course details for:', courseId);
       if (!courseId) {
         throw new Error('Course ID is required');
       }
@@ -241,7 +241,7 @@ export const categoriesAPI = {
    */
   createQuestionCategory: async (categoryData) => {
     try {
-      console.log('➕ Creating new question category:', categoryData);
+      console.log(' Creating new question category:', categoryData);
       if (!categoryData.name || !categoryData.name.trim()) {
         throw new Error('Category name is required');
       }
@@ -346,7 +346,7 @@ export const categoriesAPI = {
   },
 
   /**
-   * 🔧 NEW: Search courses by name or criteria
+   *  NEW: Search courses by name or criteria
    * @param {string} searchTerm - Search term
    * @param {Object} filters - Additional filters
    * @returns {Promise<Array>} Filtered courses
