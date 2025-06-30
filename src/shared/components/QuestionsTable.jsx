@@ -6,6 +6,7 @@ import { questionAPI } from '../../api/questionAPI';
 import { toast } from 'react-hot-toast';
 import ReactModal from 'react-modal';
 ReactModal.setAppElement('#root');
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const QuestionsTable = ({
   questions,
   allQuestions,
