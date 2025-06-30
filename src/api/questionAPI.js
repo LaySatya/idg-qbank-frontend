@@ -10,7 +10,7 @@ export const validateEnvironmentConfig = () => {
     console.error(' Missing required environment variables:', missing);
     console.error('Please check your .env file contains:');
     missing.forEach(varName => {
-      console.error(`${varName}=http://localhost:8000/api`);
+     
     });
     return false;
   }
@@ -21,7 +21,7 @@ export const validateEnvironmentConfig = () => {
 };
 
 // Fixed: Use your env variable correctly
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Validate on module load
 validateEnvironmentConfig();
@@ -522,7 +522,7 @@ export const questionAPI = {
         userid,
       });
   
-      const response = await fetch(`http://127.0.0.1:8000/api/questions?${params.toString()}`, {
+      const response = await fetch(`${API_BASE_URL}/questions?${params.toString()}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

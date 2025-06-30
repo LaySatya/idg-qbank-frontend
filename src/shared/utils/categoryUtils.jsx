@@ -54,7 +54,7 @@ export const buildGroupedCategoryTree = (categories = [], courses = []) => {
     return [];
   }
 
-  console.log(`✅ Filtered categories: ${validCategories.length}/${categories.length} valid`);
+  console.log(` Filtered categories: ${validCategories.length}/${categories.length} valid`);
 
   // Group categories by contextid
   const grouped = {};
@@ -66,7 +66,7 @@ export const buildGroupedCategoryTree = (categories = [], courses = []) => {
     grouped[contextid].push({ ...cat }); // Create shallow copy
   });
 
-  console.log('📊 Grouped by contextid:', Object.keys(grouped).map(id => `${id}: ${grouped[id].length}`));
+  console.log(' Grouped by contextid:', Object.keys(grouped).map(id => `${id}: ${grouped[id].length}`));
 
   /**
    * Build hierarchical tree from flat category list
