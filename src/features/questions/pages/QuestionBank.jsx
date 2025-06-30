@@ -20,7 +20,7 @@ import CategoriesComponent from '../../../shared/components/CategoriesComponent'
 import { EDIT_COMPONENTS, BULK_EDIT_COMPONENTS } from '../../../shared/constants/questionConstants';
 import { Toaster, toast } from 'react-hot-toast';
 import PaginationControls from '../../../shared/components/PaginationControls';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // ============================================================================
 // PERFORMANCE OPTIMIZATIONS

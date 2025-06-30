@@ -5,7 +5,7 @@ import {
   Building2, GraduationCap, FileText, Plus, Minus, RefreshCw
 } from 'lucide-react';
 import { useCategoriesAPI } from '../../api/categoriesAPI';
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const CategoriesComponent = ({ 
   isOpen, 
   onClose, 
@@ -114,7 +114,7 @@ const CategoriesComponent = ({
         setSuccess(null);
         
         console.log(' Loading course categories from API...');
-        const response = await fetch('http://127.0.0.1:8000/api/questions/course-categories', {
+        const response = await fetch(`${API_BASE_URL}/questions/course-categories`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -199,7 +199,7 @@ const CategoriesComponent = ({
       console.log(` Loading courses for category ${categoryId}...`);
       
       const response = await fetch(
-        `http://127.0.0.1:8000/api/questions/courses?categoryid=${categoryId}`,
+        `${API_BASE_URL}/questions/courses?categoryid=${categoryId}`,
         {
           method: 'GET',
           headers: {
