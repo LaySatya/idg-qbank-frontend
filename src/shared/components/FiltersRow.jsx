@@ -6,6 +6,8 @@ import {
 import { buildGroupedCategoryTree } from '@/shared/utils/categoryUtils.jsx';
 import Select from 'react-select';
 
+// Then use:
+// await questionAPI.getTagsForMultipleQuestions(questionIds);
 // MUI - Compatible with your current version
 import {
   Box,
@@ -19,6 +21,7 @@ import {
   Paper,
   Typography
 } from '@mui/material';
+
 
 // Debounce hook
 const useDebounce = (callback, delay) => {
@@ -45,6 +48,7 @@ const FiltersRow = ({
   loadingQuestionTags = false,
   loadingCategories = false,
   onSearch = null,
+  questions = [],
 }) => {
   const [internalSearchQuery, setInternalSearchQuery] = useState(searchQuery);
 
@@ -59,16 +63,92 @@ const FiltersRow = ({
 
   const questionStatuses = useMemo(() => ['ready', 'draft'], []);
 
-  // Tag options for react-select
-  const tagOptions = useMemo(() => {
-    if (!Array.isArray(allTags)) return [];
-    return allTags
-      .filter(tag => tag && tag !== 'All') // Added null check
-      .map(tag => ({
-        value: tag,
-        label: tag.charAt(0).toUpperCase() + tag.slice(1)
-      }));
-  }, [allTags]);
+
+ const tagOptions = useMemo(() => {
+  if (!Array.isArray(allTags) || allTags.length === 0) {
+    console.log(' No tags available for filtering');
+    return [];
+  }
+  
+  console.log(` Processing ${allTags.length} tags for options`);
+  
+  const options = allTags
+    .filter(tag => tag && tag.id && tag.name) // Ensure valid tags
+    .map(tag => ({
+      value: String(tag.id), //  CRITICAL: Ensure string value
+      label: tag.name,
+      rawname: tag.rawname,
+      originalTag: tag // For debugging
+    }));
+    
+  console.log(` Created ${options.length} tag options`);
+  console.log(' Sample tag options:', options.slice(0, 3));
+  
+  return options;
+}, [allTags]);
+const debugTagData = useCallback(() => {
+  console.log(' === TAG DEBUGGING SESSION ===');
+  
+  // Analyze questions and their tags
+  console.log(` Analyzing ${questions.length} questions:`);
+  
+  const tagAnalysis = {};
+  const questionTagSamples = [];
+  
+  questions.slice(0, 10).forEach((q, index) => {
+    if (q.tags && Array.isArray(q.tags) && q.tags.length > 0) {
+      const analysis = {
+        questionId: q.id,
+        questionTitle: q.title?.substring(0, 30) + '...',
+        tags: q.tags,
+        tagTypes: q.tags.map(tag => typeof tag),
+        extractedIds: q.tags.map(tag => questionFilterService.extractTagId(tag))
+      };
+      questionTagSamples.push(analysis);
+      
+      // Count tag ID types
+      q.tags.forEach(tag => {
+        const extractedId = questionFilterService.extractTagId(tag);
+        const idType = typeof extractedId;
+        tagAnalysis[idType] = (tagAnalysis[idType] || 0) + 1;
+      });
+    }
+  });
+  
+  console.log(' Tag ID type distribution:', tagAnalysis);
+  console.log(' Sample question tags:', questionTagSamples);
+  
+  // Analyze available tags
+  console.log(` Available tags (${allTags.length} total):`);
+  console.log('Sample allTags:', allTags.slice(0, 5));
+  
+  // Analyze current filter
+  console.log(` Current tag filter:`, tagFilter);
+  console.log(` Filter types:`, tagFilter.map(tag => `${tag} (${typeof tag})`));
+  
+  console.log(' === END TAG DEBUGGING ===');
+}, [questions, allTags, tagFilter]);
+
+//  Add this button temporarily for debugging
+const DebugButton = () => (
+  <button
+    onClick={debugTagData}
+    style={{
+      position: 'fixed',
+      top: '10px',
+      right: '10px',
+      zIndex: 9999,
+      background: '#f59e0b',
+      color: 'white',
+      padding: '8px 16px',
+      border: 'none',
+      borderRadius: '4px',
+      cursor: 'pointer'
+    }}
+  >
+     Debug Tags
+  </button>
+);
 
   // Category options for Chips
   const categoryOptions = useMemo(() => [
@@ -114,18 +194,18 @@ const FiltersRow = ({
 
   // Clear all filters
   const handleClearFilters = useCallback(() => {
+    console.log(' Clearing all filters including tags');
     setFilters({
       status: 'All',
       type: 'All',
       category: 'All',
-      courseId: null,
-      courseName: null,
+        courseId: filters.courseId, // Keep course selection
+      courseName: filters.courseName,
       _resetTimestamp: Date.now()
-    });
-    setInternalSearchQuery('');
-    debouncedSetSearchQuery('');
-    debouncedSetTagFilter([]);
-  }, [setFilters, debouncedSetSearchQuery, debouncedSetTagFilter]);
+   });
+    setSearchQuery('');
+    setTagFilter([]); // Clear tag filter
+  }, [setFilters, setSearchQuery, setTagFilter, filters.courseId, filters.courseName]);
 
   // Search input change
   const handleSearchChange = useCallback((e) => {
@@ -158,10 +238,20 @@ const FiltersRow = ({
   }, [setFilters]);
 
   // Tag change
-  const handleTagChange = useCallback((selectedOptions) => {
-    const newTags = selectedOptions ? selectedOptions.map(opt => opt.value) : [];
-    debouncedSetTagFilter(newTags);
-  }, [debouncedSetTagFilter]);
+ const handleTagChange = useCallback((selectedOptions) => {
+  console.log(' Tag selection changed:', selectedOptions);
+  
+  const newTags = selectedOptions ? selectedOptions.map(opt => {
+    // Ensure consistent data type
+    return String(opt.value);
+  }) : [];
+  
+  console.log(' Setting tag filter to (all strings):', newTags);
+  console.log(' Tag filter types:', newTags.map(tag => `${tag} (${typeof tag})`));
+  
+  setTagFilter(newTags);
+}, [setTagFilter]);
+
 
   // Keep internal search in sync with prop
   useEffect(() => {
@@ -184,7 +274,7 @@ const FiltersRow = ({
       
       return [
         <MenuItem key={`${node.id}-${level}`} value={node.id} sx={{ pl: 2 + level * 2 }}>
-          {`${'— '.repeat(level)}${displayName}`}
+          {`${''.repeat(level)}${displayName}`}
         </MenuItem>,
         ...(node.children && Array.isArray(node.children) 
           ? renderOptions(node.children, level + 1, node.name, contextLabel) 
@@ -331,22 +421,69 @@ const FiltersRow = ({
       </Grid>
 
       {/* Tags Filter */}
-      <Box mt={3}>
+   <Box mt={3}>
         <Typography variant="subtitle2" gutterBottom>
-          Filter by Tags
+          Filter by Tags {tagOptions.length > 0 && `(${tagOptions.length} available)`}
         </Typography>
-        <Select
-          isMulti
-          value={tagOptions.filter(opt => Array.isArray(tagFilter) && tagFilter.includes(opt.value))}
-          onChange={handleTagChange}
-          options={tagOptions}
-          placeholder="Select tags to filter..."
-          isSearchable
-          isClearable
-          classNamePrefix="react-select"
-          noOptionsMessage={() => "No tags available"}
-          isLoading={loadingQuestionTags}
-        />
+        
+        {tagOptions.length > 0 ? (
+          <Select
+            isMulti
+            value={tagOptions.filter(opt => 
+              Array.isArray(tagFilter) && tagFilter.includes(opt.value)
+            )}
+            onChange={handleTagChange}
+            options={tagOptions}
+            placeholder="Select tags to filter questions..."
+            isSearchable
+            isClearable
+            classNamePrefix="react-select"
+            noOptionsMessage={() => "No tags match your search"}
+            styles={{
+              control: (base) => ({
+                ...base,
+                minHeight: 40,
+                fontSize: 14
+              }),
+              multiValue: (base) => ({
+                ...base,
+                backgroundColor: '#e3f2fd',
+                borderRadius: 4
+              }),
+              multiValueLabel: (base) => ({
+                ...base,
+                color: '#1976d2',
+                fontSize: 12
+              })
+            }}
+          />
+        ) : (
+          <Box 
+            sx={{ 
+              p: 2, 
+              border: '1px dashed #ccc', 
+              borderRadius: 1, 
+              textAlign: 'center',
+              color: 'text.secondary'
+            }}
+          >
+            <Typography variant="body2">
+              No tags available for filtering
+            </Typography>
+            <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+              Tags will appear here once questions are loaded
+            </Typography>
+          </Box>
+        )}
+        
+        {/* Debug info in development */}
+        {process.env.NODE_ENV === 'development' && (
+          <Box mt={1}>
+            <Typography variant="caption" color="text.secondary">
+              Debug: {allTags.length} total tags, {tagFilter?.length || 0} selected
+            </Typography>
+          </Box>
+        )}
       </Box>
     </Paper>
   );

@@ -150,7 +150,7 @@ const getUserNameById = async (userId) => {
 
 export const questionAPI = {
   // Get all tags with better normalization
-  async getTags() {
+ async getTags() {
     try {
       console.log(' Fetching all tags from API...');
       
@@ -162,29 +162,30 @@ export const questionAPI = {
       const data = await handleAPIResponse(response);
       console.log(' Raw tags response:', data);
       
-      // Handle your API response format: [{ id: 36, name: "c1", rawname: "c1", ... }]
       if (Array.isArray(data)) {
-        return data.map(tag => ({
-          id: tag.id,
+        const processedTags = data.map(tag => ({
+          id: String(tag.id), //  CRITICAL: Ensure string ID
           name: tag.name,
           rawname: tag.rawname,
           isstandard: tag.isstandard || false,
           description: tag.description || '',
           flag: tag.flag || 0
         }));
+        
+        console.log(` Processed ${processedTags.length} tags`);
+        return processedTags;
       }
       
-      console.log(' Processed tags:', data.length);
+      console.log(' Tags response was not an array:', typeof data);
       return [];
     } catch (error) {
       console.error(' Failed to fetch tags:', error);
-      // Return fallback tags
       return [];
     }
   },
 
   // Get tags for a specific question
-  async getQuestionTags(questionId) {
+async getQuestionTags(questionId) {
     try {
       console.log(` Fetching tags for question ${questionId}...`);
       
@@ -194,7 +195,7 @@ export const questionAPI = {
       });
       
       const data = await handleAPIResponse(response);
-      console.log(` Tags for question ${questionId}:`, data);
+      console.log(`📋 Tags for question ${questionId}:`, data);
       
       // Handle your API response format: { questionid: 99235, tags: [] }
       let tags = [];
@@ -206,8 +207,8 @@ export const questionAPI = {
         tags = data;
       }
 
-      // Normalize tag format
-      return tags.map(tag => {
+      // Normalize tag format ensuring string IDs
+      const normalizedTags = tags.map(tag => {
         if (typeof tag === 'string') {
           return {
             id: tag,
@@ -217,7 +218,7 @@ export const questionAPI = {
           };
         } else if (typeof tag === 'object' && tag !== null) {
           return {
-            id: tag.id || tag.name || tag.rawname,
+            id: String(tag.id || tag.name || tag.rawname), // 🔧 CRITICAL: String ID
             name: tag.name || tag.rawname || tag.text || tag.value,
             rawname: tag.rawname || tag.name || tag.text || tag.value,
             isstandard: tag.isstandard || false,
@@ -228,11 +229,16 @@ export const questionAPI = {
         return null;
       }).filter(Boolean);
 
+      console.log(` Normalized ${normalizedTags.length} tags for question ${questionId}`);
+      return normalizedTags;
+
     } catch (error) {
-      console.error(`Failed to fetch tags for question ${questionId}:`, error);
+      console.error(` Failed to fetch tags for question ${questionId}:`, error);
       return [];
     }
   },
+
+
 
   // Get tags for multiple questions
   async getTagsForMultipleQuestions(questionIds) {
@@ -374,10 +380,22 @@ export const questionAPI = {
     if (filters.type && filters.type !== 'All') params.append('qtype', filters.type);
     if (filters.search) params.append('search', filters.search);
     
-    // Handle tags array
-   if (filters.tag && Array.isArray(filters.tag) && filters.tag.length > 0 && !filters.tag.includes('All')) {
-  filters.tag.forEach(tag => params.append('tags[id][]', tag)); 
-}
+ //  CRITICAL FIX: Proper tag array handling
+    if (filters.tagFilter && Array.isArray(filters.tagFilter) && filters.tagFilter.length > 0) {
+      console.log('Adding tag filters to API call:', filters.tagFilter);
+      
+      // Method 1: Individual tag parameters (recommended for your API)
+      filters.tagFilter.forEach((tagId, index) => {
+        params.append(`tags[id][${index}]`, tagId);
+      });
+      
+      // Method 2: Alternative if your API expects different format
+      // filters.tagFilter.forEach(tagId => {
+      //   params.append('tags[]', tagId);
+      // });
+      
+      console.log(' Final URL with tags:', `${API_BASE_URL}/questions/filters?${params}`);
+    }
 
 
     try {
@@ -420,7 +438,7 @@ export const questionAPI = {
   // Get question categories for course - Fixed URL
   async getQuestionCategories(courseId) {
     try {
-      console.log('🎓 Fetching question categories for course:', courseId);
+      console.log(' Fetching question categories for course:', courseId);
       
       // Fixed: Use correct endpoint path
       const response = await fetch(`${API_BASE_URL}/questions/question_categories?courseid=${courseId}`, {
@@ -460,7 +478,7 @@ export const questionAPI = {
   // Get courses - Fixed URL
   async getCourses(categoryId = null) {
     try {
-      console.log('🎓 Fetching courses:', categoryId ? `for category ${categoryId}` : 'all');
+      console.log(' Fetching courses:', categoryId ? `for category ${categoryId}` : 'all');
       
       const url = categoryId 
         ? `${API_BASE_URL}/questions/courses?categoryid=${categoryId}`
