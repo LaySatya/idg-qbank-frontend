@@ -101,13 +101,13 @@ const Sidebar = ({ collapsed }) => {
       )}
 
       {/* Collapse indicator */}
-      <div className={`absolute top-1/2 -right-3 transform -translate-y-1/2 ${collapsed ? 'rotate-180' : ''} transition-transform duration-200`}>
+      {/* <div className={`absolute top-1/2 -right-3 transform -translate-y-1/2 ${collapsed ? 'rotate-180' : ''} transition-transform duration-200`}>
         <div className="w-6 h-6 bg-white border border-gray-300 rounded-full flex items-center justify-center shadow-sm">
           <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </div>
-      </div>
+      </div> */}
     </aside>
   );
 };

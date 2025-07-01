@@ -168,7 +168,8 @@ const BulkActionsRow = ({
             return { ...q, tags: newTags };
           })
         );
-        toast.success(`✅ =Added "${tagName}" to ${questionCount} question${questionCount !== 1 ? 's' : ''}`);
+        // toast.success(`Success Added "${tagName}" to ${questionCount} question${questionCount !== 1 ? 's' : ''}`);
+        toast.success(`"${tagName}" tag added successfully!`);
         fetchCommonTags();
       } else {
         toast.error(data.message || 'Failed to add tag');
@@ -209,7 +210,7 @@ const BulkActionsRow = ({
             return { ...q, tags: newTags };
           })
         );
-        toast.success(`✅ Removed "${tagName}" from ${questionCount} question${questionCount !== 1 ? 's' : ''}`);
+        toast.success(` Removed "${tagName}" from ${questionCount} question${questionCount !== 1 ? 's' : ''}`);
         fetchCommonTags();
       } else {
         toast.error(data.message || 'Failed to remove tag');
@@ -268,17 +269,23 @@ const BulkActionsRow = ({
         <Stack direction="row" spacing={2}>
           <Button
             variant="outlined"
-            startIcon={<EditIcon />}
+            // startIcon={<EditIcon />}
             onClick={() => setShowBulkEditModal(true)}
           >
             Bulk Edit
+            {<EditIcon />}
           </Button>
-          <IconButton onClick={handleMenuClick}>
-            <SettingsIcon />
-          </IconButton>
+           <Button
+            variant="outlined"
+            
+            onClick={handleMenuClick}
+          >
+            Actions
+            {<MoreVertIcon />}
+          </Button>
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
             <MenuItem onClick={() => handleAction('status')}>
-              <CheckCircleIcon sx={{ mr: 1 }} /> Change Status
+              <EditIcon sx={{ mr: 1 }} /> Change Status
             </MenuItem>
             <MenuItem onClick={() => handleAction('tags')}>
               <TagIcon sx={{ mr: 1 }} /> Manage Tags
@@ -299,10 +306,13 @@ const BulkActionsRow = ({
           <Button
             variant="contained"
             color="error"
-            startIcon={<DeleteIcon />}
-            onClick={onBulkDelete}
-          >
-            Delete
+             onClick={onBulkDelete}
+            >
+              Delete
+            {<DeleteIcon />}
+           
+          
+            
           </Button>
         </Stack>
       </Paper>

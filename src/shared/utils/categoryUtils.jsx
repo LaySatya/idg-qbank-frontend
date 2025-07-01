@@ -20,7 +20,7 @@ export const buildGroupedCategoryTree = (categories = [], courses = []) => {
     courses = []; // Continue with empty courses array
   }
 
-  console.log('🏗️ Building category tree:', { 
+  console.log(' Building category tree:', { 
     categoriesCount: categories.length, 
     coursesCount: courses.length 
   });
@@ -218,7 +218,7 @@ export const buildGroupedCategoryTree = (categories = [], courses = []) => {
     });
   }
 
-  console.log('🎯 Final grouped tree:', orderedGroups.map(g => 
+  console.log(' Final grouped tree:', orderedGroups.map(g => 
     `${g.label} (${g.categoryCount} categories, ${g.tree.length} root nodes)`
   ));
 
