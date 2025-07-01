@@ -6,6 +6,8 @@ import { questionAPI } from '../../api/questionAPI';
 import { toast } from 'react-hot-toast';
 import ReactModal from 'react-modal';
 ReactModal.setAppElement('#root');
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const QuestionsTable = ({
   questions,
@@ -87,7 +89,7 @@ const QuestionsTable = ({
         <span
           key={`${question.id}-${tag.id}`}
           className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded hover:bg-blue-200 cursor-pointer transition-colors"
-          title={tag.display}
+          title={`${tag.name} - ${tag.description || 'No description'}`}
         >
           {tag.display}
         </span>
@@ -476,11 +478,17 @@ const handleEditModalSave = async () => {
                           <i className="fa-regular fa-pen-to-square text-gray-400"></i>
                         </span>
                       </span>
-                      {question.questiontext && (
+                      {/* {question.questiontext && (
               <div className="text-xs text-gray-600 mt-1">
                 {question.questiontext}
               </div>
-            )}
+            )} */}
+              {/* {question.questiontext && (
+              <div
+                className="text-xs text-gray-600 mt-1"
+                dangerouslySetInnerHTML={{ __html: question.questiontext }}
+              />
+            )} */}
                     </span>
                         )}
                       </label>
@@ -720,6 +728,7 @@ const handleEditModalSave = async () => {
         </div>
       )}
 {/* Edit Question Modal */}
+
 <ReactModal
   isOpen={editModalOpen}
   onRequestClose={() => setEditModalOpen(false)}
@@ -727,15 +736,15 @@ const handleEditModalSave = async () => {
   style={{
     overlay: { zIndex: 1000 },
     content: {
-      maxWidth: 500,
+      maxWidth: 1000,
       margin: 'auto',
-      maxHeight: '40vh',
+      maxHeight: '50vh',
       overflowY: 'auto',
       inset: '40px',
-      padding: '32px', 
-      borderRadius: '8px', 
-      border: '1px solid #e5e7eb', 
-      boxShadow: '0 10px 25px rgba(0,0,0,0.1)', 
+      padding: '32px',
+      borderRadius: '20px',
+      border: '1px solid #e5e7eb',
+      boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
     }
   }}
 >
@@ -743,20 +752,20 @@ const handleEditModalSave = async () => {
   <form className="space-y-5">
     <div>
       <label className="block text-sm font-medium mb-1">Question Name</label>
-      <input
-        type="text"
+      <ReactQuill
         value={editModalName}
-        onChange={e => setEditModalName(e.target.value)}
-        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+        onChange={setEditModalName}
+        theme="snow"
+        style={{ minHeight: '80px' }}
       />
     </div>
     <div>
       <label className="block text-sm font-medium mb-1">Question Text</label>
-      <textarea
+      <ReactQuill
         value={editModalText}
-        onChange={e => setEditModalText(e.target.value)}
-        rows={4}
-        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+        onChange={setEditModalText}
+        theme="snow"
+        style={{ minHeight: '180px' }}
       />
     </div>
     <div className="flex justify-end gap-2 pt-2">
@@ -777,6 +786,7 @@ const handleEditModalSave = async () => {
     </div>
   </form>
 </ReactModal>
+
     </>
  
 

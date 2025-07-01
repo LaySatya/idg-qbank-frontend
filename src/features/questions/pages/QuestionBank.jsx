@@ -20,6 +20,11 @@ import CategoriesComponent from '../../../shared/components/CategoriesComponent'
 import { EDIT_COMPONENTS, BULK_EDIT_COMPONENTS } from '../../../shared/constants/questionConstants';
 import { Toaster, toast } from 'react-hot-toast';
 import PaginationControls from '../../../shared/components/PaginationControls';
+// import { questionAPI } from '@/api/questionAPI';
+
+const fetchTagsForAllQuestions = async (questionIds) => {
+  return await questionAPI.getTagsForMultipleQuestions(questionIds);
+};
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // ============================================================================
@@ -134,7 +139,6 @@ const transformQuestion = (apiQuestion, courseId) => ({
   status: apiQuestion.status || 'ready',
   version: `v${apiQuestion.version || 1}`,
   
-  //  FIXED: Handle your exact API structure
   createdBy: {
     name: apiQuestion.createdbyuser ? 
       `${apiQuestion.createdbyuser.firstname} ${apiQuestion.createdbyuser.lastname}` : 
@@ -152,7 +156,6 @@ const transformQuestion = (apiQuestion, courseId) => ({
       ''
   },
   
-  //  FIXED: Your API returns answers array, map to choices
   choices: (apiQuestion.answers || []).map(answer => ({
     id: answer.id,
     text: answer.answer,
@@ -160,26 +163,95 @@ const transformQuestion = (apiQuestion, courseId) => ({
     feedback: answer.feedback || ''
   })),
   
-  //  FIXED: Your API returns empty tags array initially
-  tags: apiQuestion.tags || [],
+  //  CRITICAL: Enhanced tag processing based on your API format
+  tags: processTagsFromAPI(apiQuestion),
   
-  //  FIXED: Map your category structure
   categoryId: apiQuestion.category,
   categoryName: apiQuestion.category_name || '',
   contextid: apiQuestion.contextid,
-  
-  //  FIXED: Map usage data
   usage: (apiQuestion.usages || []).length,
   lastUsed: apiQuestion.usages && apiQuestion.usages.length > 0 ? 'Recently' : 'Never',
   comments: 0,
-  
-  // Additional fields from your API
   stamp: apiQuestion.stamp,
   versionid: apiQuestion.versionid,
   questionbankentryid: apiQuestion.questionbankentryid,
   idnumber: apiQuestion.idnumber || apiQuestion.id
 });
+// NEW: Process tags from API with multiple fallback strategies
+function processTagsFromAPI(apiQuestion) {
+  console.log(` Processing tags for question ${apiQuestion.id}:`, {
+    tags: apiQuestion.tags,
+    questiontags: apiQuestion.questiontags,
+    tagnames: apiQuestion.tagnames
+  });
 
+  let rawTags = [];
+  
+  // Strategy 1: Direct tags array (your current API returns empty array initially)
+  if (apiQuestion.tags && Array.isArray(apiQuestion.tags)) {
+    rawTags = apiQuestion.tags;
+    console.log(`   Using direct tags array: ${rawTags.length} items`);
+  }
+  // Strategy 2: Questiontags property
+  else if (apiQuestion.questiontags && Array.isArray(apiQuestion.questiontags)) {
+    rawTags = apiQuestion.questiontags;
+    console.log(`   Using questiontags array: ${rawTags.length} items`);
+  }
+  // Strategy 3: Tag names array
+  else if (apiQuestion.tagnames && Array.isArray(apiQuestion.tagnames)) {
+    rawTags = apiQuestion.tagnames;
+    console.log(`   Using tagnames array: ${rawTags.length} items`);
+  }
+  // Strategy 4: Fetch tags separately (since your API might return empty initially)
+  else {
+    console.log(`   No tags found in question data for ID ${apiQuestion.id}`);
+    // We'll handle this with a separate API call below
+    return [];
+  }
+
+  // Process the raw tags into consistent format
+  const processedTags = rawTags.map((tag, index) => {
+    if (typeof tag === 'string') {
+      // Simple string tag
+      return {
+        id: tag,
+        name: tag,
+        rawname: tag,
+        isstandard: false
+      };
+    } else if (typeof tag === 'number') {
+      // Numeric tag ID
+      return {
+        id: String(tag),
+        name: String(tag),
+        rawname: String(tag),
+        isstandard: false
+      };
+    } else if (typeof tag === 'object' && tag !== null) {
+      // Object tag - normalize to consistent format
+      return {
+        id: String(tag.id || tag.tagid || tag.name || index),
+        name: tag.name || tag.rawname || tag.text || String(tag.id || index),
+        rawname: tag.rawname || tag.name || tag.text || String(tag.id || index),
+        isstandard: Boolean(tag.isstandard),
+        description: tag.description || '',
+        flag: tag.flag || 0
+      };
+    }
+    
+    // Fallback for unknown format
+    console.warn(` Unknown tag format for question ${apiQuestion.id}:`, tag);
+    return {
+      id: String(index),
+      name: String(tag),
+      rawname: String(tag),
+      isstandard: false
+    };
+  }).filter(tag => tag && tag.id && tag.name);
+
+  console.log(`   Processed ${processedTags.length} tags for question ${apiQuestion.id}`);
+  return processedTags;
+}
 // ============================================================================
 // FIXED FILTERING STRATEGIES WITH CORRECT API URLS
 // ============================================================================
@@ -187,144 +259,519 @@ const transformQuestion = (apiQuestion, courseId) => ({
 class QuestionFilterService {
   constructor(apiClient) {
     this.apiClient = apiClient;
+     this.tagFilteredCache = new Map();
   }
 
   // Strategy 1: Question categories (fastest when available)
+  // UPDATED: Enhanced fetchByCategories with client-side tag filtering
   async fetchByCategories(courseId, filters, page, perPage) {
+  try {
+    console.log('Strategy 1: Categories + Smart tag filtering');
+    
+    //  STEP 1: Fetch categories for the course
+    const categoriesUrl = `${API_BASE_URL}/questions/question_categories?courseid=${courseId}`;
+    const categoriesData = await this.apiClient.request(categoriesUrl);
+
+    let categories = [];
+    if (Array.isArray(categoriesData)) {
+      categories = categoriesData;
+    } else if (categoriesData.categories) {
+      categories = categoriesData.categories;
+    }
+
+    if (categories.length === 0) {
+      return { success: false, reason: 'No categories found' };
+    }
+
+    console.log(` Found ${categories.length} categories for course ${courseId}`);
+
+    //  STEP 2: Check if tag filtering is needed
+    const hasTagFilter = filters.tagFilter && Array.isArray(filters.tagFilter) && filters.tagFilter.length > 0;
+    const hasOtherFilters = filters.searchQuery?.trim() || filters.status !== 'All' || filters.type !== 'All';
+
+    console.log(' Filter analysis:', {
+      hasTagFilter,
+      tagCount: hasTagFilter ? filters.tagFilter.length : 0,
+      hasOtherFilters,
+      searchQuery: filters.searchQuery,
+      status: filters.status,
+      type: filters.type
+    });
+
+    //  STEP 3: Route to appropriate strategy
+    if (hasTagFilter) {
+      console.log(' Using tag filtering strategy');
+      return await this.fetchWithTagFiltering(courseId, filters, page, perPage);
+    } else if (hasOtherFilters) {
+      console.log(' Using filtered strategy (no tags)');
+      return await this.fetchWithoutTagFiltering(courseId, filters, page, perPage);
+    } else {
+      console.log(' Using normal pagination strategy');
+      return await this.fetchWithoutTagFiltering(courseId, filters, page, perPage);
+    }
+
+  } catch (error) {
+    console.error(' fetchByCategories error:', error);
+    return { success: false, reason: error.message };
+  }
+  }
+
+
+
+  //  //  NEW: Fetch without tag filtering (normal pagination)
+  // async fetchByCategories(courseId, filters, page, perPage) {
+  //   try {
+  //     console.log(' Strategy 1: Categories + Smart tag filtering');
+      
+  //     // ✅ STEP 1: Fetch categories for the course
+  //     const categoriesUrl = `${API_BASE_URL}/questions/question_categories?courseid=${courseId}`;
+  //     const categoriesData = await this.apiClient.request(categoriesUrl);
+
+  //     let categories = [];
+  //     if (Array.isArray(categoriesData)) {
+  //       categories = categoriesData;
+  //     } else if (categoriesData.categories) {
+  //       categories = categoriesData.categories;
+  //     }
+
+  //     if (categories.length === 0) {
+  //       return { success: false, reason: 'No categories found' };
+  //     }
+
+  //     console.log(`📂 Found ${categories.length} categories for course ${courseId}`);
+
+  //     // ✅ STEP 2: Check if tag filtering is needed
+  //     const hasTagFilter = filters.tagFilter && Array.isArray(filters.tagFilter) && filters.tagFilter.length > 0;
+  //     const hasOtherFilters = filters.searchQuery?.trim() || filters.status !== 'All' || filters.type !== 'All';
+
+  //     console.log('🎯 Filter analysis:', {
+  //       hasTagFilter,
+  //       tagCount: hasTagFilter ? filters.tagFilter.length : 0,
+  //       hasOtherFilters,
+  //       searchQuery: filters.searchQuery,
+  //       status: filters.status,
+  //       type: filters.type
+  //     });
+
+  //     //  STEP 3: Route to appropriate strategy
+  //     if (hasTagFilter) {
+  //       console.log(' Using tag filtering strategy');
+  //       return await this.fetchWithTagFiltering(courseId, filters, page, perPage);
+  //     } else {
+  //       console.log(' Using normal pagination strategy');
+  //       return await this.fetchWithoutTagFiltering(courseId, filters, page, perPage);
+  //     }
+
+  //   } catch (error) {
+  //     console.error(' fetchByCategories error:', error);
+  //     return { success: false, reason: error.message };
+  //   }
+  // }
+   async fetchWithoutTagFiltering(courseId, filters, page, perPage) {
     try {
-      console.log(' Strategy 1: Categories approach');
-      const categoriesUrl = `${API_BASE_URL}/questions/question_categories?courseid=${courseId}`;
-      const categoriesData = await this.apiClient.request(categoriesUrl);
-  
-      let categories = [];
-      if (Array.isArray(categoriesData)) {
-        categories = categoriesData;
-      } else if (categoriesData.categories) {
-        categories = categoriesData.categories;
-      }
-  
-      if (categories.length === 0) {
-        return { success: false, reason: 'No categories found' };
-      }
-  
-      const categoryIds = categories.map(cat => cat.id || cat.categoryid).filter(Boolean);
-  
-      if (categoryIds.length === 0) {
-        return { success: false, reason: 'No valid category IDs' };
-      }
-  
-      // Build params with pagination
+      console.log(' Normal fetch strategy - server-side pagination');
+      
       const filterParams = this.buildFilterParams(filters);
+      
       const paramsObj = {
         page: page.toString(),
         per_page: perPage.toString(),
         ...filterParams
       };
-  
+
       const params = new URLSearchParams(paramsObj);
       const questionsUrl = `${API_BASE_URL}/questions/filters?${params}`;
-      const questionsData = await this.apiClient.request(questionsUrl);
-  
-      if (questionsData.questions && questionsData.questions.length > 0) {
-        return {
-          success: true,
-          data: questionsData,
-          method: 'categories'
-        };
-      }
-  
-      return { success: false, reason: 'No questions in categories' };
-    } catch (error) {
-      return { success: false, reason: error.message };
-    }
-  }
-
-
-// Strategy 2: Direct filtering (medium speed) - ADD THIS METHOD
-async fetchByDirectFilter(courseId, filters, page, perPage) {
-    try {
-      console.log('Strategy 2: Direct filtering');
       
-      const filterParams = this.buildFilterParams(filters);
-      const params = new URLSearchParams({
-        page: page.toString(),
-        per_page: perPage.toString(),
-        courseid: courseId.toString(),
-        ...filterParams
-      });
-
-      //  FIXED: Correct API URL
-      const questionsUrl = `${API_BASE_URL}/questions/filters?${params}`;
-      const questionsData = await this.apiClient.request(questionsUrl);
-
-      if (questionsData.questions && questionsData.questions.length > 0) {
-        return {
-          success: true,
-          data: questionsData,
-          method: 'direct'
-        };
-      }
-
-      return { success: false, reason: 'No questions found' };
-    } catch (error) {
-      return { success: false, reason: error.message };
-    }
-  }
-
-
-  // Strategy 3: General with client-side filtering (slowest but most reliable)
- async fetchWithClientFilter(courseId, filters, page, perPage) {
-    try {
-      console.log(' Strategy 3: Client-side filtering');
-      
-      // Get more questions to filter from
-      const filterParams = this.buildFilterParams(filters);
-      const params = new URLSearchParams({
-        page: '1',
-        per_page: '100', // Get larger batch for client filtering
-        ...filterParams
-      });
-
-      const questionsUrl = `${API_BASE_URL}/questions/filters?${params}`;
+      console.log(' API call:', questionsUrl);
       const questionsData = await this.apiClient.request(questionsUrl);
 
       if (!questionsData.questions || questionsData.questions.length === 0) {
-        return { success: false, reason: 'No questions available' };
+        console.log(' No questions found');
+        return { success: false, reason: 'No questions found' };
       }
 
-      // Filter by course on client side
-      const courseQuestions = questionsData.questions.filter(q => {
-        const qCourseId = q.courseid || q.course_id || q.contextid;
-        return qCourseId == courseId;
-      });
-
-      if (courseQuestions.length === 0) {
-        // Fallback: create virtual assignment
-        return this.createVirtualAssignment(courseId, questionsData.questions, page, perPage);
-      }
-
-      // Apply pagination
-      const startIdx = (page - 1) * perPage;
-      const paginatedQuestions = courseQuestions.slice(startIdx, startIdx + perPage);
+      console.log(` Normal fetch: ${questionsData.questions.length} questions, page ${page}/${questionsData.last_page || 1}`);
 
       return {
         success: true,
         data: {
-          questions: paginatedQuestions,
-          total: courseQuestions.length,
-          current_page: page,
-          per_page: perPage
+          questions: questionsData.questions,
+          total: questionsData.total,
+          current_page: questionsData.current_page || page,
+          per_page: questionsData.per_page || perPage,
+          last_page: questionsData.last_page || Math.ceil(questionsData.total / perPage),
+          client_filtered: false
         },
-        method: 'client-filter'
+        method: 'categories-normal'
       };
+
+    } catch (error) {
+      console.error(' fetchWithoutTagFiltering error:', error);
+      return { success: false, reason: error.message };
+    }
+  }
+
+   //  NEW: Fetch with tag filtering (get all, then filter and paginate)
+async fetchWithTagFiltering(courseId, filters, page, perPage) {
+    try {
+      console.log(' Tag filtering strategy - fetch all then filter');
+      
+      //  STEP 1: Create cache key for this filter combination
+      const cacheKey = `tag-filter-${courseId}-${filters.category}-${filters.status}-${filters.type}-${encodeURIComponent(filters.searchQuery || '')}-${JSON.stringify(filters.tagFilter)}`;
+      
+      console.log(' Cache key:', cacheKey);
+
+      //  STEP 2: Check cache first
+      let allFilteredQuestions = this.tagFilteredCache.get(cacheKey);
+      
+      if (allFilteredQuestions) {
+        console.log(' Cache HIT - using cached filtered results');
+        console.log(` Cached results: ${allFilteredQuestions.length} questions`);
+      } else {
+        console.log(' Cache MISS - fetching all questions for filtering');
+        
+        //  STEP 3: Fetch ALL questions for this course
+        const allQuestions = await this.fetchAllQuestionsForTagFiltering(courseId, filters);
+        
+        if (!allQuestions || allQuestions.length === 0) {
+          console.log(' No questions found for tag filtering');
+          return { success: false, reason: 'No questions found for tag filtering' };
+        }
+
+        console.log(` Total questions fetched: ${allQuestions.length}`);
+
+        //  STEP 4: Apply tag filtering to all questions
+        allFilteredQuestions = this.applyTagFilter(allQuestions, filters.tagFilter);
+        
+        //  STEP 5: Cache the filtered results (expire in 5 minutes)
+        this.tagFilteredCache.set(cacheKey, allFilteredQuestions);
+        
+        // Set cache expiration
+        setTimeout(() => {
+          if (this.tagFilteredCache.has(cacheKey)) {
+            console.log(' Cache expired for:', cacheKey);
+            this.tagFilteredCache.delete(cacheKey);
+          }
+        }, 5 * 60 * 1000); // 5 minutes
+        
+        console.log(` Tag filtering results: ${allQuestions.length} → ${allFilteredQuestions.length} questions`);
+      }
+
+      // STEP 6: Apply pagination to the filtered results
+      const paginatedResult = this.applyClientPagination(allFilteredQuestions, page, perPage);
+      const totalPages = Math.ceil(allFilteredQuestions.length / perPage);
+
+      console.log(` Pagination: Page ${page}/${totalPages}, showing ${paginatedResult.questions.length} of ${allFilteredQuestions.length} total`);
+
+      //  STEP 7: Return paginated results
+      return {
+        success: true,
+        data: {
+          questions: paginatedResult.questions,
+          total: allFilteredQuestions.length, // Total after tag filtering
+          current_page: page,
+          per_page: perPage,
+          last_page: totalPages,
+          client_filtered: true,
+          tag_filtered_total: allFilteredQuestions.length,
+          original_total: allFilteredQuestions.length, // For debugging
+          cache_used: allFilteredQuestions === this.tagFilteredCache.get(cacheKey)
+        },
+        method: 'categories-tag-filtered'
+      };
+
+    } catch (error) {
+      console.error('fetchWithTagFiltering error:', error);
+      return { success: false, reason: error.message };
+    }
+  }
+
+
+  //  NEW: Fetch all questions for tag filtering
+ async fetchAllQuestionsForTagFiltering(courseId, filters) {
+    try {
+      console.log(' Fetching ALL questions for comprehensive tag filtering...');
+      
+      const filterParams = this.buildFilterParams(filters);
+      let allQuestions = [];
+      let currentPage = 1;
+      const perPage = 100; // Fetch in chunks of 100
+      let hasMorePages = true;
+      let totalExpected = 0;
+
+      //  First, get the total count
+      const initialParams = new URLSearchParams({
+        page: '1',
+        per_page: '1',
+        ...filterParams
+      });
+      
+      const initialUrl = `${API_BASE_URL}/questions/filters?${initialParams}`;
+      const initialData = await this.apiClient.request(initialUrl);
+      totalExpected = initialData.total || 0;
+      
+      console.log(` Total questions expected: ${totalExpected}`);
+
+      //  Now fetch all pages
+      while (hasMorePages && currentPage <= 20) { // Safety limit: max 20 pages (2000 questions)
+        const paramsObj = {
+          page: currentPage.toString(),
+          per_page: perPage.toString(),
+          ...filterParams
+        };
+
+        const params = new URLSearchParams(paramsObj);
+        const questionsUrl = `${API_BASE_URL}/questions/filters?${params}`;
+        
+        try {
+          console.log(` Fetching page ${currentPage}...`);
+          const questionsData = await this.apiClient.request(questionsUrl);
+          
+          if (questionsData.questions && questionsData.questions.length > 0) {
+            allQuestions = allQuestions.concat(questionsData.questions);
+            
+            const progress = Math.round((allQuestions.length / totalExpected) * 100);
+            console.log(` Progress: ${allQuestions.length}/${totalExpected} (${progress}%) - Page ${currentPage}`);
+            
+            // Check if there are more pages
+            const totalPages = questionsData.last_page || Math.ceil(questionsData.total / perPage);
+            hasMorePages = currentPage < totalPages && questionsData.questions.length === perPage;
+            currentPage++;
+            
+            // Add small delay to avoid overwhelming the server
+            if (currentPage % 5 === 0) {
+              console.log('⏳ Brief pause to avoid server overload...');
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+          } else {
+            console.log(` No more questions on page ${currentPage}`);
+            hasMorePages = false;
+          }
+        } catch (error) {
+          console.error(` Error fetching page ${currentPage}:`, error);
+          hasMorePages = false;
+          break;
+        }
+      }
+
+      console.log(` Fetching complete: ${allQuestions.length} total questions collected`);
+      
+      if (allQuestions.length !== totalExpected && totalExpected > 0) {
+        console.warn(` Expected ${totalExpected} questions, but got ${allQuestions.length}`);
+      }
+
+      return allQuestions;
+
+    } catch (error) {
+      console.error(' Error in fetchAllQuestionsForTagFiltering:', error);
+      return [];
+    }
+  }
+
+//  //  NEW: Calculate how many questions to fetch for filtering
+//   calculateFetchSize(filters, perPage) {
+//           const hasTagFilter = filters.tagFilter && Array.isArray(filters.tagFilter) && filters.tagFilter.length > 0;
+
+    
+//     if (hasTagFilter) {
+//       // Fetch more questions when tag filtering to ensure we have enough after filtering
+//       return Math.max(100, perPage * 10); // Fetch at least 100 or 10x the page size
+//     }
+    
+//     return perPage;
+//   }
+
+  //  NEW: Apply tag filtering on client side
+applyTagFilter(questions, tagFilter) {
+  if (!tagFilter || !Array.isArray(tagFilter) || tagFilter.length === 0) {
+    console.log(' No tag filter - returning all questions');
+    return questions;
+  }
+
+  console.log(` Applying tag filter: [${tagFilter.join(', ')}]`);
+
+  let matchedQuestions = 0;
+  let questionsWithTags = 0;
+  let questionsWithoutTags = 0;
+  let debugInfo = [];
+
+  const filteredQuestions = questions.filter((question, index) => {
+    if (!question.tags || !Array.isArray(question.tags) || question.tags.length === 0) {
+      questionsWithoutTags++;
+      return false;
+    }
+    questionsWithTags++;
+
+    //  CRITICAL: Ensure consistent string comparison
+    const questionTagIds = question.tags.map(tag => {
+      const extractedId = this.extractTagId(tag);
+      return String(extractedId); // Force string conversion
+    }).filter(id => id && id !== 'null' && id !== 'undefined');
+
+    const filterTagIds = tagFilter.map(id => String(id)); // Force string conversion
+    const hasMatchingTag = questionTagIds.some(tagId => filterTagIds.includes(tagId));
+    if (hasMatchingTag) matchedQuestions++;
+
+    // Debug info
+    if (index < 5) {
+      debugInfo.push({
+        questionId: question.id,
+        questionTitle: question.title?.substring(0, 50) + '...',
+        questionTags: question.tags,
+        extractedTagIds: questionTagIds,
+        filterTagIds: filterTagIds,
+        matches: questionTagIds.filter(tagId => filterTagIds.includes(tagId))
+      });
+    }
+
+    return hasMatchingTag;
+  });
+    //  Enhanced debugging for first few questions
+  //   if (index < 5) {
+  //     debugInfo.push({
+  //       questionId: question.id,
+  //       questionTitle: question.title?.substring(0, 50) + '...',
+  //       questionTags: question.tags,
+  //       extractedTagIds: questionTagIds,
+  //       filterTagIds: filterTagIds,
+  //       matches: questionTagIds.filter(tagId => filterTagIds.includes(tagId))
+  //     });
+  //   }
+
+  //   // const hasMatchingTag = questionTagIds.some(tagId => filterTagIds.includes(tagId));
+  //   // if (hasMatchingTag) matchedQuestions++;
+    
+  //   return hasMatchingTag;
+  // });
+
+  //  Enhanced logging with debug info
+  console.log(`Tag filtering summary:`);
+  console.log(`    Total questions processed: ${questions.length}`);
+  console.log(`    Questions with tags: ${questionsWithTags}`);
+  console.log(`    Questions without tags: ${questionsWithoutTags}`);
+  console.log(`    Questions matching filter: ${matchedQuestions}`);
+  console.log(`    Filter efficiency: ${questionsWithTags > 0 ? Math.round((matchedQuestions / questionsWithTags) * 100) : 0}%`);
+  
+  //  Debug info for first few questions
+  if (debugInfo.length > 0) {
+    console.log(` Debug info for first ${debugInfo.length} questions:`);
+    console.table(debugInfo);
+  }
+
+  return filteredQuestions;
+}
+
+
+  //  IMPROVED: Extract tag ID from different tag formats
+extractTagId(tag) {
+  if (tag === null || tag === undefined) {
+    console.warn(' Null/undefined tag encountered');
+    return null;
+  }
+
+  // Always return string for consistent comparison
+  if (typeof tag === 'number') {
+    return String(tag);
+  }
+  
+  if (typeof tag === 'string') {
+    const parsed = parseInt(tag);
+    return isNaN(parsed) ? tag : String(parsed);
+  }
+  
+  if (typeof tag === 'object') {
+    // Try different possible ID fields
+    const possibleIds = [tag.id, tag.tagid, tag.tag_id, tag.tagId];
+    for (const id of possibleIds) {
+      if (id !== undefined && id !== null) {
+        return String(id); //  CRITICAL: Always return string
+      }
+    }
+    
+    // Try name as fallback
+    if (tag.name) {
+      const parsed = parseInt(tag.name);
+      return isNaN(parsed) ? tag.name : String(parsed);
+    }
+    
+    console.warn(' Could not extract ID from tag object:', tag);
+    return String(tag.id || tag.name || 'unknown');
+  }
+
+  console.warn(' Unknown tag type:', typeof tag, tag);
+  return String(tag);
+}
+
+  //  UNCHANGED: Apply pagination on client side
+  applyClientPagination(questions, page, perPage) {
+    // Validate inputs
+    const validPage = Math.max(1, parseInt(page) || 1);
+    const validPerPage = Math.max(1, Math.min(100, parseInt(perPage) || 10)); // Max 100 per page
+    
+    const totalQuestions = questions.length;
+    const totalPages = Math.ceil(totalQuestions / validPerPage);
+    const safePage = Math.min(validPage, totalPages || 1);
+
+    const startIndex = (safePage - 1) * validPerPage;
+    const endIndex = Math.min(startIndex + validPerPage, totalQuestions);
+    const paginatedQuestions = questions.slice(startIndex, endIndex);
+
+    console.log(` Pagination applied: Page ${safePage}/${totalPages}, Items ${startIndex + 1}-${endIndex} of ${totalQuestions}`);
+
+    return {
+      questions: paginatedQuestions,
+      startIndex,
+      endIndex,
+      page: safePage,
+      perPage: validPerPage,
+      totalPages,
+      totalQuestions,
+      hasNextPage: safePage < totalPages,
+      hasPrevPage: safePage > 1
+    };
+  }
+
+// Strategy 2: Direct filtering (medium speed) - ADD THIS METHOD
+  // Other required methods
+  async fetchByDirectFilter(courseId, filters, page, perPage) {
+    try {
+      console.log(' Strategy 2: Direct filtering');
+      
+      const hasTagFilter = filters.tagFilter && Array.isArray(filters.tagFilter) && filters.tagFilter.length > 0;
+      
+      if (hasTagFilter) {
+        return await this.fetchWithTagFiltering(courseId, filters, page, perPage);
+      }
+
+      return await this.fetchWithoutTagFiltering(courseId, filters, page, perPage);
+    } catch (error) {
+      console.error(' Direct filter failed:', error);
+      return { success: false, reason: error.message };
+    }
+  }
+ async fetchWithClientFilter(courseId, filters, page, perPage) {
+    try {
+      console.log(' Strategy 3: Client-side filtering');
+      
+      const hasTagFilter = filters.tagFilter && Array.isArray(filters.tagFilter) && filters.tagFilter.length > 0;
+      
+      if (hasTagFilter) {
+        return await this.fetchWithTagFiltering(courseId, filters, page, perPage);
+      }
+
+      return await this.fetchWithoutTagFiltering(courseId, filters, page, perPage);
     } catch (error) {
       return { success: false, reason: error.message };
     }
   }
 
 
+
+
+
+
  // Virtual assignment for courses without proper linking
-  createVirtualAssignment(courseId, allQuestions, page, perPage) {
+    createVirtualAssignment(courseId, allQuestions, page, perPage, filters) {
     const courseInt = parseInt(courseId);
     let virtualQuestions = [];
 
@@ -341,50 +788,38 @@ async fetchByDirectFilter(courseId, filters, page, perPage) {
         (q.name || '').toLowerCase().includes('communication')
       );
     } else {
-      // Mathematical distribution for other courses
-      const questionsPerCourse = Math.max(10, Math.floor(allQuestions.length / 8));
+      const questionsPerCourse = Math.max(50, Math.floor(allQuestions.length / 8));
       const startIndex = ((courseInt - 1) * questionsPerCourse) % allQuestions.length;
       virtualQuestions = allQuestions.slice(startIndex, startIndex + questionsPerCourse);
     }
 
+    // Apply tag filtering if needed
+    const hasTagFilter = filters.tagFilter && Array.isArray(filters.tagFilter) && filters.tagFilter.length > 0;
+    if (hasTagFilter) {
+      virtualQuestions = this.applyTagFilter(virtualQuestions, filters.tagFilter);
+    }
+
     // Apply pagination
-    const startIdx = (page - 1) * perPage;
-    const paginatedQuestions = virtualQuestions.slice(startIdx, startIdx + perPage);
+    const paginatedResult = this.applyClientPagination(virtualQuestions, page, perPage);
 
     return {
       success: true,
       data: {
-        questions: paginatedQuestions,
+        questions: paginatedResult.questions,
         total: virtualQuestions.length,
         current_page: page,
-        per_page: perPage
+        per_page: perPage,
+        last_page: Math.ceil(virtualQuestions.length / perPage),
+        client_filtered: hasTagFilter
       },
-      method: 'virtual',
+      method: 'virtual-with-tags',
       isVirtual: true
     };
   }
 
-  // buildFilterParams(filters) {
-  //   const params = {};
-    
-  //   if (filters.status && filters.status !== 'All') {
-  //     params.status = filters.status.toLowerCase();
-  //   }
-    
-  //   if (filters.type && filters.type !== 'All') {
-  //     params.qtype = filters.type;
-  //   }
-    
-  //   if (filters.searchQuery?.trim()) {
-  //     params.search = filters.searchQuery.trim();
-  //   }
-    
-  //   if (filters.tagFilter && filters.tagFilter !== 'All') {
-  //     params.tag = filters.tagFilter;
-  //   }
 
-  //   return params;
-  // }
+
+
 
   //  IMPROVED: buildFilterParams with better logic
 buildFilterParams(filters) {
@@ -406,34 +841,37 @@ buildFilterParams(filters) {
     params.search = filters.searchQuery.trim();
   }
 
-  //  ADD THIS BLOCK FOR TAG FILTERING:
-  if (filters.tagFilter && Array.isArray(filters.tagFilter) && filters.tagFilter.length > 0) {
-    // Option 1: Send as comma-separated string (most common)
-    params.tags = filters.tagFilter.join(',');
-    
-    // Option 2: If your backend expects individual tag parameters, use this instead:
-    // filters.tagFilter.forEach((tag, index) => {
-    //   params[`tags[${index}]`] = tag;
-    // });
-    
-    console.log(' Adding tag filter to API params:', params.tags);
+
+
+    return params;
   }
 
-  return params;
+  clearTagFilterCache() {
+    const cacheSize = this.tagFilteredCache.size;
+    console.log(`🧹 Clearing tag filter cache (${cacheSize} entries)`);
+    this.tagFilteredCache.clear();
+    console.log(' Tag filter cache cleared');
+  }
+
+
+clearTagFilterCacheForCourse(courseId) {
+    let cleared = 0;
+    console.log(`🧹 Clearing tag filter cache for course: ${courseId}`);
+    
+    for (const key of this.tagFilteredCache.keys()) {
+      if (key.includes(`tag-filter-${courseId}`)) {
+        this.tagFilteredCache.delete(key);
+        cleared++;
+      }
+    }
+    
+    console.log(` Cleared ${cleared} cache entries for course ${courseId}`);
+  }
+
+
+
 }
 
-
-
-
-}
-//  CRITICAL FIX 5: Performance monitoring
-// const PerformanceMonitor = ({ questionsCount, loading, currentPage, totalPages }) => (
-//   <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded mb-2">
-//     Performance: {questionsCount} questions loaded | Page {currentPage}/{totalPages}
-//     {loading ? ' |  Loading...' : ' |  Ready'}
-//     | Last update: {new Date().toLocaleTimeString()}
-//   </div>
-// );
 export { QuestionFilterService };
 const questionFilterService = new QuestionFilterService(apiClient);
 
@@ -497,42 +935,6 @@ const [debugInfo, setDebugInfo] = useState({});
   const [questionCategories, setQuestionCategories] = useState([]);
   const [loadingQuestionCategories, setLoadingQuestionCategories] = useState(false);
 
-  // Memoized tags calculation
- const allTags = useMemo(() => {
-  // Skip computation if no questions
-  if (!questions || questions.length === 0) {
-    console.log('⚡ Skipping tag computation - no questions');
-    return ['All'];
-  }
-
-  console.log(' Computing tags from questions:', questions.length);
-  
-  const tagSet = new Set(['All']);
-  
-  questions.forEach(question => {
-    if (Array.isArray(question.tags)) {
-      question.tags.forEach(tag => {
-        const tagName = typeof tag === 'string' ? tag : (tag?.name || tag?.text || tag?.tag || '');
-        if (tagName && tagName.trim()) {
-          tagSet.add(tagName.trim());
-        }
-      });
-    }
-    
-    if (question.questiontags && Array.isArray(question.questiontags)) {
-      question.questiontags.forEach(tag => {
-        const tagName = tag.name || tag.text || tag.tag || '';
-        if (tagName && tagName.trim()) {
-          tagSet.add(tagName.trim());
-        }
-      });
-    }
-  });
-  
-  const finalTags = Array.from(tagSet).sort();
-  console.log(' Final computed tags:', finalTags);
-  return finalTags;
-}, [questions?.length]);
 
   // Memoized filtered questions for better performance
   const filteredQuestions = useMemo(() => {
@@ -764,24 +1166,41 @@ const processQuestionsData = async (data, page, courseId = null, isVirtual = fal
     current_page: data.current_page,
     per_page: data.per_page,
     last_page: data.last_page,
-    questions_count: data.questions?.length
+    questions_count: data.questions?.length,
+    client_filtered: data.client_filtered,
+    hasTagFilter: Array.isArray(tagFilter) && tagFilter.length > 0
   });
 
   if (data && Array.isArray(data.questions)) {
-    const transformedQuestions = data.questions.map(q => transformQuestion(q, courseId));
+    let transformedQuestions = data.questions.map(q => transformQuestion(q, courseId));
+    
+    //  NEW: Fetch tags for questions that don't have them
+       const questionIds = transformedQuestions.map(q => q.id);
+    const tagsByQuestionId = await fetchTagsForAllQuestions(questionIds);
+    
+    // If you want to attach tags to each question:
+     transformedQuestions = transformedQuestions.map(q => ({
+      ...q,
+      tags: tagsByQuestionId[q.id] || q.tags || []
+    }));
     
     setQuestions(transformedQuestions);
     setTotalQuestions(data.total);
-    setCurrentPage(data.current_page);
+    setCurrentPage(data.current_page || page);
     
-    // Calculate total pages from your API response
-    const totalPages = data.last_page || Math.ceil(data.total / data.per_page);
-    console.log(` Loaded ${transformedQuestions.length} questions, page ${data.current_page}/${totalPages}`);
+    const totalPages = data.last_page || Math.ceil(data.total / (data.per_page || 10));
+    
+    if (data.client_filtered) {
+      console.log(` Client-side filtering applied: ${transformedQuestions.length} questions shown`);
+    }
+    
+    console.log(` Loaded ${transformedQuestions.length} questions, page ${data.current_page || page}/${totalPages}`);
   } else {
     setQuestions([]);
     setTotalQuestions(0);
   }
 };
+
 
   // Load static data with caching
   const loadStaticData = useCallback(async () => {
@@ -970,17 +1389,23 @@ const processQuestionsData = async (data, page, courseId = null, isVirtual = fal
   // ============================================================================
   // EFFECTS
   // ============================================================================
- useEffect(() => {
+useEffect(() => {
   const triggerInfo = {
     timestamp: Date.now(),
     courseId: filters.courseId,
     currentPage,
-    tagFilter: Array.isArray(tagFilter) ? tagFilter.length : 'NOT_ARRAY',
+    tagFilter: Array.isArray(tagFilter) ? tagFilter : [],
+    tagFilterLength: Array.isArray(tagFilter) ? tagFilter.length : 0,
     searchQuery: debouncedSearchQuery,
-    lastFetch: lastFetchParamsRef.current ? 'EXISTS' : 'NULL'
+    hasFilters: (
+      debouncedSearchQuery !== '' || 
+      (Array.isArray(tagFilter) && tagFilter.length > 0) || 
+      filters.status !== 'All' || 
+      filters.type !== 'All'
+    )
   };
   
-  setDebugInfo(triggerInfo);
+  console.log(' Filter Effect Triggered:', triggerInfo);
   
   if (currentView !== 'questions') return;
   if (!filters.courseId || filters.courseId === 'All') {
@@ -990,50 +1415,47 @@ const processQuestionsData = async (data, page, courseId = null, isVirtual = fal
     return;
   }
 
-  console.log(' Filter Effect Triggered:', { 
-    courseId: filters.courseId, 
-    page: currentPage, 
-    search: debouncedSearchQuery,
-    tag: tagFilter,
-    timestamp: Date.now()
-  });
-
   const filterParams = {
     category: filters.category,
     courseId: filters.courseId,
     status: filters.status,
     type: filters.type,
     searchQuery: debouncedSearchQuery,
-    tagFilter
+    tagFilter: Array.isArray(tagFilter) ? tagFilter : []
   };
+  
+  console.log(' Making API call with filters:', filterParams);
 
-  //  FIXED: Correct shouldResetPage logic
-  const shouldResetPage = 
+  //  FIXED: Properly define tagFilterChanged
+  const tagFilterChanged = 
     lastFetchParamsRef.current && 
-    !lastFetchParamsRef.current.includes(`"page":${currentPage}`) &&
-    (
-      debouncedSearchQuery !== '' || 
-      (Array.isArray(tagFilter) && tagFilter.length > 0) || //  FIXED: Check array length
-      filters.status !== 'All' || 
-      filters.type !== 'All'
-    );
+    !lastFetchParamsRef.current.includes(`"tags":${JSON.stringify(tagFilter)}`);
+
+  const shouldResetPage = 
+    (debouncedSearchQuery !== '' || 
+     filters.status !== 'All' || 
+     filters.type !== 'All' ||
+     tagFilterChanged) && 
+    currentPage !== 1;
 
   console.log(' shouldResetPage check:', {
     hasLastFetch: !!lastFetchParamsRef.current,
     pageInLastFetch: lastFetchParamsRef.current ? lastFetchParamsRef.current.includes(`"page":${currentPage}`) : false,
     hasSearch: debouncedSearchQuery !== '',
     hasTagFilter: Array.isArray(tagFilter) && tagFilter.length > 0,
+    tagFilterChanged: tagFilterChanged, //  Now properly defined
     hasStatusFilter: filters.status !== 'All',
     hasTypeFilter: filters.type !== 'All',
     result: shouldResetPage
   });
 
-  if (shouldResetPage && currentPage !== 1) {
+  if (shouldResetPage) {
     console.log(' Resetting to page 1 due to filter change');
+    // Clear tag filter cache when filters change
+    questionFilterService.clearTagFilterCache();
     setCurrentPage(1);
     fetchQuestionsFromAPI(filterParams, 1, questionsPerPage);
   } else {
-    console.log(' Fetching current page:', currentPage);
     fetchQuestionsFromAPI(filterParams, currentPage, questionsPerPage);
   }
 }, [
@@ -1042,7 +1464,7 @@ const processQuestionsData = async (data, page, courseId = null, isVirtual = fal
   filters.status, 
   filters.type,
   debouncedSearchQuery, 
-  tagFilter, 
+  tagFilter, // This will trigger when tags change
   currentView, 
   currentPage, 
   questionsPerPage, 
@@ -1063,10 +1485,40 @@ const processQuestionsData = async (data, page, courseId = null, isVirtual = fal
   }, [filters.courseId, fetchQuestionCategoriesForCourse]);
 const [availableCourses, setAvailableCourses] = useState([]);
 
+const [allTags, setAllTags] = useState([]);
+
+useEffect(() => {
+  async function fetchTags() {
+    try {
+      console.log(' Loading tags for filtering...');
+      const tags = await questionAPI.getTags();
+      
+      if (Array.isArray(tags) && tags.length > 0) {
+        console.log(` Loaded ${tags.length} tags for filtering`);
+        setAllTags(tags);
+      } else {
+        console.warn(' No tags found or invalid format');
+        setAllTags([]);
+      }
+    } catch (err) {
+      console.error(' Failed to fetch tags:', err);
+      setAllTags([]);
+    }
+  }
+  fetchTags();
+}, []);
 useEffect(() => {
   async function fetchCourses() {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/questions/courses?categoryid=0'); // adjust endpoint if needed
+      const token = localStorage.getItem('token');
+      // Update the endpoint below to your actual courses endpoint!
+      const res = await fetch(`${API_BASE_URL}/courses?categoryid=0`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
       const data = await res.json();
       setAvailableCourses(data.courses || []);
     } catch (err) {
@@ -1228,6 +1680,28 @@ const renderCurrentView = () => {
           {!filters.courseId || filters.courseId === 'All' ? (
             <div className="text-center py-8 text-gray-500">
               <p>Please select a course to view questions.</p>
+                            
+              <button
+                onClick={() => {
+                  console.log('All questions:', questions);
+// Run this in dev console or inside a debug button temporarily:
+                const tagMap = {};
+                questions.forEach(q => {
+                  if (Array.isArray(q.tags)) {
+                    q.tags.forEach(tag => {
+                      const id = tag.id || tag.tagid;
+                      if (id) tagMap[id] = (tagMap[id] || 0) + 1;
+                    });
+                  }
+                });
+                console.table(tagMap);
+
+
+                }}
+                style={{ position: 'fixed', top: 10, right: 10, zIndex: 9999 }}
+              >
+                Log Questions & Tags
+              </button>
               <button
                 onClick={() => setCurrentView('categories')}
                 className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"

@@ -16,10 +16,10 @@ const ChevronRightIcon = () => (
 );
 
 const PaginationControls = ({
-  currentPage,
-  totalPages,
-  totalItems,
-  itemsPerPage,
+  currentPage=1,
+  totalPages=1,
+  totalItems=0,
+  itemsPerPage=5,
   onPageChange,
   onItemsPerPageChange,
   isLoading = false,
@@ -227,13 +227,13 @@ const PaginationControls = ({
 };
 
 //  FIXED: Prop validation with exact API structure
-PaginationControls.defaultProps = {
-  currentPage: 1,
-  totalPages: 1,
-  totalItems: 0,
-  itemsPerPage: 5,
-  isLoading: false,
-  className: ''
-};
+// PaginationControls.defaultProps = {
+//   currentPage: 1,
+//   totalPages: 1,
+//   totalItems: 0,
+//   itemsPerPage: 5,
+//   isLoading: false,
+//   className: ''
+// };
 
 export default PaginationControls;
