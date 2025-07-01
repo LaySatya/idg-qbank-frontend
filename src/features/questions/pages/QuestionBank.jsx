@@ -1680,7 +1680,7 @@ const renderCurrentView = () => {
           {!filters.courseId || filters.courseId === 'All' ? (
             <div className="text-center py-8 text-gray-500">
               <p>Please select a course to view questions.</p>
-                            
+{/*                             
               <button
                 onClick={() => {
                   console.log('All questions:', questions);
@@ -1701,7 +1701,7 @@ const renderCurrentView = () => {
                 style={{ position: 'fixed', top: 10, right: 10, zIndex: 9999 }}
               >
                 Log Questions & Tags
-              </button>
+              </button> */}
               <button
                 onClick={() => setCurrentView('categories')}
                 className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
