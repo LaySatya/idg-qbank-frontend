@@ -476,31 +476,19 @@ const handleEditModalSave = async () => {
                               }}
                             />
                           ) : (
-                          <span
-                        className="inline-flex items-center group cursor-pointer"
-                        onClick={() => openEditModal(question)}
-                      >
-                        <span className="ml-2 text-black font-semibold hover:text-blue-700 flex items-center">
-                          {question.name || question.title || '(No title)'}
-                          <span className="ml-2">
-                            <i className="fa-regular fa-pen-to-square text-gray-400"></i>
-                          </span>
-                        </span>
-                        {/* {question.questiontext && (
-            <div className="text-xs text-gray-600 mt-1">
-              {question.questiontext}
-            </div>
-          )} */}
-            {/* {question.questiontext && (
-            <div
-              className="text-xs text-gray-600 mt-1"
-              dangerouslySetInnerHTML={{ __html: question.questiontext }}
-            />
-          )} */}
-                    </span>
+                            <span
+                              className="inline-flex items-center group cursor-pointer"
+                              onClick={() => openEditModal(question)}
+                            >
+                              <span className="ml-2 text-black font-semibold hover:text-blue-700 flex items-center">
+                                {question.name || question.title || '(No title)'}
+                                <span className="ml-2">
+                                  <i className="fa-regular fa-pen-to-square text-gray-400"></i>
+                                </span>
+                              </span>
+                            </span>
                           )}
                         </label>
-                        
                         {question.idNumber && (
                           <span className="ml-1">
                             <span className="sr-only">ID number</span>&nbsp;
@@ -508,7 +496,10 @@ const handleEditModalSave = async () => {
                           </span>
                         )}
                       </div>
-                      
+                      {/* Render question text as HTML if present */}
+                      {question.questiontext && (
+                        <div className="text-xs text-gray-600 mt-1" dangerouslySetInnerHTML={{ __html: question.questiontext }} />
+                      )}
                       {/* FIXED: Tags Rendering Section */}
                       <div className="w-full">
                         {renderTags(question)}
