@@ -1,5 +1,5 @@
 // ============================================================================
-// 📁 src/components/questions/hooks/useAPIData.js
+//  src/components/questions/hooks/useAPIData.js
 // ============================================================================
 import { useState, useEffect } from 'react';
 import { questionAPI } from '../../../api/questionAPI';
@@ -18,7 +18,7 @@ export const useAPITags = () => {
         setTags(apiTags);
         setError(null);
       } catch (err) {
-        console.error('❌ Failed to fetch tags:', err);
+        console.error(' Failed to fetch tags:', err);
         setError(err.message);
         // Fallback tags
         setTags(['exam', 'quiz', 'general', 'l1', 'l2', 'l3', 'hardware', 'software']);
@@ -46,7 +46,7 @@ export const useAPICategories = () => {
         setCategories(apiCategories);
         setError(null);
       } catch (err) {
-        console.error('❌ Failed to fetch categories:', err);
+        console.error(' Failed to fetch categories:', err);
         setError(err.message);
         setCategories([{ value: 1, label: 'Default Category' }]);
       } finally {
@@ -73,7 +73,7 @@ export const useAPIQuestionTypes = () => {
         setQuestionTypes(apiTypes);
         setError(null);
       } catch (err) {
-        console.error('❌ Failed to fetch question types:', err);
+        console.error(' Failed to fetch question types:', err);
         setError(err.message);
         setQuestionTypes([
           { value: 'multichoice', label: 'Multiple Choice' },

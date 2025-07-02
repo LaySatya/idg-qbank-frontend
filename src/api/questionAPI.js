@@ -149,6 +149,19 @@ const getUserNameById = async (userId) => {
 };
 
 export const questionAPI = {
+   // Add missing cache properties
+  cache: new Map(),
+  CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
+
+  // Helper method for making requests
+  async makeRequest(url, options = {}) {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+      ...options
+    });
+    return await handleAPIResponse(response);
+  },
   // Get all tags with better normalization
  async getTags() {
     try {
@@ -183,7 +196,56 @@ export const questionAPI = {
       return [];
     }
   },
+// Get tags for a specific question
+async getTagsForQuestion(questionId) {
+  if (!questionId) {
+    console.warn(' No question ID provided');
+    return [];
+  }
 
+  const cacheKey = `question_tags_${questionId}`;
+  const cached = this.cache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+    console.log(` Using cached tags for question ${questionId}`);
+    return cached.data;
+  }
+
+  try {
+    console.log(` Fetching tags for question: ${questionId}`);
+    
+    const url = `${API_BASE_URL}/questions/question-tags?questionid=${questionId}`;
+    const response = await this.makeRequest(url);
+
+    console.log(` Question tags response for ${questionId}:`, response);
+
+    // Response format: { questionid: number, tags: array }
+    const tags = Array.isArray(response.tags) ? response.tags : [];
+    
+    const normalizedTags = tags.map(tag => ({
+      id: String(tag.id),
+      name: tag.name || tag.rawname || String(tag.id),
+      rawname: tag.rawname || tag.name || String(tag.id),
+      isstandard: Boolean(tag.isstandard),
+      description: tag.description || '',
+      descriptionformat: tag.descriptionformat || 0,
+      flag: tag.flag || 0
+    }));
+
+    // Cache the result
+    this.cache.set(cacheKey, {
+      data: normalizedTags,
+      timestamp: Date.now()
+    });
+
+    console.log(` Loaded ${normalizedTags.length} tags for question ${questionId}`);
+    return normalizedTags;
+
+  } catch (error) {
+    console.error(` Failed to fetch tags for question ${questionId}:`, error);
+    return [];
+  }
+},
   // Get tags for a specific question
 async getQuestionTags(questionId) {
     try {
@@ -195,7 +257,7 @@ async getQuestionTags(questionId) {
       });
       
       const data = await handleAPIResponse(response);
-      console.log(`📋 Tags for question ${questionId}:`, data);
+      console.log(` Tags for question ${questionId}:`, data);
       
       // Handle your API response format: { questionid: 99235, tags: [] }
       let tags = [];
@@ -218,7 +280,7 @@ async getQuestionTags(questionId) {
           };
         } else if (typeof tag === 'object' && tag !== null) {
           return {
-            id: String(tag.id || tag.name || tag.rawname), // 🔧 CRITICAL: String ID
+            id: String(tag.id || tag.name || tag.rawname), //  CRITICAL: String ID
             name: tag.name || tag.rawname || tag.text || tag.value,
             rawname: tag.rawname || tag.name || tag.text || tag.value,
             isstandard: tag.isstandard || false,
@@ -238,38 +300,108 @@ async getQuestionTags(questionId) {
     }
   },
 
+// Get questions by specific tag IDs - NEW method based on your API
+async getQuestionsByTags(tagIds) {
+  if (!Array.isArray(tagIds) || tagIds.length === 0) {
+    console.warn(' No tag IDs provided for filtering');
+    return [];
+  }
 
+  try {
+    console.log(` Fetching questions for tag IDs: [${tagIds.join(', ')}]`);
+    
+    // Build query parameters: tags[id][]=5&tags[id][]=6&tags[id][]=23
+    const params = new URLSearchParams();
+    tagIds.forEach(tagId => {
+      params.append('tags[id][]', tagId);
+    });
+
+    const url = `${API_BASE_URL}/questions/tag?${params}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    
+    const data = await handleAPIResponse(response);
+    console.log('Questions by tags response:', data);
+
+    // Handle different response formats
+    let questions = [];
+    if (Array.isArray(data)) {
+      questions = data;
+    } else if (data && Array.isArray(data.questions)) {
+      questions = data.questions;
+    } else if (data && Array.isArray(data.data)) {
+      questions = data.data;
+    } else {
+      console.warn(' Unexpected response format from tag endpoint:', data);
+      questions = [];
+    }
+    
+    console.log(` Found ${questions.length} questions with tags: [${tagIds.join(', ')}]`);
+    return questions;
+
+  } catch (error) {
+    console.error(' Failed to fetch questions by tags:', error);
+    return [];
+  }
+},
 
   // Get tags for multiple questions
-  async getTagsForMultipleQuestions(questionIds) {
-    try {
-      const results = {};
-      
-      // Your API doesn't have batch endpoint, so fetch individually
-      for (const questionId of questionIds) {
-        try {
-          const response = await fetch(`${API_BASE_URL}/questions/question-tags?questionid=${questionId}`, {
-            method: 'GET',
-            headers: getAuthHeaders()
-          });
+async getTagsForMultipleQuestions(questionIds) {
+    if (!Array.isArray(questionIds) || questionIds.length === 0) {
+      return {};
+    }
 
-          if (response.ok) {
-            const data = await response.json();
-            // Your API returns: { questionid: 99235, tags: [] }
-            results[questionId] = data.tags || [];
-          } else {
-            results[questionId] = [];
+    try {
+      console.log(` Fetching tags for ${questionIds.length} questions...`);
+      
+      // Since there's no bulk endpoint, fetch individually with concurrency control
+      const batchSize = 5; // Process 5 questions at a time to avoid overwhelming the API
+      const tagsByQuestionId = {};
+      
+      for (let i = 0; i < questionIds.length; i += batchSize) {
+        const batch = questionIds.slice(i, i + batchSize);
+        
+        console.log(` Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(questionIds.length/batchSize)}: [${batch.join(', ')}]`);
+        
+        const batchPromises = batch.map(async (questionId) => {
+          try {
+            const tags = await this.getTagsForQuestion(questionId);
+            return { questionId, tags };
+          } catch (error) {
+            console.warn(` Failed to get tags for question ${questionId}:`, error);
+            return { questionId, tags: [] };
           }
-        } catch (error) {
-          console.error(`Error fetching tags for question ${questionId}:`, error);
-          results[questionId] = [];
+        });
+
+        const batchResults = await Promise.allSettled(batchPromises);
+        
+        batchResults.forEach((result) => {
+          if (result.status === 'fulfilled') {
+            const { questionId, tags } = result.value;
+            tagsByQuestionId[questionId] = tags;
+          }
+        });
+
+        // Small delay between batches to be nice to the API
+        if (i + batchSize < questionIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
 
-      return results;
-    } catch (err) {
-      console.error('Error in batch tag fetching:', err);
-      return {};
+      console.log(` Loaded tags for ${Object.keys(tagsByQuestionId).length}/${questionIds.length} questions`);
+      return tagsByQuestionId;
+
+    } catch (error) {
+      console.error(' Failed to fetch tags for questions:', error);
+      
+      // Return empty object as fallback
+      const fallback = {};
+      questionIds.forEach(id => {
+        fallback[id] = [];
+      });
+      return fallback;
     }
   },
 

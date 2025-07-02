@@ -356,340 +356,349 @@ const handleEditModalSave = async () => {
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <table id="categoryquestions" className="min-w-full border-collapse">
-          <thead>
-            <tr>
-              <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">
-                <span title="Select questions for bulk actions">
-                  <input 
-                    id="qbheadercheckbox" 
-                    name="qbheadercheckbox" 
-                    type="checkbox"  
-                    value="1"
-                    data-action="toggle"
-                    data-toggle="master"
-                    data-togglegroup="qbank"
-                    data-toggle-selectall="Select all"
-                    data-toggle-deselectall="Deselect all"
-                    onChange={handleSelectAll}
-                    checked={selectedQuestions.length === filteredQuestions.length && filteredQuestions.length > 0}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="qbheadercheckbox" className="sr-only">Select all</label>
-                </span>
-              </th>
-              <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">
-                <div className="font-semibold">Question</div>
-                <div className="mt-1 space-x-1">
-                  <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Question name ascending">Question name</a>
-                  <span className="text-gray-400">/</span>
-                  <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by ID number ascending">ID number</a>
-                </div>
-              </th>
-              <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Status</th>
-              <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Comments</th>
-              <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Version</th>
-              <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Usage</th>
-              <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Last used</th>
-              <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">
-                <div className="font-semibold">Created by</div>
-                <div className="mt-1 space-x-1">
-                  <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by First name ascending">First name</a>
-                  <span className="text-gray-400">/</span>
-                  <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Last name ascending">Last name</a>
-                  <span className="text-gray-400">/</span>
-                  <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Date ascending">Date</a>
-                </div>
-              </th>
-              <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">
-                <div className="font-semibold">Modified by</div>
-                <div className="mt-1 space-x-1">
-                  <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by First name ascending">First name</a>
-                  <span className="text-gray-400">/</span>
-                  <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Last name ascending">Last name</a>
-                  <span className="text-gray-400">/</span>
-                  <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Date ascending">Date</a>
-                </div>
-              </th>
-              <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">
-                <div>
-                  <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Question type descending">
-                    T<i className="fa fa-sort-asc fa-fw ml-1 text-gray-500" title="Ascending" role="img" aria-label="Ascending"></i>
-                  </a>
-                </div>
-              </th>
-              <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {questions.map((question, index) => (
-              <tr key={question.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100 transition-colors`}>
-                <td className="px-3 py-4 whitespace-nowrap">
-                  <input 
-                    id={`checkq${question.id}`}
-                    name={`q${question.id}`}
-                    type="checkbox"  
-                    value="1"
-                    data-action="toggle"
-                    data-toggle="slave"
-                    data-togglegroup="qbank"
-                    checked={selectedQuestions.includes(question.id)}
-                    onChange={() => toggleQuestionSelection(question.id)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor={`checkq${question.id}`} className="sr-only">Select</label>
-                </td>
-                
-                {/* Question text and tags */}
-                <td className="px-3 py-4">
-                  <div className="flex flex-col items-start w-full">
-                    <div className="w-full mb-2">
-                      <label htmlFor={`checkq${question.id}`} className="block">
-                        {editingQuestion === question.id ? (
-                          <input
-                            type="text"
-                            value={newQuestionTitle}
-                            onChange={(e) => setNewQuestionTitle(e.target.value)}
-                            className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                            autoFocus
-                            onBlur={() => {
-                              setPendingSaveQuestionId(question.id);
-                              setPendingSaveTitle(newQuestionTitle);
-                              setShowSaveModal(true);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
+      <div
+        className="overflow-x-auto"
+        style={{ minHeight: '300px', height: 'unset', maxHeight: 'unset', overflowY: 'auto' }}
+      >
+        {questions.length === 0 ? (
+          <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+            No questions found.
+          </div>
+        ) : (
+          <table id="categoryquestions" className="min-w-full border-collapse">
+            <thead>
+              <tr>
+                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">
+                  <span title="Select questions for bulk actions">
+                    <input 
+                      id="qbheadercheckbox" 
+                      name="qbheadercheckbox" 
+                      type="checkbox"  
+                      value="1"
+                      data-action="toggle"
+                      data-toggle="master"
+                      data-togglegroup="qbank"
+                      data-toggle-selectall="Select all"
+                      data-toggle-deselectall="Deselect all"
+                      onChange={handleSelectAll}
+                      checked={selectedQuestions.length === filteredQuestions.length && filteredQuestions.length > 0}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="qbheadercheckbox" className="sr-only">Select all</label>
+                  </span>
+                </th>
+                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">
+                  <div className="font-semibold">Question</div>
+                  <div className="mt-1 space-x-1">
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Question name ascending">Question name</a>
+                    <span className="text-gray-400">/</span>
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by ID number ascending">ID number</a>
+                  </div>
+                </th>
+                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell" scope="col">Status</th>
+                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Comments</th>
+                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Version</th>
+                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Usage</th>
+                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Last used</th>
+                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">
+                  <div className="font-semibold">Created by</div>
+                  <div className="mt-1 space-x-1">
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by First name ascending">First name</a>
+                    <span className="text-gray-400">/</span>
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Last name ascending">Last name</a>
+                    <span className="text-gray-400">/</span>
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Date ascending">Date</a>
+                  </div>
+                </th>
+                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">
+                  <div className="font-semibold">Modified by</div>
+                  <div className="mt-1 space-x-1">
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by First name ascending">First name</a>
+                    <span className="text-gray-400">/</span>
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Last name ascending">Last name</a>
+                    <span className="text-gray-400">/</span>
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Date ascending">Date</a>
+                  </div>
+                </th>
+                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">
+                  <div>
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Question type descending">
+                      T<i className="fa fa-sort-asc fa-fw ml-1 text-gray-500" title="Ascending" role="img" aria-label="Ascending"></i>
+                    </a>
+                  </div>
+                </th>
+                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {questions.map((question, index) => (
+                <tr key={question.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100 transition-colors`}>
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    <input 
+                      id={`checkq${question.id}`}
+                      name={`q${question.id}`}
+                      type="checkbox"  
+                      value="1"
+                      data-action="toggle"
+                      data-toggle="slave"
+                      data-togglegroup="qbank"
+                      checked={selectedQuestions.includes(question.id)}
+                      onChange={() => toggleQuestionSelection(question.id)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor={`checkq${question.id}`} className="sr-only">Select</label>
+                  </td>
+                  
+                  {/* Question text and tags */}
+                  <td className="px-3 py-4">
+                    <div className="flex flex-col items-start w-full">
+                      <div className="w-full mb-2">
+                        <label htmlFor={`checkq${question.id}`} className="block">
+                          {editingQuestion === question.id ? (
+                            <input
+                              type="text"
+                              value={newQuestionTitle}
+                              onChange={(e) => setNewQuestionTitle(e.target.value)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                              autoFocus
+                              onBlur={() => {
                                 setPendingSaveQuestionId(question.id);
                                 setPendingSaveTitle(newQuestionTitle);
                                 setShowSaveModal(true);
-                              }
-                              if (e.key === 'Escape') setEditingQuestion(null);
-                            }}
-                          />
-                        ) : (
-                        <span
-                      className="inline-flex items-center group cursor-pointer"
-                      onClick={() => openEditModal(question)}
-                    >
-                      <span className="ml-2 text-black font-semibold hover:text-blue-700 flex items-center">
-                        {question.name || question.title || '(No title)'}
-                        <span className="ml-2">
-                          <i className="fa-regular fa-pen-to-square text-gray-400"></i>
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  setPendingSaveQuestionId(question.id);
+                                  setPendingSaveTitle(newQuestionTitle);
+                                  setShowSaveModal(true);
+                                }
+                                if (e.key === 'Escape') setEditingQuestion(null);
+                              }}
+                            />
+                          ) : (
+                          <span
+                        className="inline-flex items-center group cursor-pointer"
+                        onClick={() => openEditModal(question)}
+                      >
+                        <span className="ml-2 text-black font-semibold hover:text-blue-700 flex items-center">
+                          {question.name || question.title || '(No title)'}
+                          <span className="ml-2">
+                            <i className="fa-regular fa-pen-to-square text-gray-400"></i>
+                          </span>
                         </span>
-                      </span>
-                      {/* {question.questiontext && (
-              <div className="text-xs text-gray-600 mt-1">
-                {question.questiontext}
-              </div>
-            )} */}
-              {/* {question.questiontext && (
-              <div
-                className="text-xs text-gray-600 mt-1"
-                dangerouslySetInnerHTML={{ __html: question.questiontext }}
-              />
-            )} */}
+                        {/* {question.questiontext && (
+            <div className="text-xs text-gray-600 mt-1">
+              {question.questiontext}
+            </div>
+          )} */}
+            {/* {question.questiontext && (
+            <div
+              className="text-xs text-gray-600 mt-1"
+              dangerouslySetInnerHTML={{ __html: question.questiontext }}
+            />
+          )} */}
                     </span>
-                        )}
-                      </label>
-                      
-                      {question.idNumber && (
-                        <span className="ml-1">
-                          <span className="sr-only">ID number</span>&nbsp;
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-small bg-grey-100 text-grey-800">ID {question.idNumber}</span>
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* FIXED: Tags Rendering Section */}
-                    <div className="w-full">
-                      {renderTags(question)}
-                    </div>
-                  </div>
-                </td>
-                
-                {/* Status Column */}
-                <td className="px-3 py-4 whitespace-nowrap">
-                  <div className="relative" data-status-dropdown={question.id}>
-                    <select
-                      id={`question_status_dropdown-${question.id}`}
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm appearance-none pr-8"
-                      name="question_status_dropdown"
-                      value={question.status}
-                      onChange={(e) => onStatusChange(question.id, e.target.value)}
-                    >
-                      <option value="ready">Ready</option>
-                      <option value="draft">Draft</option>
-                    </select>
-                    <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                      <i className="fa fa-sort text-gray-400" aria-hidden="true"></i>
-                    </span>
-                  </div>
-                </td>
-                
-                <td className="px-3 py-4 whitespace-nowrap">
-                  <a href="#" className="text-blue-600 hover:text-blue-900" data-target={`questioncommentpreview_${question.id}`} data-questionid={question.id} data-courseid="985" data-contextid="1">
-                    {question.comments || 0}
-                  </a>
-                </td>
-                
-                <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">{question.version}</td>
-                
-                <td className="px-3 py-4 whitespace-nowrap">
-                  <a href="#" className="text-blue-600 hover:text-blue-900" data-target={`questionusagepreview_${question.id}`} data-questionid={question.id} data-courseid="985">
-                    {question.usage || 0}
-                  </a>
-                </td>
-                
-                <td className="px-3 py-4 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">{question.lastUsed}</span>
-                </td>
-                
-                <td className="px-3 py-4 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">{question.createdBy?.name || ''}</span>
-                  <br />
-                  <span className="text-xs text-gray-500">{question.createdBy?.date || ''}</span>
-                </td>
-                
-                <td className="px-3 py-4 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">{question.modifiedBy?.name || ''}</span>
-                  <br />
-                  <span className="text-xs text-gray-500">{question.modifiedBy?.date || ''}</span>
-                </td>
-                
-                <td className="px-3 py-4 whitespace-nowrap">
-                  {getQuestionTypeIcon(question.qtype || question.questionType, question)}
-                </td>
-                
-                <td className="px-3 py-4 whitespace-nowrap">
-                  <div className="relative" data-enhance="moodle-core-actionmenu">
-                    <div className="flex">
-                      <div className="relative" ref={el => dropdownRefs.current[question.id] = el}>
-                        <div>
-                          <a 
-                            href="#" 
-                            className="text-blue-600 hover:text-blue-900 focus:outline-none" 
-                            aria-label="Edit" 
-                            role="button" 
-                            aria-haspopup="true" 
-                            aria-expanded={openActionDropdown === question.id}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setOpenActionDropdown(openActionDropdown === question.id ? null : question.id);
-                            }}
-                          >
-                            Edit
-                            <i className="fa fa-chevron-down ml-1"></i>
-                          </a>
-                          {openActionDropdown === question.id && (
-                            <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
-                              <a
-                                href="#"
-                                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-                                role="menuitem"
-                                tabIndex="-1"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  onEdit(question);
-                                  setOpenActionDropdown(null);
-                                }}
-                              >
-                                <i className="fa fa-cog w-4 text-center mr-2 text-gray-500"></i>
-                                <span>Edit question</span>
-                              </a>
-                              <a 
-                                href="#" 
-                                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors" 
-                                role="menuitem" 
-                                tabIndex="-1" 
-                                onClick={(e) => { 
-                                  e.preventDefault();
-                                  onDuplicate(question.id); 
-                                  setOpenActionDropdown(null); 
-                                }}
-                              >
-                                <i className="fa fa-copy w-4 text-center mr-2 text-gray-500"></i>
-                                <span>Duplicate</span>
-                              </a>
-                              <a 
-                                href="#" 
-                                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors" 
-                                role="menuitem" 
-                                tabIndex="-1"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setOpenActionDropdown(null);
-                                }}
-                              >
-                                <i className="fa fa-tags w-4 text-center mr-2 text-gray-500"></i>
-                                <span>Manage tags</span>
-                              </a>
-                              <a 
-                                href="#" 
-                                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors" 
-                                role="menuitem" 
-                                tabIndex="-1" 
-                                onClick={(e) => { 
-                                  e.preventDefault();
-                                  onPreview(question); 
-                                  setOpenActionDropdown(null); 
-                                }}
-                              >
-                                <i className="fa fa-search w-4 text-center mr-2 text-gray-500"></i>
-                                <span>Preview</span>
-                              </a>
-                              <a 
-                                href="#" 
-                                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors" 
-                                role="menuitem" 
-                                tabIndex="-1" 
-                                onClick={(e) => { 
-                                  e.preventDefault();
-                                  onHistory(question); 
-                                  setOpenActionDropdown(null); 
-                                }}
-                              >
-                                <i className="fa fa-list w-4 text-center mr-2 text-gray-500"></i>
-                                <span>History</span>
-                              </a>
-                              <a 
-                                href="#" 
-                                className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors" 
-                                role="menuitem" 
-                                tabIndex="-1" 
-                                onClick={(e) => { 
-                                  e.preventDefault();
-                                  onDelete(question.id); 
-                                  setOpenActionDropdown(null); 
-                                }}
-                              >
-                                <i className="fa fa-trash w-4 text-center mr-2 text-red-500"></i>
-                                <span>Delete</span>
-                              </a>
-                              <a 
-                                href="#" 
-                                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors" 
-                                role="menuitem" 
-                                tabIndex="-1"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setOpenActionDropdown(null);
-                                }}
-                              >
-                                <i className="fa fa-download w-4 text-center mr-2 text-gray-500"></i>
-                                <span>Export as Moodle XML</span>
-                              </a>
-                            </div>
                           )}
+                        </label>
+                        
+                        {question.idNumber && (
+                          <span className="ml-1">
+                            <span className="sr-only">ID number</span>&nbsp;
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-small bg-grey-100 text-grey-800">ID {question.idNumber}</span>
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* FIXED: Tags Rendering Section */}
+                      <div className="w-full">
+                        {renderTags(question)}
+                      </div>
+                    </div>
+                  </td>
+                  
+                  {/* Status Column */}
+                 <td className="px-3 py-4 whitespace-nowrap hidden sm:table-cell">
+                    <div className="relative" data-status-dropdown={question.id}>
+                      <select
+                        id={`question_status_dropdown-${question.id}`}
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm appearance-none pr-8"
+                        name="question_status_dropdown"
+                        value={question.status}
+                        onChange={(e) => onStatusChange(question.id, e.target.value)}
+                      >
+                        <option value="ready">Ready</option>
+                        <option value="draft">Draft</option>
+                      </select>
+                      <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                        <i className="fa fa-sort text-gray-400" aria-hidden="true"></i>
+                      </span>
+                    </div>
+                  </td>
+                  
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    <a href="#" className="text-blue-600 hover:text-blue-900" data-target={`questioncommentpreview_${question.id}`} data-questionid={question.id} data-courseid="985" data-contextid="1">
+                      {question.comments || 0}
+                    </a>
+                  </td>
+                  
+                  <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">{question.version}</td>
+                  
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    <a href="#" className="text-blue-600 hover:text-blue-900" data-target={`questionusagepreview_${question.id}`} data-questionid={question.id} data-courseid="985">
+                      {question.usage || 0}
+                    </a>
+                  </td>
+                  
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-900">{question.lastUsed}</span>
+                  </td>
+                  
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-900">{question.createdBy?.name || ''}</span>
+                    <br />
+                    <span className="text-xs text-gray-500">{question.createdBy?.date || ''}</span>
+                  </td>
+                  
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-900">{question.modifiedBy?.name || ''}</span>
+                    <br />
+                    <span className="text-xs text-gray-500">{question.modifiedBy?.date || ''}</span>
+                  </td>
+                  
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    {getQuestionTypeIcon(question.qtype || question.questionType, question)}
+                  </td>
+                  
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    <div className="relative" data-enhance="moodle-core-actionmenu">
+                      <div className="flex">
+                        <div className="relative" ref={el => dropdownRefs.current[question.id] = el}>
+                          <div>
+                            <a 
+                              href="#" 
+                              className="text-blue-600 hover:text-blue-900 focus:outline-none" 
+                              aria-label="Edit" 
+                              role="button" 
+                              aria-haspopup="true" 
+                              aria-expanded={openActionDropdown === question.id}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setOpenActionDropdown(openActionDropdown === question.id ? null : question.id);
+                              }}
+                            >
+                              Edit
+                              <i className="fa fa-chevron-down ml-1"></i>
+                            </a>
+                            {openActionDropdown === question.id && (
+                              <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+                                <a
+                                  href="#"
+                                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                                  role="menuitem"
+                                  tabIndex="-1"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    openEditModal(question); // Use the unified modal for editing
+                                    setOpenActionDropdown(null);
+                                  }}
+                                >
+                                  <i className="fa fa-cog w-4 text-center mr-2 text-gray-500"></i>
+                                  <span>Edit question</span>
+                                </a>
+                                <a 
+                                  href="#" 
+                                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors" 
+                                  role="menuitem" 
+                                  tabIndex="-1" 
+                                  onClick={(e) => { 
+                                    e.preventDefault();
+                                    onDuplicate(question.id); 
+                                    setOpenActionDropdown(null); 
+                                  }}
+                                >
+                                  <i className="fa fa-copy w-4 text-center mr-2 text-gray-500"></i>
+                                  <span>Duplicate</span>
+                                </a>
+                                <a 
+                                  href="#" 
+                                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors" 
+                                  role="menuitem" 
+                                  tabIndex="-1" 
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setOpenActionDropdown(null);
+                                  }}
+                                >
+                                  <i className="fa fa-tags w-4 text-center mr-2 text-gray-500"></i>
+                                  <span>Manage tags</span>
+                                </a>
+                                <a 
+                                  href="#" 
+                                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors" 
+                                  role="menuitem" 
+                                  tabIndex="-1" 
+                                  onClick={(e) => { 
+                                    e.preventDefault();
+                                    onPreview(question); 
+                                    setOpenActionDropdown(null); 
+                                  }}
+                                >
+                                  <i className="fa fa-search w-4 text-center mr-2 text-gray-500"></i>
+                                  <span>Preview</span>
+                                </a>
+                                <a 
+                                  href="#" 
+                                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors" 
+                                  role="menuitem" 
+                                  tabIndex="-1" 
+                                  onClick={(e) => { 
+                                    e.preventDefault();
+                                    onHistory(question); 
+                                    setOpenActionDropdown(null); 
+                                  }}
+                                >
+                                  <i className="fa fa-list w-4 text-center mr-2 text-gray-500"></i>
+                                  <span>History</span>
+                                </a>
+                                <a 
+                                  href="#" 
+                                  className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors" 
+                                  role="menuitem" 
+                                  tabIndex="-1" 
+                                  onClick={(e) => { 
+                                    e.preventDefault();
+                                    onDelete(question.id); 
+                                    setOpenActionDropdown(null); 
+                                  }}
+                                >
+                                  <i className="fa fa-trash w-4 text-center mr-2 text-red-500"></i>
+                                  <span>Delete</span>
+                                </a>
+                                <a 
+                                  href="#" 
+                                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors" 
+                                  role="menuitem" 
+                                  tabIndex="-1"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setOpenActionDropdown(null);
+                                  }}
+                                >
+                                  <i className="fa fa-download w-4 text-center mr-2 text-gray-500"></i>
+                                  <span>Export as Moodle XML</span>
+                                </a>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Save confirmation modal */}
@@ -737,10 +746,15 @@ const handleEditModalSave = async () => {
     overlay: { zIndex: 1000 },
     content: {
       maxWidth: 1000,
+      // width: 'auto',
       margin: 'auto',
-      maxHeight: '50vh',
+      // maxHeight: '50vh',
       overflowY: 'auto',
-      inset: '40px',
+      //  inset: '20px',
+      top: '20%',
+      left: '50%',
+    
+      transform: 'translateX(-50%)',
       padding: '32px',
       borderRadius: '20px',
       border: '1px solid #e5e7eb',
@@ -752,11 +766,11 @@ const handleEditModalSave = async () => {
   <form className="space-y-5">
     <div>
       <label className="block text-sm font-medium mb-1">Question Name</label>
-      <ReactQuill
+      <input
+        type="text"
         value={editModalName}
-        onChange={setEditModalName}
-        theme="snow"
-        style={{ minHeight: '80px' }}
+        onChange={e => setEditModalName(e.target.value)}
+        className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
       />
     </div>
     <div>
@@ -765,7 +779,7 @@ const handleEditModalSave = async () => {
         value={editModalText}
         onChange={setEditModalText}
         theme="snow"
-        style={{ minHeight: '180px' }}
+        style={{ minHeight: '280px' }}
       />
     </div>
     <div className="flex justify-end gap-2 pt-2">

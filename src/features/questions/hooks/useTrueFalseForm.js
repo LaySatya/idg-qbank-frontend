@@ -58,15 +58,15 @@ export const useTrueFalseForm = (initialQuestion = null) => {
 
     try {
       setSaving(true);
-      console.log('💾 Saving True/False question:', question);
+      console.log(' Saving True/False question:', question);
       
       const result = await questionAPI.createTrueFalseQuestion(question);
-      console.log('✅ Question saved successfully:', result);
+      console.log(' Question saved successfully:', result);
       
       alert('Question saved successfully!');
       return true;
     } catch (error) {
-      console.error('❌ Failed to save question:', error);
+      console.error(' Failed to save question:', error);
       alert(`Failed to save question: ${error.message}`);
       return false;
     } finally {
