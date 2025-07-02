@@ -633,7 +633,7 @@ const HistoryModal = ({ question, onClose }) => {
             onClick={onClose}
             className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
           >
-            Close
+            <Close></Close>
           </button>
         </div>
       </div>
