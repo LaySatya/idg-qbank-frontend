@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSearch, faFilter, faTimes, faTag, faLayerGroup, faCheckCircle
 } from '@fortawesome/free-solid-svg-icons';
-import { buildGroupedCategoryTree } from '@/shared/utils/categoryUtils.jsx';
+import { buildGroupedCategoryTree, addQuestionCountToCategoryTree } from '@/shared/utils/categoryUtils.jsx';
 import Select from 'react-select';
 
 // Then use:
@@ -49,6 +49,8 @@ const FiltersRow = ({
   loadingCategories = false,
   onSearch = null,
   questions = [],
+  allQuestions = null, // <-- Add this prop for all questions (optional)
+  categoryQuestionCount = 0 
 }) => {
   const [internalSearchQuery, setInternalSearchQuery] = useState(searchQuery);
 
@@ -64,25 +66,27 @@ const FiltersRow = ({
   const questionStatuses = useMemo(() => ['ready', 'draft'], []);
 
 
- const tagOptions = useMemo(() => {
+const tagOptions = useMemo(() => {
   if (!Array.isArray(allTags) || allTags.length === 0) {
-    console.log(' No tags available for filtering');
+    console.log('No tags available for filtering');
     return [];
   }
   
-  console.log(` Processing ${allTags.length} tags for options`);
+  console.log(`Processing ${allTags.length} tags for options`);
   
   const options = allTags
-    .filter(tag => tag && tag.id && tag.name) // Ensure valid tags
+    .filter(tag => tag && tag.id && tag.name)
     .map(tag => ({
-      value: String(tag.id), //  CRITICAL: Ensure string value
+      value: String(tag.id), // Ensure string value for react-select
       label: tag.name,
       rawname: tag.rawname,
-      originalTag: tag // For debugging
+      isstandard: tag.isstandard,
+      description: tag.description,
+      originalTag: tag
     }));
     
-  console.log(` Created ${options.length} tag options`);
-  console.log(' Sample tag options:', options.slice(0, 3));
+  console.log(`Created ${options.length} tag options`);
+  console.log('Sample tag options:', options.slice(0, 3));
   
   return options;
 }, [allTags]);
@@ -156,7 +160,7 @@ const DebugButton = () => (
     ...availableCategories
       .filter(cat => cat && cat.id && cat.name) // Added null checks
       .map(cat => ({
-        value: cat.id,
+        value: String(cat.id),
         label: cat.name
       }))
   ], [availableCategories]);
@@ -216,14 +220,21 @@ const DebugButton = () => (
 
   // Category change
   const handleCategoryChange = useCallback((e) => {
-    const newCategory = e.target.value;
-    setFilters(prev => ({
-      ...prev,
-      category: newCategory,
-      _filterChangeTimestamp: Date.now()
-    }));
-    localStorage.setItem('questionCategoryId', newCategory);
-  }, [setFilters]);
+  const newCategory = e.target.value;
+
+  const selectedCat = availableCategories.find(cat => String(cat.id) === newCategory);
+  const selectedName = selectedCat ? selectedCat.name : '';
+
+  setFilters(prev => ({
+    ...prev,
+    category: newCategory,
+    categoryName: selectedName,
+    _filterChangeTimestamp: Date.now()
+  }));
+
+  localStorage.setItem('questionCategoryId', newCategory);
+  localStorage.setItem('questionCategoryName', selectedName);
+}, [setFilters, availableCategories]);
 
   // Status change
   const handleStatusChange = useCallback((e) => {
@@ -238,20 +249,86 @@ const DebugButton = () => (
   }, [setFilters]);
 
   // Tag change
- const handleTagChange = useCallback((selectedOptions) => {
+const handleTagChange = useCallback((selectedOptions) => {
   console.log(' Tag selection changed:', selectedOptions);
   
-  const newTags = selectedOptions ? selectedOptions.map(opt => {
-    // Ensure consistent data type
-    return String(opt.value);
-  }) : [];
+  // Debug: Check what the user actually selected
+  if (selectedOptions && selectedOptions.length > 0) {
+    selectedOptions.forEach(option => {
+      console.log(' Selected tag:', {
+        value: option.value,
+        label: option.label, 
+        originalTag: option.originalTag
+      });
+    });
+  }
   
-  console.log(' Setting tag filter to (all strings):', newTags);
-  console.log(' Tag filter types:', newTags.map(tag => `${tag} (${typeof tag})`));
+  const newTags = selectedOptions ? selectedOptions.map(opt => String(opt.value)) : [];
+  
+  console.log(' Setting tag filter to:', newTags);
+  
+  // Debug: Show a sample of all available tags
+  console.log('Available tags sample:', allTags.slice(0, 10).map(tag => ({
+    id: tag.id,
+    name: tag.name
+  })));
   
   setTagFilter(newTags);
-}, [setTagFilter]);
+  localStorage.setItem('questionTagFilter', JSON.stringify(newTags));
+}, [setTagFilter, allTags]);
 
+  // Get selected category name for chip display
+  const selectedCategoryObj = availableCategories.find(
+    cat => String(cat.id) === String(filters.category)
+  );
+  const selectedCategoryName = selectedCategoryObj ? selectedCategoryObj.name : 'All';
+
+  // ENHANCED: Calculate question counts for each category option
+const categoryOptionsWithCounts = useMemo(() => {
+  if (!Array.isArray(availableCategories) || availableCategories.length === 0) {
+    return [{ value: 'All', label: 'All Categories', count: categoryQuestionCount }];
+  }
+  // Use allQuestions if available, otherwise fall back to questions
+  const questionsToCount = Array.isArray(allQuestions) ? allQuestions : questions;
+  // Calculate counts for each category
+  const categoriesWithCounts = availableCategories.map(cat => {
+    const categoryId = String(cat.id);
+    const questionCount = questionsToCount.filter(q => {
+      const qCategoryId = String(q.categoryId || q.categoryid || q.category || '');
+      return qCategoryId === categoryId;
+    }).length;
+    return {
+      value: categoryId,
+      label: cat.name,
+      count: questionCount,
+      originalCategory: cat
+    };
+  });
+  // Add "All Categories" option with total count
+  const totalCount = questionsToCount.length || categoryQuestionCount;
+  return [
+    { value: 'All', label: 'All Categories', count: totalCount },
+    ...categoriesWithCounts
+  ];
+}, [availableCategories, questions, allQuestions, categoryQuestionCount]);
+
+// ENHANCED: Category label with dynamic question count
+const selectedCategoryLabel = useMemo(() => {
+  if (filters.category === 'All') {
+    return `All Categories (${categoryQuestionCount} questions)`;
+  }
+  // Find the selected category and its count
+  const selectedCategoryWithCount = categoryOptionsWithCounts.find(
+    cat => String(cat.value) === String(filters.category)
+  );
+  if (selectedCategoryWithCount) {
+    return `${selectedCategoryWithCount.label} (${selectedCategoryWithCount.count} questions)`;
+  }
+  // Fallback to existing logic
+  const matched = availableCategories.find(cat => String(cat.id) === String(filters.category));
+  const name = matched ? matched.name : filters.categoryName || 'Unknown';
+  return `${name} (${categoryQuestionCount} questions)`;
+}, [filters.category, categoryOptionsWithCounts, availableCategories, filters.categoryName, categoryQuestionCount]);
 
   // Keep internal search in sync with prop
   useEffect(() => {
@@ -260,21 +337,75 @@ const DebugButton = () => (
     }
   }, [searchQuery]);
 
-  // Render category tree options with safety checks
+  // Restore category filter (ID and name) from localStorage on mount
+useEffect(() => {
+  const savedCategoryId = localStorage.getItem('questionCategoryId');
+  const savedCategoryName = localStorage.getItem('questionCategoryName');
+  if (savedCategoryId && savedCategoryId !== 'All') {
+    const found = availableCategories.find(cat => String(cat.id) === String(savedCategoryId));
+    if (found) {
+      if (
+        filters.category !== String(savedCategoryId) ||
+        filters.categoryName !== found.name
+      ) {
+        setFilters(prev => ({
+          ...prev,
+          category: String(savedCategoryId),
+          categoryName: found.name
+        }));
+      }
+    } else {
+      if (filters.category !== 'All' || filters.categoryName !== '') {
+        setFilters(prev => ({
+          ...prev,
+          category: 'All',
+          categoryName: ''
+        }));
+      }
+    }
+  }
+}, [setFilters, availableCategories, filters.category, filters.categoryName]);
+
+  // Safe category tree building with question counts
+  const categoryGroups = useMemo(() => {
+    try {
+      if (!Array.isArray(availableCategories) || !Array.isArray(availableCourses)) {
+        return [];
+      }
+      const groups = buildGroupedCategoryTree(availableCategories, availableCourses);
+      // Use allQuestions for counts if provided, else fallback to paginated questions
+      const questionsForCount = Array.isArray(allQuestions) ? allQuestions : questions;
+      groups.forEach(group => {
+        addQuestionCountToCategoryTree(group.tree, questionsForCount);
+      });
+      return groups;
+    } catch (error) {
+      console.warn('Error building category tree:', error);
+      return [];
+    }
+  }, [availableCategories, availableCourses, questions, allQuestions]);
+
+  // Render category tree options with safety checks, now with questionCount
   const renderOptions = (nodes, level = 0, parentName = '', contextLabel = '') => {
     if (!Array.isArray(nodes)) return [];
-    
     return nodes.flatMap(node => {
       if (!node || !node.name || !node.id) return [];
-      
       let displayName = node.name;
       if (level === 0 && node.name.trim().toLowerCase() === 'top') {
         displayName = `Top for ${contextLabel}`;
       }
-      
+      // Calculate question count for this specific node
+      const questionsToCount = Array.isArray(allQuestions) ? allQuestions : questions;
+      const nodeQuestionCount = questionsToCount.filter(q => {
+        const qCategoryId = String(q.categoryId || q.categoryid || q.category || '');
+        return qCategoryId === String(node.id);
+      }).length;
+      // Use the calculated count or fall back to node.questionCount
+      const finalCount = nodeQuestionCount || node.questionCount || 0;
+      const labelWithCount = `${displayName} (${finalCount})`;
       return [
-        <MenuItem key={`${node.id}-${level}`} value={node.id} sx={{ pl: 2 + level * 2 }}>
-          {`${''.repeat(level)}${displayName}`}
+        <MenuItem key={`${node.id}-${level}`} value={String(node.id)} sx={{ pl: 2 + level * 2 }}>
+          {`${''.repeat(level)}${labelWithCount}`}
         </MenuItem>,
         ...(node.children && Array.isArray(node.children) 
           ? renderOptions(node.children, level + 1, node.name, contextLabel) 
@@ -301,19 +432,6 @@ const DebugButton = () => (
     if (filters.type === 'All') return 'All';
     return typeOptions.some(opt => opt.value === filters.type) ? filters.type : 'All';
   }, [filters.type, typeOptions]);
-
-  // Safe category tree building
-  const categoryGroups = useMemo(() => {
-    try {
-      if (!Array.isArray(availableCategories) || !Array.isArray(availableCourses)) {
-        return [];
-      }
-      return buildGroupedCategoryTree(availableCategories, availableCourses);
-    } catch (error) {
-      console.warn('Error building category tree:', error);
-      return [];
-    }
-  }, [availableCategories, availableCourses]);
 
   return (
     <Paper elevation={2} sx={{ p: 3, mb: 2 }}>
@@ -352,23 +470,30 @@ const DebugButton = () => (
 
         {/* Category */}
         <Grid item xs={12} md={2}>
-          <TextField
-            select
-            fullWidth
-            label="Category"
-            value={validCategory}
-            onChange={handleCategoryChange}
-            size="small"
-            disabled={loadingCategories}
-          >
-            <MenuItem value="All">All Categories</MenuItem>
-            {categoryGroups.map(group => [
-              <MenuItem key={`group-${group.contextid}`} disabled sx={{ fontWeight: 'bold', color: '#3b82f6' }}>
-                {group.label}
-              </MenuItem>,
-              ...renderOptions(group.tree, 0, '', group.label)
-            ])}
-          </TextField>
+<TextField
+  select
+  fullWidth
+  label="Category"
+  value={validCategory}
+  onChange={handleCategoryChange}
+  size="small"
+  disabled={loadingCategories}
+  SelectProps={{
+    renderValue: () => selectedCategoryLabel //  Now shows correct count
+  }}
+>
+
+  <MenuItem value="All">
+    All Categories ({categoryQuestionCount} questions)
+  </MenuItem>
+  {categoryGroups.map(group => [
+    <MenuItem key={`group-${group.contextid}`} disabled sx={{ fontWeight: 'bold', color: '#3b82f6' }}>
+      {group.label}
+    </MenuItem>,
+    ...renderOptions(group.tree, 0, '', group.label)
+  ])}
+</TextField>
+
         </Grid>
 
         {/* Status */}
@@ -480,7 +605,9 @@ const DebugButton = () => (
         {process.env.NODE_ENV === 'development' && (
           <Box mt={1}>
             <Typography variant="caption" color="text.secondary">
-              Debug: {allTags.length} total tags, {tagFilter?.length || 0} selected
+              Debug: Category "{filters.category}" has {categoryQuestionCount} questions
+              | Total questions loaded: {questions.length}
+              | All questions: {allQuestions?.length || 'not provided'}
             </Typography>
           </Box>
         )}

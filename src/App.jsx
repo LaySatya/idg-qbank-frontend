@@ -91,7 +91,7 @@ const App = () => {
       setIsAuthenticated(false);
       setCurrentUser(null);
       
-      navigate('/login');
+      
     }
   };
 

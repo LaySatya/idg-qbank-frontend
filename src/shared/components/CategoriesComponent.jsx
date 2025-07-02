@@ -33,11 +33,6 @@ const CategoriesComponent = ({
   const [defaultCategory, setDefaultCategory] = useState(null);
   const [defaultCourse, setDefaultCourse] = useState(null);
 
-  // NEW: Confirmation dialog state
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [pendingCourseSelection, setPendingCourseSelection] = useState(null);
-  const [dialogType, setDialogType] = useState('course'); // 'course' or 'category'
-
   // API
   const {
     loading,
@@ -309,21 +304,18 @@ const CategoriesComponent = ({
     }
   };
 
-  //  NEW: Handle course selection with confirmation dialog
+  //  NEW: Handle course selection
   const handleCourseSelect = (course) => {
     console.log(' Course selected:', course);
     
-    setPendingCourseSelection(course);
-    setDialogType('course');
-    setShowConfirmDialog(true);
+    setSelectedCourse(course);
   };
 
   //  NEW: Confirm course selection and navigate
   const confirmCourseSelection = () => {
-    if (!pendingCourseSelection) return;
+    if (!selectedCourse) return;
 
-    const course = pendingCourseSelection;
-    setSelectedCourse(course);
+    const course = selectedCourse;
     // When selecting a category
 //  localStorage.setItem('userCourseCategoryId', selectedCategory?.toString() || '');
 // Save user preference
@@ -378,16 +370,6 @@ const CategoriesComponent = ({
       type: 'success', 
       message: `Selected course: ${course.name} (ID: ${course.id})` 
     });
-
-    // Clear confirmation dialog
-    setShowConfirmDialog(false);
-    setPendingCourseSelection(null);
-  };
-
-  //  NEW: Cancel course selection
-  const cancelCourseSelection = () => {
-    setShowConfirmDialog(false);
-    setPendingCourseSelection(null);
   };
 
   const handleClearSelection = () => {
@@ -814,79 +796,24 @@ const CategoriesComponent = ({
               }
             </div>
             <div className="flex items-center gap-3">
-              {/* <button
-                onClick={() => {
-                  if (setFilters) setFilters({ category: 'All', status: 'All', type: 'All', courseId: null });
-                  if (onNavigateToQuestions) onNavigateToQuestions();
-                  onClose();
-                }}
-                className="px-4 py-2 text-blue-700 bg-sky-100 hover:bg-sky-200 rounded-lg transition-colors flex items-center gap-2"
-              >
-                <Eye size={14} />
-                View All Questions
-              </button> */}
               <button
                 onClick={onClose}
                 className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
               >
                 Close
               </button>
+              {selectedCourse && (
+                <button
+                  onClick={confirmCourseSelection}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  Proceed to Questions
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
-
-      {/*  NEW: Confirmation Dialog */}
-      {showConfirmDialog && pendingCourseSelection && (
-        <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
-            <div className="text-center mb-6">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
-                <BookOpen className="h-6 w-6 text-blue-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2 ">
-                Let's go to QuestionCategories!!!
-              </h3>
-              <p className="text-sm text-gray-600">
-                You are in <strong>"{pendingCourseSelection.name}"</strong>. 
-               
-              </p>
-            </div>
-
-        
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">{pendingCourseSelection.name}</p>
-                  <p className="text-sm text-gray-600">
-                    Course ID: {pendingCourseSelection.id} • 
-                    Category: {pendingCourseSelection.categoryName}
-                  </p>
-                </div>
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={cancelCourseSelection}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmCourseSelection}
-                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-              >
-                Proceed to Questions
-              </button>
-            </div>
-
-            
-          </div>
-        </div>
-      )}
     </>
   );
 };

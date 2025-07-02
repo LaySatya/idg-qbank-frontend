@@ -135,15 +135,15 @@ export const useMultipleChoiceForm = (initialQuestion = {}) => {
 
     try {
       setSaving(true);
-      console.log('💾 Saving Multiple Choice question:', formData);
+      console.log(' Saving Multiple Choice question:', formData);
       
       const result = await questionAPI.createMultipleChoiceQuestion(formData);
-      console.log('✅ Question saved successfully:', result);
+      console.log(' Question saved successfully:', result);
       
       alert('Question saved successfully!');
       return true;
     } catch (error) {
-      console.error('❌ Failed to save question:', error);
+      console.error(' Failed to save question:', error);
       alert(`Failed to save question: ${error.message}`);
       return false;
     } finally {

@@ -221,7 +221,7 @@ const {
               <div className="pt-6">
                 <TagManager
                   availableTags={tags}
-                  existingTags={existingTags} // 🔧 Now contains tags from all questions
+                  existingTags={existingTags} //  Now contains tags from all questions
                   selectedAddTags={globalBulkChanges?.tags?.add || []}
                   selectedRemoveTags={globalBulkChanges?.tags?.remove || []}
                   onTagOperation={onGlobalTagOperation}
@@ -229,7 +229,7 @@ const {
                   loading={tagsLoading}
                   error={tagsError}
                   onRefresh={refreshTags}
-                  showSmartRemoval={true} // 🔧 CHANGED: Now use smart removal for global too
+                  showSmartRemoval={true} //  CHANGED: Now use smart removal for global too
                   customTagPlaceholder="Enter new tag for global use"
                 />
               </div>

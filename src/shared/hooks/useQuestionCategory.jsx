@@ -174,11 +174,11 @@ const useQuestionCategory = (courseId) => {
         timemodified: cat.timemodified || null
       })).filter(cat => cat.id); // Remove invalid categories
 
-      console.log('📊 Processed categories:', normalizedCategories.length);
+      console.log('Processed categories:', normalizedCategories.length);
       return normalizedCategories;
 
     } catch (error) {
-      console.error('❌ API request failed:', error);
+      console.error(' API request failed:', error);
       throw error;
     }
   };

@@ -80,7 +80,7 @@ const handleResponse = async (response) => {
  */
 export const categoriesAPI = {
   /**
-   * 🔧 NEW: Fetch course categories (different from question categories)
+   *  NEW: Fetch course categories (different from question categories)
    * These are the main categories that organize courses in Moodle
    * @returns {Promise<Array>} Course categories array
    */

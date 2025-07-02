@@ -451,6 +451,66 @@ export const validateCategoryTree = (tree) => {
   };
 };
 
+/**
+ * Annotate a category tree with question counts for each category
+ * @param {Array} tree - Category tree (array of nodes)
+ * @param {Array} questions - Flat array of questions (each with categoryid)
+ * @returns {Array} The same tree, with .questionCount on each node
+ */
+export function addQuestionCountToCategoryTree(tree, questions) {
+  // Build a map: categoryId -> count
+  const countMap = {};
+  const questionCatIds = new Set();
+  questions.forEach(q => {
+    // Support multiple possible field names for category ID
+    const catId = String(q.categoryid || q.categoryId || q.category).trim();
+    if (!catId || catId === 'undefined' || catId === 'null') return;
+    questionCatIds.add(catId);
+    countMap[catId] = (countMap[catId] || 0) + 1;
+    console.log('[QCOUNT] Question:', q.id, 'categoryid:', q.categoryid, 'categoryId:', q.categoryId, 'category:', q.category, '-> used:', catId);
+  });
+
+  // Collect all unique category node IDs from the tree
+  const treeCatIds = new Set();
+  function collectNodeIds(nodes) {
+    if (!Array.isArray(nodes)) return;
+    nodes.forEach(node => {
+      const nodeId = String(node.id).trim();
+      treeCatIds.add(nodeId);
+      if (node.children) collectNodeIds(node.children);
+    });
+  }
+  collectNodeIds(tree);
+
+  // Print all unique IDs for debugging
+  console.log('[QCOUNT] Unique question category IDs:', Array.from(questionCatIds));
+  console.log('[QCOUNT] Unique tree node IDs:', Array.from(treeCatIds));
+
+  // Find mismatches
+  const questionIdsNotInTree = Array.from(questionCatIds).filter(id => !treeCatIds.has(id));
+  const treeIdsNotInQuestions = Array.from(treeCatIds).filter(id => !questionCatIds.has(id));
+  if (questionIdsNotInTree.length > 0) {
+    console.warn('[QCOUNT] Category IDs in questions but not in tree:', questionIdsNotInTree);
+  }
+  if (treeIdsNotInQuestions.length > 0) {
+    console.info('[QCOUNT] Category IDs in tree but not in any question:', treeIdsNotInQuestions);
+  }
+
+  // Recursively add questionCount to each node
+  function traverse(nodes) {
+    if (!Array.isArray(nodes)) return;
+    nodes.forEach(node => {
+      const nodeId = String(node.id).trim();
+      node.questionCount = countMap[nodeId] || 0;
+      console.log('[QCOUNT] Category node:', nodeId, 'name:', node.name, 'questionCount:', node.questionCount);
+      if (node.children) traverse(node.children);
+    });
+  }
+
+  traverse(tree);
+  return tree;
+}
+
 // Export all utilities
 export default {
   buildGroupedCategoryTree,
@@ -459,5 +519,6 @@ export default {
   getAllCategoryIds,
   flattenCategoryTree,
   generateCategoryPath,
-  validateCategoryTree
+  validateCategoryTree,
+  addQuestionCountToCategoryTree
 };
