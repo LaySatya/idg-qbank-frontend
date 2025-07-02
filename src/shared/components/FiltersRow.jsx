@@ -185,6 +185,9 @@ const DebugButton = () => (
     }))
   ], [questionStatuses]);
 
+  // Grouped category tree for dropdown
+  const categoryGroups = useMemo(() => buildGroupedCategoryTree(availableCategories), [availableCategories]);
+
   // Check if any filter is active
   const hasActiveFilters = useMemo(() =>
     internalSearchQuery.trim() ||
@@ -283,109 +286,7 @@ const handleTagChange = useCallback((selectedOptions) => {
   );
   const selectedCategoryName = selectedCategoryObj ? selectedCategoryObj.name : 'All';
 
-  // ENHANCED: Calculate question counts for each category option
-const categoryOptionsWithCounts = useMemo(() => {
-  if (!Array.isArray(availableCategories) || availableCategories.length === 0) {
-    return [{ value: 'All', label: 'All Categories', count: categoryQuestionCount }];
-  }
-  // Use allQuestions if available, otherwise fall back to questions
-  const questionsToCount = Array.isArray(allQuestions) ? allQuestions : questions;
-  // Calculate counts for each category
-  const categoriesWithCounts = availableCategories.map(cat => {
-    const categoryId = String(cat.id);
-    const questionCount = questionsToCount.filter(q => {
-      const qCategoryId = String(q.categoryId || q.categoryid || q.category || '');
-      return qCategoryId === categoryId;
-    }).length;
-    return {
-      value: categoryId,
-      label: cat.name,
-      count: questionCount,
-      originalCategory: cat
-    };
-  });
-  // Add "All Categories" option with total count
-  const totalCount = questionsToCount.length || categoryQuestionCount;
-  return [
-    { value: 'All', label: 'All Categories', count: totalCount },
-    ...categoriesWithCounts
-  ];
-}, [availableCategories, questions, allQuestions, categoryQuestionCount]);
-
-// ENHANCED: Category label with dynamic question count
-const selectedCategoryLabel = useMemo(() => {
-  if (filters.category === 'All') {
-    return `All Categories (${categoryQuestionCount} questions)`;
-  }
-  // Find the selected category and its count
-  const selectedCategoryWithCount = categoryOptionsWithCounts.find(
-    cat => String(cat.value) === String(filters.category)
-  );
-  if (selectedCategoryWithCount) {
-    return `${selectedCategoryWithCount.label} (${selectedCategoryWithCount.count} questions)`;
-  }
-  // Fallback to existing logic
-  const matched = availableCategories.find(cat => String(cat.id) === String(filters.category));
-  const name = matched ? matched.name : filters.categoryName || 'Unknown';
-  return `${name} (${categoryQuestionCount} questions)`;
-}, [filters.category, categoryOptionsWithCounts, availableCategories, filters.categoryName, categoryQuestionCount]);
-
-  // Keep internal search in sync with prop
-  useEffect(() => {
-    if (searchQuery !== internalSearchQuery) {
-      setInternalSearchQuery(searchQuery);
-    }
-  }, [searchQuery]);
-
-  // Restore category filter (ID and name) from localStorage on mount
-useEffect(() => {
-  const savedCategoryId = localStorage.getItem('questionCategoryId');
-  const savedCategoryName = localStorage.getItem('questionCategoryName');
-  if (savedCategoryId && savedCategoryId !== 'All') {
-    const found = availableCategories.find(cat => String(cat.id) === String(savedCategoryId));
-    if (found) {
-      if (
-        filters.category !== String(savedCategoryId) ||
-        filters.categoryName !== found.name
-      ) {
-        setFilters(prev => ({
-          ...prev,
-          category: String(savedCategoryId),
-          categoryName: found.name
-        }));
-      }
-    } else {
-      if (filters.category !== 'All' || filters.categoryName !== '') {
-        setFilters(prev => ({
-          ...prev,
-          category: 'All',
-          categoryName: ''
-        }));
-      }
-    }
-  }
-}, [setFilters, availableCategories, filters.category, filters.categoryName]);
-
-  // Safe category tree building with question counts
-  const categoryGroups = useMemo(() => {
-    try {
-      if (!Array.isArray(availableCategories) || !Array.isArray(availableCourses)) {
-        return [];
-      }
-      const groups = buildGroupedCategoryTree(availableCategories, availableCourses);
-      // Use allQuestions for counts if provided, else fallback to paginated questions
-      const questionsForCount = Array.isArray(allQuestions) ? allQuestions : questions;
-      groups.forEach(group => {
-        addQuestionCountToCategoryTree(group.tree, questionsForCount);
-      });
-      return groups;
-    } catch (error) {
-      console.warn('Error building category tree:', error);
-      return [];
-    }
-  }, [availableCategories, availableCourses, questions, allQuestions]);
-
-  // Render category tree options with safety checks, now with questionCount
+  // Remove question count from renderOptions
   const renderOptions = (nodes, level = 0, parentName = '', contextLabel = '') => {
     if (!Array.isArray(nodes)) return [];
     return nodes.flatMap(node => {
@@ -394,18 +295,10 @@ useEffect(() => {
       if (level === 0 && node.name.trim().toLowerCase() === 'top') {
         displayName = `Top for ${contextLabel}`;
       }
-      // Calculate question count for this specific node
-      const questionsToCount = Array.isArray(allQuestions) ? allQuestions : questions;
-      const nodeQuestionCount = questionsToCount.filter(q => {
-        const qCategoryId = String(q.categoryId || q.categoryid || q.category || '');
-        return qCategoryId === String(node.id);
-      }).length;
-      // Use the calculated count or fall back to node.questionCount
-      const finalCount = nodeQuestionCount || node.questionCount || 0;
-      const labelWithCount = `${displayName} (${finalCount})`;
+      // Only show the name, not the count
       return [
         <MenuItem key={`${node.id}-${level}`} value={String(node.id)} sx={{ pl: 2 + level * 2 }}>
-          {`${''.repeat(level)}${labelWithCount}`}
+          {displayName}
         </MenuItem>,
         ...(node.children && Array.isArray(node.children) 
           ? renderOptions(node.children, level + 1, node.name, contextLabel) 
@@ -479,12 +372,19 @@ useEffect(() => {
   size="small"
   disabled={loadingCategories}
   SelectProps={{
-    renderValue: () => selectedCategoryLabel //  Now shows correct count
+    renderValue: () => {
+      // Only show the category name, not the count
+      if (filters.category === 'All') {
+        return 'All Categories';
+      }
+      const selectedCategory = availableCategories.find(cat => String(cat.id) === String(filters.category));
+      return selectedCategory ? selectedCategory.name : filters.categoryName || 'Unknown';
+    }
   }}
 >
 
   <MenuItem value="All">
-    All Categories ({categoryQuestionCount} questions)
+    All Categories
   </MenuItem>
   {categoryGroups.map(group => [
     <MenuItem key={`group-${group.contextid}`} disabled sx={{ fontWeight: 'bold', color: '#3b82f6' }}>
