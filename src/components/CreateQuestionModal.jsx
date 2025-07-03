@@ -372,17 +372,7 @@ const CreateQuestionModal = ({
         </div>
       </div>
       
-      {/* Debug Info (Development Only) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 right-4 bg-black bg-opacity-75 text-white p-3 rounded text-xs max-w-md">
-          <div className="font-bold mb-1">🐛 Debug Info</div>
-          <div>API Types: {availableQuestionTypes.length}</div>
-          <div>Loading: {loadingQuestionTypes ? 'Yes' : 'No'}</div>
-          <div>Filtered: {filteredQuestionTypes.length}</div>
-          <div>Selected: {selectedType || 'None'}</div>
-          <div>Search: "{searchQuery}"</div>
-        </div>
-      )}
+  
     </div>
   );
 };

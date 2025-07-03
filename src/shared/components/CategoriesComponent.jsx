@@ -145,7 +145,8 @@ const CategoriesComponent = ({
               if (categoryExists) {
                 console.log(' Auto-selecting default category:', defaultCategory);
                 setSelectedCategory(defaultCategory);
-                // Don't load courses yet - wait for user interaction
+               // Auto-load courses for the default category
+              loadCoursesForCategory(defaultCategory);
               }
             }
           } else {

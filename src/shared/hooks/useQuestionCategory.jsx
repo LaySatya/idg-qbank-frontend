@@ -145,7 +145,7 @@ const useQuestionCategory = (courseId) => {
       }
 
       const data = await response.json();
-      console.log('✅ Question categories response:', data);
+      console.log(' Question categories response:', data);
 
       // Handle different response formats
       let processedCategories = [];
