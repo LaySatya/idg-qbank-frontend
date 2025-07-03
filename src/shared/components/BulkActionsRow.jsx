@@ -134,91 +134,149 @@ const BulkActionsRow = ({
     }
   };
 
-  const handleAddTag = async (tagId) => {
-    const tagName = allTags.find(t => t.id === tagId)?.name || 'this tag';
-    const questionCount = selectedQuestions.length;
-    if (!window.confirm(
-      `Add "${tagName}" to ${questionCount} question${questionCount !== 1 ? 's' : ''}?\n\nThis action will update all selected questions.`
-    )) {
+const handleAddTag = async (tagId) => {
+  const tagName = allTags.find(t => t.id === tagId)?.name || 'this tag';
+  const questionCount = selectedQuestions.length;
+  
+  if (!window.confirm(
+    `Add "${tagName}" to ${questionCount} question${questionCount !== 1 ? 's' : ''}?\n\nThis action will update all selected questions.`
+  )) {
+    return;
+  }
+  
+  try {
+    console.log(' Adding tag to questions:', { 
+      tagId, 
+      questionCount, 
+      selectedQuestions,
+      tagName 
+    });
+    
+    // Ensure question IDs are integers
+    const validQuestionIds = selectedQuestions
+      .map(id => parseInt(id))
+      .filter(id => !isNaN(id) && id > 0);
+    
+    if (validQuestionIds.length === 0) {
+      toast.error('No valid question IDs selected');
       return;
     }
-    try {
-      const res = await fetch(`${API_BASE_URL}/questions/bulk-tags`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          questionids: selectedQuestions,
-          tagids: [tagId]
+    
+    //  CORRECT ENDPOINT: /questions/bulk-tags (with 's')
+    const res = await fetch(`${API_BASE_URL}/questions/bulk-tags`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        questionids: validQuestionIds,  // Array of integers
+        tagids: [parseInt(tagId)]       // Array with single integer
+      })
+    });
+    
+    console.log(' API Response Status:', res.status);
+    const data = await res.json();
+    console.log(' API Response Data:', data);
+    
+    if (res.ok && data.success) {
+      // Update frontend state
+      setQuestions(prevQuestions =>
+        prevQuestions.map(q => {
+          if (!validQuestionIds.includes(q.id)) return q;
+          let newTags = Array.isArray(q.tags) ? [...q.tags] : [];
+          const tagObj = allTags.find(t => t.id == tagId);
+          if (tagObj && !newTags.some(t => t.id == tagId)) {
+            newTags.push(tagObj);
+          }
+          return { ...q, tags: newTags };
         })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setQuestions(prevQuestions =>
-          prevQuestions.map(q => {
-            if (!selectedQuestions.includes(q.id)) return q;
-            let newTags = Array.isArray(q.tags) ? [...q.tags] : [];
-            const tagObj = allTags.find(t => t.id === tagId);
-            if (tagObj && !newTags.some(t => t.id === tagId)) {
-              newTags.push(tagObj);
-            }
-            return { ...q, tags: newTags };
-          })
-        );
-        // toast.success(`Success Added "${tagName}" to ${questionCount} question${questionCount !== 1 ? 's' : ''}`);
-        toast.success(`"${tagName}" tag added successfully!`);
-        fetchCommonTags();
-      } else {
-        toast.error(data.message || 'Failed to add tag');
-      }
-    } catch (error) {
-      toast.error('Error adding tag');
+      );
+      
+      toast.success(`"${tagName}" tag added successfully!`);
+      fetchCommonTags();
+    } else {
+      console.error(' API returned failure:', data);
+      toast.error(data.message || data.error || 'Failed to add tag');
     }
-  };
+    
+  } catch (error) {
+    console.error(' Network/API error:', error);
+    toast.error(`Error adding tag: ${error.message}`);
+  }
+};
 
-  const handleRemoveTag = async (tagId) => {
-    const tagName = commonTags.find(t => t.id === tagId)?.name || 'this tag';
-    const questionCount = selectedQuestions.length;
-    if (!window.confirm(
-      `Remove "${tagName}" from ${questionCount} question${questionCount !== 1 ? 's' : ''}?\n\nThis action cannot be undone.`
-    )) {
+const handleRemoveTag = async (tagId) => {
+  const tagName = commonTags.find(t => t.id === tagId)?.name || 'this tag';
+  const questionCount = selectedQuestions.length;
+  
+  if (!window.confirm(
+    `Remove "${tagName}" from ${questionCount} question${questionCount !== 1 ? 's' : ''}?\n\nThis action cannot be undone.`
+  )) {
+    return;
+  }
+  
+  try {
+    console.log(' Removing tag from questions:', { 
+      tagId, 
+      questionCount, 
+      selectedQuestions,
+      tagName 
+    });
+    
+    // Ensure question IDs are integers
+    const validQuestionIds = selectedQuestions
+      .map(id => parseInt(id))
+      .filter(id => !isNaN(id) && id > 0);
+    
+    if (validQuestionIds.length === 0) {
+      toast.error('No valid question IDs selected');
       return;
     }
-    try {
-      const res = await fetch(`${API_BASE_URL}/questions/bulk-tags`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          questionids: selectedQuestions,
-          tagids: [tagId]
+    
+    // ✅ CORRECT ENDPOINT: /questions/bulk-tags (with 's')
+    const res = await fetch(`${API_BASE_URL}/questions/bulk-tags`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        questionids: validQuestionIds,  // Array of integers
+        tagids: [parseInt(tagId)]       // Array with single integer
+      })
+    });
+    
+    console.log('🔗 API Response Status:', res.status);
+    const data = await res.json();
+    console.log('📊 API Response Data:', data);
+    
+    if (res.ok && data.success) {
+      // Update frontend state
+      setQuestions(prevQuestions =>
+        prevQuestions.map(q => {
+          if (!validQuestionIds.includes(q.id)) return q;
+          let newTags = Array.isArray(q.tags) ? [...q.tags] : [];
+          newTags = newTags.filter(t => t.id != tagId);
+          return { ...q, tags: newTags };
         })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setQuestions(prevQuestions =>
-          prevQuestions.map(q => {
-            if (!selectedQuestions.includes(q.id)) return q;
-            let newTags = Array.isArray(q.tags) ? [...q.tags] : [];
-            newTags = newTags.filter(t => t.id !== tagId);
-            return { ...q, tags: newTags };
-          })
-        );
-        toast.success(` Removed "${tagName}" from ${questionCount} question${questionCount !== 1 ? 's' : ''}`);
-        fetchCommonTags();
-      } else {
-        toast.error(data.message || 'Failed to remove tag');
-      }
-    } catch (error) {
-      toast.error('Error removing tag');
+      );
+      
+      toast.success(`Removed "${tagName}" from ${questionCount} question${questionCount !== 1 ? 's' : ''}`);
+      fetchCommonTags();
+    } else {
+      console.error(' API returned failure:', data);
+      toast.error(data.message || data.error || 'Failed to remove tag');
     }
-  };
+    
+  } catch (error) {
+    console.error('Network/API error:', error);
+    toast.error(`Error removing tag: ${error.message}`);
+  }
+};
+
 
   // Tag search/filter logic
   const filteredTags = allTags.filter(tag =>

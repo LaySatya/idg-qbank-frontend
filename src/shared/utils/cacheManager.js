@@ -181,7 +181,7 @@
 //     if (oldestKey) {
 //       this.delete(oldestKey);
 //       this.stats.evictions++;
-//       console.log(`🔄 Cache LRU EVICT: ${oldestKey}`);
+//       console.log(` Cache LRU EVICT: ${oldestKey}`);
 //     }
 //   }
 

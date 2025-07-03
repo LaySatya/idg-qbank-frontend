@@ -60,4 +60,4 @@ export const fetchQuestionTags = async (questionId, token) => {
   }
 };
 
-console.log('✅ Frontend fixes applied for existing backend API structure');
+console.log(' Frontend fixes applied for existing backend API structure');

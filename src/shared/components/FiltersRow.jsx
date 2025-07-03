@@ -22,6 +22,52 @@ import {
   Typography
 } from '@mui/material';
 
+const TagFilterStatus = ({ tagFilter, allTags }) => {
+  if (!Array.isArray(tagFilter) || tagFilter.length === 0) {
+    return null;
+  }
+
+  const selectedTagNames = tagFilter.map(tagId => {
+    const tag = allTags.find(t => String(t.id) === String(tagId));
+    return tag ? tag.name : `Tag ${tagId}`;
+  });
+
+  // return (
+  //   // <Box sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+  //   //   <Typography variant="body2" color="info.dark">
+  //   //     <FontAwesomeIcon icon={faFilter} style={{ marginRight: 8 }} />
+  //   //     Filtering by {tagFilter.length} tag{tagFilter.length !== 1 ? 's' : ''}: 
+  //   //     <strong> {selectedTagNames.join(', ')}</strong>
+  //   //   </Typography>
+  //   // </Box>
+  // );
+};
+// Clear tag filter button
+const ClearTagFilterButton = ({ tagFilter, setTagFilter }) => {
+  if (!Array.isArray(tagFilter) || tagFilter.length === 0) {
+    return null;
+  }
+
+  const handleClearTags = () => {
+    setTagFilter([]);
+    localStorage.removeItem('questionTagFilter');
+    console.log('Tag filter cleared');
+  };
+
+  // return (
+  //   <Button
+  //     size="small"
+  //     variant="outlined"
+  //     color="error"
+  //     onClick={handleClearTags}
+  //     startIcon={<FontAwesomeIcon icon={faTimes} />}
+  //     sx={{ ml: 1 }}
+  //   >
+  //     Clear Tags ({tagFilter.length})
+  //   </Button>
+  // );
+};
+
 
 // Debounce hook
 const useDebounce = (callback, delay) => {
@@ -68,27 +114,18 @@ const FiltersRow = ({
 
 const tagOptions = useMemo(() => {
   if (!Array.isArray(allTags) || allTags.length === 0) {
-    console.log('No tags available for filtering');
     return [];
   }
   
-  console.log(`Processing ${allTags.length} tags for options`);
-  
-  const options = allTags
-    .filter(tag => tag && tag.id && tag.name)
+  return allTags
+    .filter(tag => tag && tag.id && tag.name) // Only valid tags
     .map(tag => ({
       value: String(tag.id), // Ensure string value for react-select
       label: tag.name,
       rawname: tag.rawname,
       isstandard: tag.isstandard,
-      description: tag.description,
-      originalTag: tag
+      description: tag.description
     }));
-    
-  console.log(`Created ${options.length} tag options`);
-  console.log('Sample tag options:', options.slice(0, 3));
-  
-  return options;
 }, [allTags]);
 const debugTagData = useCallback(() => {
   console.log(' === TAG DEBUGGING SESSION ===');
@@ -206,7 +243,7 @@ const DebugButton = () => (
       status: 'All',
       type: 'All',
       category: 'All',
-        courseId: filters.courseId, // Keep course selection
+      courseId: filters.courseId, // Keep course selection
       courseName: filters.courseName,
       _resetTimestamp: Date.now()
    });
@@ -255,31 +292,33 @@ const DebugButton = () => (
 const handleTagChange = useCallback((selectedOptions) => {
   console.log(' Tag selection changed:', selectedOptions);
   
-  // Debug: Check what the user actually selected
-  if (selectedOptions && selectedOptions.length > 0) {
-    selectedOptions.forEach(option => {
-      console.log(' Selected tag:', {
-        value: option.value,
-        label: option.label, 
-        originalTag: option.originalTag
-      });
-    });
-  }
-  
   const newTags = selectedOptions ? selectedOptions.map(opt => String(opt.value)) : [];
-  
   console.log(' Setting tag filter to:', newTags);
   
-  // Debug: Show a sample of all available tags
-  console.log('Available tags sample:', allTags.slice(0, 10).map(tag => ({
-    id: tag.id,
-    name: tag.name
-  })));
-  
-  setTagFilter(newTags);
+  // Save to localStorage for persistence
   localStorage.setItem('questionTagFilter', JSON.stringify(newTags));
-}, [setTagFilter, allTags]);
+  
+  // Apply the filter
+  setTagFilter(newTags);
+  
+  // Log for debugging
+  if (newTags.length > 0) {
+    console.log(` Filtering by ${newTags.length} tag(s): ${newTags.join(', ')}`);
+  } else {
+    console.log(' Tag filter cleared');
+  }
+}, [setTagFilter]);
 
+
+
+
+
+// NEW: Add this for selected values
+const selectedTagValues = useMemo(() => {
+  return tagOptions.filter(opt => 
+    Array.isArray(tagFilter) && tagFilter.includes(opt.value)
+  );
+}, [tagOptions, tagFilter]);
   // Get selected category name for chip display
   const selectedCategoryObj = availableCategories.find(
     cat => String(cat.id) === String(filters.category)
@@ -331,7 +370,7 @@ const handleTagChange = useCallback((selectedOptions) => {
       {/* Grid container - Compatible with current MUI version */}
       <Grid container spacing={2} alignItems="flex-end">
         {/* Search */}
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={3}>
           <TextField
             fullWidth
             label="Search Questions"
@@ -363,41 +402,39 @@ const handleTagChange = useCallback((selectedOptions) => {
 
         {/* Category */}
         <Grid item xs={12} md={2}>
-<TextField
-  select
-  fullWidth
-  label="Category"
-  value={validCategory}
-  onChange={handleCategoryChange}
-  size="small"
-  disabled={loadingCategories}
-  SelectProps={{
-    renderValue: () => {
-      // Only show the category name, not the count
-      if (filters.category === 'All') {
-        return 'All Categories';
-      }
-      const selectedCategory = availableCategories.find(cat => String(cat.id) === String(filters.category));
-      return selectedCategory ? selectedCategory.name : filters.categoryName || 'Unknown';
-    }
-  }}
->
-
-  <MenuItem value="All">
-    All Categories
-  </MenuItem>
-  {categoryGroups.map(group => [
-    <MenuItem key={`group-${group.contextid}`} disabled sx={{ fontWeight: 'bold', color: '#3b82f6' }}>
-      {group.label}
-    </MenuItem>,
-    ...renderOptions(group.tree, 0, '', group.label)
-  ])}
-</TextField>
-
+          <TextField
+            select
+            fullWidth
+            label="Category"
+            value={validCategory}
+            onChange={handleCategoryChange}
+            size="small"
+            disabled={loadingCategories}
+            SelectProps={{
+              renderValue: () => {
+                // Only show the category name, not the count
+                if (filters.category === 'All') {
+                  return 'All Categories';
+                }
+                const selectedCategory = availableCategories.find(cat => String(cat.id) === String(filters.category));
+                return selectedCategory ? selectedCategory.name : filters.categoryName || 'Unknown';
+              }
+            }}
+          >
+            <MenuItem value="All">
+              All Categories
+            </MenuItem>
+            {categoryGroups.map(group => [
+              <MenuItem key={`group-${group.contextid}`} disabled sx={{ fontWeight: 'bold', color: '#3b82f6' }}>
+                {group.label}
+              </MenuItem>,
+              ...renderOptions(group.tree, 0, '', group.label)
+            ])}
+          </TextField>
         </Grid>
 
         {/* Status */}
-        <Grid item xs={12} md={2}>
+        <Grid item xs={12} md={1.5}>
           <TextField
             select
             fullWidth
@@ -413,7 +450,7 @@ const handleTagChange = useCallback((selectedOptions) => {
         </Grid>
 
         {/* Type */}
-        <Grid item xs={12} md={2}>
+        <Grid item xs={12} md={1.5}>
           <TextField
             select
             fullWidth
@@ -429,8 +466,66 @@ const handleTagChange = useCallback((selectedOptions) => {
           </TextField>
         </Grid>
 
+        {/* Tag Filter - moved into main row with label */}
+        <Grid item xs={12} md={2.5}>
+        
+          <Select
+            isMulti
+            value={selectedTagValues}
+            onChange={handleTagChange}
+            options={tagOptions}
+            placeholder="Filter by tags..."
+            isSearchable
+            isClearable
+            classNamePrefix="react-select"
+            noOptionsMessage={() => "No tags match your search"}
+            styles={{
+              control: (base, state) => ({
+                ...base,
+                minHeight: 40,
+                fontSize: 14,
+                borderColor: state.isFocused ? '#1976d2' : '#ccc',
+                boxShadow: state.isFocused ? '0 0 0 2px rgba(25, 118, 210, 0.2)' : 'none',
+                '&:hover': {
+                  borderColor: '#1976d2'
+                }
+              }),
+              multiValue: (base) => ({
+                ...base,
+                backgroundColor: '#e3f2fd',
+                borderRadius: 4,
+                border: '1px solid #bbdefb'
+              }),
+              multiValueLabel: (base) => ({
+                ...base,
+                color: '#1976d2',
+                fontSize: 12,
+                fontWeight: 500
+              }),
+              multiValueRemove: (base) => ({
+                ...base,
+                color: '#1976d2',
+                '&:hover': {
+                  backgroundColor: '#bbdefb',
+                  color: '#0d47a1'
+                }
+              }),
+              option: (base, state) => ({
+                ...base,
+                backgroundColor: state.isSelected 
+                  ? '#1976d2' 
+                  : state.isFocused 
+                  ? '#f3f4f6' 
+                  : 'white',
+                color: state.isSelected ? 'white' : '#374151',
+                fontSize: 14
+              })
+            }}
+          />
+        </Grid>
+
         {/* Clear Button */}
-        <Grid item xs={12} md={2}>
+        <Grid item xs={12} md={1.5}>
           {hasActiveFilters && (
             <Button
               variant="outlined"
@@ -445,72 +540,13 @@ const handleTagChange = useCallback((selectedOptions) => {
         </Grid>
       </Grid>
 
-      {/* Tags Filter */}
-   <Box mt={3}>
-        <Typography variant="subtitle2" gutterBottom>
-          Filter by Tags {tagOptions.length > 0 && `(${tagOptions.length} available)`}
-        </Typography>
+      {/* Tag filter status and clear button below row */}
+      <Box mt={2}>
         
-        {tagOptions.length > 0 ? (
-          <Select
-            isMulti
-            value={tagOptions.filter(opt => 
-              Array.isArray(tagFilter) && tagFilter.includes(opt.value)
-            )}
-            onChange={handleTagChange}
-            options={tagOptions}
-            placeholder="Select tags to filter questions..."
-            isSearchable
-            isClearable
-            classNamePrefix="react-select"
-            noOptionsMessage={() => "No tags match your search"}
-            styles={{
-              control: (base) => ({
-                ...base,
-                minHeight: 40,
-                fontSize: 14
-              }),
-              multiValue: (base) => ({
-                ...base,
-                backgroundColor: '#e3f2fd',
-                borderRadius: 4
-              }),
-              multiValueLabel: (base) => ({
-                ...base,
-                color: '#1976d2',
-                fontSize: 12
-              })
-            }}
-          />
-        ) : (
-          <Box 
-            sx={{ 
-              p: 2, 
-              border: '1px dashed #ccc', 
-              borderRadius: 1, 
-              textAlign: 'center',
-              color: 'text.secondary'
-            }}
-          >
-            <Typography variant="body2">
-              No tags available for filtering
-            </Typography>
-            <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-              Tags will appear here once questions are loaded
-            </Typography>
-          </Box>
-        )}
-        
-        {/* Debug info in development */}
-        {process.env.NODE_ENV === 'development' && (
-          <Box mt={1}>
-            <Typography variant="caption" color="text.secondary">
-              Debug: Category "{filters.category}" has {categoryQuestionCount} questions
-              | Total questions loaded: {questions.length}
-              | All questions: {allQuestions?.length || 'not provided'}
-            </Typography>
-          </Box>
-        )}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <TagFilterStatus tagFilter={tagFilter} allTags={allTags} />
+          <ClearTagFilterButton tagFilter={tagFilter} setTagFilter={setTagFilter} />
+        </Box>
       </Box>
     </Paper>
   );

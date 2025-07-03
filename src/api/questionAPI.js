@@ -301,48 +301,112 @@ async getQuestionTags(questionId) {
   },
 
 // Get questions by specific tag IDs - NEW method based on your API
-async getQuestionsByTags(tagIds) {
-  if (!Array.isArray(tagIds) || tagIds.length === 0) {
-    console.warn(' No tag IDs provided for filtering');
-    return [];
-  }
-
+async getQuestionsByTagsWithFilters(tagIds, additionalFilters = {}, page = 1, perPage = 10) {
   try {
-    console.log(` Fetching questions for tag IDs: [${tagIds.join(', ')}]`);
+    console.log(' Filtering questions by tags:', tagIds);
     
-    // Build query parameters: tags[id][]=5&tags[id][]=6&tags[id][]=23
-    const params = new URLSearchParams();
-    tagIds.forEach(tagId => {
-      params.append('tags[id][]', tagId);
-    });
+    if (!Array.isArray(tagIds) || tagIds.length === 0) {
+      console.warn('No tag IDs provided');
+      return { questions: [], total: 0 };
+    }
 
-    const url = `${API_BASE_URL}/questions/tag?${params}`;
+    // Build URL with proper tag parameter format
+    const params = new URLSearchParams();
+    
+    // Add pagination
+    params.append('page', page.toString());
+    params.append('per_page', perPage.toString());
+    
+    // Add tag filters - CRITICAL: Use correct format from your API docs
+    tagIds.forEach(tagId => {
+      params.append('tags[id][]', tagId.toString());
+    });
+    
+    // Add other filters
+    if (additionalFilters.categoryid) {
+      params.append('categoryid', additionalFilters.categoryid);
+    }
+    if (additionalFilters.status && additionalFilters.status !== 'All') {
+      params.append('status', additionalFilters.status);
+    }
+    if (additionalFilters.qtype && additionalFilters.qtype !== 'All') {
+      params.append('qtype', additionalFilters.qtype);
+    }
+    if (additionalFilters.searchterm) {
+      params.append('searchterm', additionalFilters.searchterm);
+    }
+
+    const url = `${API_BASE_URL}/questions/filters?${params.toString()}`;
+    console.log('🔗 Tag filter URL:', url);
+
     const response = await fetch(url, {
       method: 'GET',
-      headers: getAuthHeaders()
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
     });
-    
-    const data = await handleAPIResponse(response);
-    console.log('Questions by tags response:', data);
 
-    // Handle different response formats
-    let questions = [];
-    if (Array.isArray(data)) {
-      questions = data;
-    } else if (data && Array.isArray(data.questions)) {
-      questions = data.questions;
-    } else if (data && Array.isArray(data.data)) {
-      questions = data.data;
-    } else {
-      console.warn(' Unexpected response format from tag endpoint:', data);
-      questions = [];
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    
-    console.log(` Found ${questions.length} questions with tags: [${tagIds.join(', ')}]`);
-    return questions;
+
+    const data = await response.json();
+    console.log(' Tag filtering response:', {
+      total: data.total,
+      current_page: data.current_page,
+      questions_count: data.questions?.length,
+      filtered_tagids: data.filtered_tagids
+    });
+
+    return {
+      questions: data.questions || [],
+      total: data.total || 0,
+      current_page: data.current_page || page,
+      per_page: data.per_page || perPage,
+      last_page: data.last_page || 1,
+      filtered_tagids: data.filtered_tagids || []
+    };
 
   } catch (error) {
-    console.error(' Failed to fetch questions by tags:', error);
+    console.error(' Tag filtering failed:', error);
+    throw error;
+  }
+},
+
+// NEW: Replace getTags method with this
+async getAllTags() {
+  try {
+    console.log('📋 Fetching all tags...');
+    
+    const response = await fetch(`${API_BASE_URL}/questions/tags`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const tags = await response.json();
+    console.log(' Tags loaded:', tags.length);
+
+    // Normalize tag format
+    return Array.isArray(tags) ? tags.map(tag => ({
+      id: String(tag.id), // Ensure string ID for react-select
+      name: tag.name || tag.rawname || `Tag ${tag.id}`,
+      rawname: tag.rawname || tag.name,
+      isstandard: Boolean(tag.isstandard),
+      description: tag.description || ''
+    })).filter(tag => tag.id && tag.name) : [];
+
+  } catch (error) {
+    console.error(' Failed to fetch tags:', error);
     return [];
   }
 },
@@ -406,31 +470,37 @@ async getTagsForMultipleQuestions(questionIds) {
   },
 
   // Bulk tag operations with proper error handling
-  async bulkTagOperations(questionIds, tagIds, operation = 'add') {
-    try {
-      console.log(` Bulk ${operation} tags:`, { questionIds, tagIds });
-      
-      const url = `${API_BASE_URL}/questions/bulk-tags`;
-      const method = operation === 'add' ? 'POST' : 'DELETE';
-      
-      const response = await fetch(url, {
-        method,
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          questionids: questionIds,
-          tagids: tagIds
-        })
-      });
-      
-      const data = await handleAPIResponse(response);
-      console.log(` Bulk ${operation} tags successful:`, data);
-      
-      return data;
-    } catch (error) {
-      console.error(` Bulk ${operation} tags failed:`, error);
-      throw error;
-    }
-  },
+ async bulkTagOperations(questionIds, tagIds, operation = 'add') {
+  try {
+    console.log(` Bulk ${operation} tags:`, { questionIds, tagIds });
+    
+    //  CORRECT ENDPOINT: /questions/bulk-tags (with 's')
+    const url = `${API_BASE_URL}/questions/bulk-tags`;
+    const method = operation === 'add' ? 'POST' : 'DELETE';
+    
+    // Ensure all IDs are integers
+    const validQuestionIds = questionIds.map(id => parseInt(id)).filter(id => !isNaN(id));
+    const validTagIds = tagIds.map(id => parseInt(id)).filter(id => !isNaN(id));
+    
+    const response = await fetch(url, {
+      method,
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        questionids: validQuestionIds,
+        tagids: validTagIds
+      })
+    });
+    
+    const data = await handleAPIResponse(response);
+    console.log(` Bulk ${operation} tags successful:`, data);
+    
+    return data;
+  } catch (error) {
+    console.error(`Bulk ${operation} tags failed:`, error);
+    throw error;
+  }
+},
+
 
   // Get all categories
   async getCategories() {

@@ -49,137 +49,199 @@ const QuestionsTable = ({
   const isFetchingRef = useRef(false);
 
   // FIXED: Enhanced tag rendering with REAL API data
- const renderTags = (question) => {
-  // Your API returns tags: [] initially, so handle empty state
-  if (!Array.isArray(question.tags) || question.tags.length === 0) {
-    return <div className="text-xs text-gray-400 italic mt-1">No tags</div>;
+// 1. FIXED: Simplified and accurate tag rendering function
+const renderTags = (question) => {
+  // Get tags from the question object - your API returns tags in the 'tags' property
+  const questionTags = question.tags || [];
+  
+  // If no tags, show standard Moodle empty state
+  if (!questionTags || questionTags.length === 0) {
+    return (
+      <div className="text-xs text-gray-400 italic">
+        <span className="text-gray-500">Tags: </span>
+        <span>None</span>
+      </div>
+    );
   }
 
-  // Process tags according to your API structure
-  const contentTags = question.tags
-    .map((tag, index) => {
-      // Your API tag format: { id, name, rawname, isstandard, description, flag }
-      if (typeof tag === 'object' && tag !== null) {
-        return {
-          id: tag.id,
-          name: tag.name,
-          display: tag.rawname || tag.name,
-          isstandard: tag.isstandard
-        };
-      } else if (typeof tag === 'string') {
-        return {
-          id: index,
-          name: tag,
-          display: tag,
-          isstandard: false
-        };
-      }
-      return null;
-    })
-    .filter(Boolean);
+  // Normalize tags to handle both string and object formats
+  const normalizedTags = questionTags.map((tag, index) => {
+    if (typeof tag === 'string') {
+      return {
+        id: `string-${index}`,
+        name: tag.trim(),
+        displayName: tag.trim()
+      };
+    } else if (tag && typeof tag === 'object') {
+      return {
+        id: tag.id || tag.tagid || `obj-${index}`,
+        name: tag.name || tag.rawname || tag.displayname || `Tag ${index}`,
+        displayName: tag.rawname || tag.name || tag.displayname || `Tag ${index}`,
+        description: tag.description || '',
+        isStandard: Boolean(tag.isstandard)
+      };
+    }
+    return null;
+  }).filter(Boolean);
 
-  const maxTagsToShow = 3;
-  const tagsToShow = contentTags.slice(0, maxTagsToShow);
-  const hasMore = contentTags.length > maxTagsToShow;
+  // Moodle typically shows all tags, but we can limit for UI space
+  const maxVisibleTags = 5;
+  const visibleTags = normalizedTags.slice(0, maxVisibleTags);
+  const hiddenTagsCount = Math.max(0, normalizedTags.length - maxVisibleTags);
 
   return (
-    <div className="flex flex-wrap gap-1 mt-1">
+    <div className="flex flex-wrap items-center gap-1 mt-2">
       <span className="text-xs font-medium text-gray-600 mr-1">Tags:</span>
-      {tagsToShow.map((tag) => (
+      
+      {visibleTags.map((tag) => (
         <span
-          key={`${question.id}-${tag.id}`}
-          className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded hover:bg-blue-200 cursor-pointer transition-colors"
-          title={`${tag.name} - ${tag.description || 'No description'}`}
+          key={`tag-${question.id}-${tag.id}`}
+          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium cursor-pointer transition-colors ${
+            tag.isStandard 
+              ? 'bg-blue-100 text-blue-800 hover:bg-blue-200' 
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+          title={tag.description || `Tag: ${tag.displayName}`}
         >
-          {tag.display}
+          {tag.displayName}
         </span>
       ))}
-      {hasMore && (
-        <span className="text-xs font-medium text-blue-600 ml-1">
-          +{contentTags.length - maxTagsToShow}
+      
+      {hiddenTagsCount > 0 && (
+        <span 
+          className="text-xs font-medium text-blue-600 cursor-pointer hover:text-blue-800"
+          title={`${hiddenTagsCount} more tags`}
+        >
+          +{hiddenTagsCount} more
         </span>
       )}
     </div>
   );
 };
 
+
   //  CRITICAL FIX: Smart tag fetching - only fetch once per question
-  useEffect(() => {
-    if (!questions || questions.length === 0 || isFetchingRef.current) return;
-    
-    // Find questions that need tags AND haven't been fetched yet
-    const questionsNeedingTags = questions.filter(q => {
-      // Skip if already fetched
-      if (fetchedQuestionsRef.current.has(q.id)) {
-        return false;
-      }
-      
-      // Check if needs tags
-      if (!Array.isArray(q.tags) || q.tags.length === 0) {
-        return true;
-      }
-      
-      // Check if tags are in old string format
-      if (typeof q.tags[0] === 'string') {
-        return true;
-      }
-      
+// 2. FIXED: Enhanced useEffect for fetching tags (uncomment and use this version)
+useEffect(() => {
+  if (!questions || questions.length === 0 || isFetchingRef.current) return;
+  
+  // Find questions that need tags fetched
+  const questionsNeedingTags = questions.filter(q => {
+    // Skip if already fetched
+    if (fetchedQuestionsRef.current.has(q.id)) {
       return false;
-    });
-    
-    if (questionsNeedingTags.length === 0) {
-      return;
     }
+    
+    // Check if tags need to be fetched (empty or not an array)
+    return !Array.isArray(q.tags) || q.tags.length === 0;
+  });
+  
+  if (questionsNeedingTags.length === 0) {
+    return;
+  }
 
-    console.log(` Fetching tags for ${questionsNeedingTags.length} questions:`, 
-      questionsNeedingTags.map(q => q.id));
+  console.log(` Fetching tags for ${questionsNeedingTags.length} questions`);
 
-    async function fetchTagsForQuestions() {
-      if (isFetchingRef.current) return;
-      
-      isFetchingRef.current = true;
-      
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          console.error(' No authentication token for tag fetching');
-          return;
-        }
+  async function fetchTagsForQuestions() {
+    if (isFetchingRef.current) return;
+    
+    isFetchingRef.current = true;
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error(' No authentication token for tag fetching');
+        return;
+      }
 
-        //  OPTIMIZED: Batch fetch tags for multiple questions
-        const questionIds = questionsNeedingTags.map(q => q.id);
-        const batchTagsResponse = await questionAPI.getTagsForMultipleQuestions(questionIds);
+      // Process questions in smaller batches to avoid overwhelming the API
+      const batchSize = 3;
+      let updatedQuestions = {};
+
+      for (let i = 0; i < questionsNeedingTags.length; i += batchSize) {
+        const batch = questionsNeedingTags.slice(i, i + batchSize);
         
-        // Mark all questions as fetched
-        questionsNeedingTags.forEach(q => {
-          fetchedQuestionsRef.current.add(q.id);
+        console.log(` Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(questionsNeedingTags.length/batchSize)}`);
+        
+        // Fetch tags for each question in the batch
+        const batchPromises = batch.map(async (question) => {
+          try {
+            // Use your exact API endpoint format
+            const response = await fetch(`${API_BASE_URL}/questions/question-tags?questionid=${question.id}`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              }
+            });
+
+            if (!response.ok) {
+              console.warn(`Failed to fetch tags for question ${question.id}: ${response.status}`);
+              return { questionId: question.id, tags: [] };
+            }
+
+            const data = await response.json();
+            console.log(` Tags for question ${question.id}:`, data);
+
+            // Extract tags from your API response format: { questionid: 0, tags: [] }
+            const tags = Array.isArray(data.tags) ? data.tags : [];
+            
+            return { questionId: question.id, tags };
+          } catch (error) {
+            console.error(` Error fetching tags for question ${question.id}:`, error);
+            return { questionId: question.id, tags: [] };
+          }
         });
 
-        // Update questions with fetched tags
+        // Wait for the batch to complete
+        const batchResults = await Promise.allSettled(batchPromises);
+        
+        // Process results
+        batchResults.forEach((result) => {
+          if (result.status === 'fulfilled') {
+            const { questionId, tags } = result.value;
+            updatedQuestions[questionId] = tags;
+            fetchedQuestionsRef.current.add(questionId);
+          }
+        });
+
+        // Small delay between batches to be respectful to the API
+        if (i + batchSize < questionsNeedingTags.length) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
+
+      // Update questions state with fetched tags
+      if (Object.keys(updatedQuestions).length > 0) {
         setQuestions(prev => {
           return prev.map(q => {
-            if (batchTagsResponse[q.id]) {
-              return { ...q, tags: batchTagsResponse[q.id] };
+            if (updatedQuestions.hasOwnProperty(q.id)) {
+              return { 
+                ...q, 
+                tags: updatedQuestions[q.id] || [] 
+              };
             }
             return q;
           });
         });
         
-        console.log(' Tag fetch completed successfully');
-        
-      } catch (error) {
-        console.error(' Error fetching tags:', error);
-        // Still mark as fetched to prevent retry loops
-        questionsNeedingTags.forEach(q => {
-          fetchedQuestionsRef.current.add(q.id);
-        });
-      } finally {
-        isFetchingRef.current = false;
+        console.log(` Successfully updated tags for ${Object.keys(updatedQuestions).length} questions`);
       }
+        
+    } catch (error) {
+      console.error(' Error in tag fetching process:', error);
+      // Mark all questions as fetched to prevent retry loops
+      questionsNeedingTags.forEach(q => {
+        fetchedQuestionsRef.current.add(q.id);
+      });
+    } finally {
+      isFetchingRef.current = false;
     }
+  }
 
-    fetchTagsForQuestions();
-  }, [questions?.length]); // Only depend on length, not the questions array
+  fetchTagsForQuestions();
+}, [questions?.length, setQuestions]); // Dependencies: only re-run when questions length changes
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -335,7 +397,7 @@ const handleEditModalSave = async () => {
               ? { ...q, name: newQuestionTitle, modifiedBy: result.modifiedby }
               : q
           )
-        );
+        );a
         setEditingQuestion(null);
         toast.success(result.message || 'Question updated successfully');
       } else {
