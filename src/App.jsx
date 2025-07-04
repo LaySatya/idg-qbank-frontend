@@ -146,8 +146,8 @@ const App = () => {
       />
       
       {isAuthenticated && <Sidebar collapsed={sidebarCollapsed} />}
-      <div className="flex flex-col flex-1 overflow-hidden">
-          {isAuthenticated && (
+      <div className="flex flex-col flex-1">
+        {isAuthenticated && (
           <Header 
             toggleSidebar={() => setSidebarCollapsed(prev => !prev)} 
             onLogout={handleLogout}

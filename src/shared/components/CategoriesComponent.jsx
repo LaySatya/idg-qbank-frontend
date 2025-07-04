@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { 
   X, FolderOpen, Folder, BookOpen, Users, Search, Filter, ChevronRight, ChevronDown, 
-  Check, Loader, AlertCircle, Eye, ArrowRight, Radio, CheckCircle, Circle, Home, 
-  Building2, GraduationCap, FileText, Plus, Minus, RefreshCw
+  Check, Loader, AlertCircle, Eye, ArrowRight, Radio, CheckCircle, Circle, Home, Building2,
+   GraduationCap, FileText, Plus, Minus, RefreshCw
 } from 'lucide-react';
 import { useCategoriesAPI } from '../../api/categoriesAPI';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -42,6 +43,9 @@ const CategoriesComponent = ({
     fetchCourseCategories,
     fetchCoursesByCategoryId
   } = useCategoriesAPI();
+
+  // Modal ref for focus trap and portal
+  const modalRef = useRef(null);
 
   // Helper: Build category tree with proper Moodle hierarchy
   function buildCategoryTree(categoriesData) {
@@ -405,116 +409,129 @@ const CategoriesComponent = ({
     
     // Moodle-style indentation
     const indentWidth = level * 24;
-    
+
+    // Inline styles
+    const categoryRowStyle = {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      padding: 12,
+      borderRadius: 12,
+      border: '1px solid',
+      borderColor: isSelected ? '#0ea5e9' : '#e5e7eb',
+      background: isSelected ? '#f0f9ff' : '#fff',
+      boxShadow: isSelected ? '0 1px 4px 0 rgba(14,165,233,0.08)' : 'none',
+      transition: 'all 0.2s',
+      cursor: 'pointer',
+      marginLeft: indentWidth,
+      marginBottom: 4,
+    };
+    const expandBtnStyle = {
+      padding: 4,
+      borderRadius: 6,
+      background: 'none',
+      border: 'none',
+      cursor: 'pointer',
+      transition: 'background 0.2s',
+      outline: 'none',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    };
+    const badgeStyle = (bg, color) => ({
+      fontSize: 12,
+      padding: '2px 8px',
+      borderRadius: 12,
+      background: bg,
+      color: color,
+      fontWeight: 500,
+      marginLeft: 4,
+    });
+    const idBadgeStyle = badgeStyle(isSelected ? '#e0f2fe' : '#f3f4f6', isSelected ? '#0369a1' : '#6b7280');
+    const courseCountBadgeStyle = badgeStyle(isSelected ? '#bae6fd' : '#f3f4f6', isSelected ? '#0369a1' : '#6b7280');
+    const levelBadgeStyle = badgeStyle(level === 0 ? '#e0f2fe' : '#fef9c3', level === 0 ? '#0369a1' : '#b45309');
+    const nameStyle = {
+      fontWeight: 600,
+      fontSize: level === 0 ? 16 : 14,
+      color: isSelected ? (level === 0 ? '#0c4a6e' : '#075985') : (level === 0 ? '#111827' : '#334155'),
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      marginRight: 8,
+    };
+    const idNumberStyle = {
+      fontSize: 12,
+      color: '#6b7280',
+      marginTop: 2,
+    };
     return (
-      <div key={category.id} className="mb-1">
+      <div key={category.id} style={{ marginBottom: 4 }}>
         {/* Category Row */}
         <div 
-          className={`flex items-center gap-2 p-3 rounded-lg border transition-all duration-200 cursor-pointer
-            ${isSelected 
-              ? 'border-sky-500 bg-sky-50 shadow-sm' 
-              : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
-            }`}
-          style={{ marginLeft: `${indentWidth}px` }}
+          style={categoryRowStyle}
           onClick={() => handleCategorySelect(category.id)}
         >
           {/* Expand/Collapse Button */}
           {hasChildren && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleExpanded(category.id);
-              }}
-              className="p-1 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
+              onClick={e => { e.stopPropagation(); toggleExpanded(category.id); }}
+              style={expandBtnStyle}
+              tabIndex={-1}
             >
               {isExpanded ? 
-                <Minus size={14} className="text-gray-600" /> : 
-                <Plus size={14} className="text-gray-600" />
+                <Minus size={14} color="#52525b" /> : 
+                <Plus size={14} color="#52525b" />
               }
             </button>
           )}
-          
           {/* Selection Radio */}
-          <div className="flex-shrink-0">
+          <div style={{ flexShrink: 0 }}>
             {isSelected ? (
-              <CheckCircle size={16} className="text-blue-600" />
+              <CheckCircle size={16} color="#2563eb" />
             ) : (
-              <Circle size={16} className="text-gray-400" />
+              <Circle size={16} color="#9ca3af" />
             )}
           </div>
-          
           {/* Category Icon */}
-          <div className="flex-shrink-0">
+          <div style={{ flexShrink: 0 }}>
             {level === 0 ? (
-              <Building2 size={18} className={isSelected ? "text-blue-600" : "text-gray-600"} />
+              <Building2 size={18} color={isSelected ? '#2563eb' : '#52525b'} />
             ) : hasChildren ? (
-              <FolderOpen size={16} className={isSelected ? "text-sky-500" : "text-gray-500"} />
+              <FolderOpen size={16} color={isSelected ? '#0ea5e9' : '#64748b'} />
             ) : (
-              <Folder size={16} className={isSelected ? "text-blue-500" : "text-gray-500"} />
+              <Folder size={16} color={isSelected ? '#2563eb' : '#64748b'} />
             )}
           </div>
-          
           {/* Category Name */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className={`font-medium truncate ${
-                level === 0 
-                  ? (isSelected ? 'text-blue-900 text-base' : 'text-gray-900 text-base')
-                  : (isSelected ? 'text-blue-800 text-sm' : 'text-gray-800 text-sm')
-              }`}>
-                {category.name}
-              </span>
-              
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={nameStyle}>{category.name}</span>
               {/* Course Count Badge */}
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                isSelected 
-                  ? 'bg-sky-200 text-sky-800' 
-                  : 'bg-gray-100 text-gray-600'
-              }`}>
+              <span style={courseCountBadgeStyle}>
                 {isLoadingCourses ? '...' : 
                  hasLoadedCourses ? `${coursesInCategory.length} course${coursesInCategory.length !== 1 ? 's' : ''}` :
-                 'Click to load courses'
-                }
+                 'Click to load courses'}
               </span>
-              
               {/* Loading indicator */}
               {isLoadingCourses && (
-                <Loader size={14} className="animate-spin text-blue-500" />
+                <Loader size={14} style={{ color: '#2563eb', animation: 'spin 1s linear infinite' }} />
               )}
-              
               {/* ID Badge */}
-              <span className={`text-xs px-2 py-1 rounded ${
-                isSelected 
-                  ? 'bg-sky-100 text-sky-700' 
-                  : 'bg-gray-100 text-gray-500'
-              }`}>
-                ID: {category.id}
-              </span>
+              <span style={idBadgeStyle}>ID: {category.id}</span>
             </div>
-            
             {/* ID Number */}
             {category.idnumber && (
-              <div className="text-xs text-gray-500 mt-1">
-                {category.idnumber}
-              </div>
+              <div style={idNumberStyle}>{category.idnumber}</div>
             )}
           </div>
-          
           {/* Level Indicator */}
-          <div className="flex-shrink-0">
-            <span className={`text-xs px-2 py-1 rounded-full ${
-              level === 0 
-                ? 'bg-sky-100 text-sky-700' 
-                : 'bg-yellow-100 text-yellow-700'
-            }`}>
-              L{level + 1}
-            </span>
+          <div style={{ flexShrink: 0 }}>
+            <span style={levelBadgeStyle}>L{level + 1}</span>
           </div>
         </div>
-        
         {/* Children */}
         {hasChildren && isExpanded && (
-          <div className="mt-1">
+          <div style={{ marginTop: 4 }}>
             {category.children.map(child => renderCategory(child, level + 1))}
           </div>
         )}
@@ -525,77 +542,90 @@ const CategoriesComponent = ({
   // Render course card
   const renderCourse = (course) => {
     const isSelected = selectedCourse?.id === course.id;
-    
+    const cardStyle = {
+      background: isSelected ? '#f0f9ff' : '#fff',
+      border: '2px solid',
+      borderColor: isSelected ? '#0ea5e9' : '#e5e7eb',
+      borderRadius: 12,
+      padding: 16,
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      boxShadow: isSelected ? '0 2px 8px 0 rgba(14,165,233,0.10)' : 'none',
+      marginBottom: 8,
+    };
+    const headerStyle = { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 };
+    const nameStyle = {
+      fontWeight: 600,
+      fontSize: 16,
+      color: isSelected ? '#0c4a6e' : '#111827',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      marginBottom: 2,
+    };
+    const shortnameStyle = { fontSize: 14, color: '#2563eb', fontWeight: 500 };
+    const badgeStyle = (bg, color) => ({
+      fontSize: 12,
+      padding: '2px 8px',
+      borderRadius: 12,
+      background: bg,
+      color: color,
+      fontWeight: 500,
+      marginLeft: 4,
+    });
+    const visibleBadgeStyle = badgeStyle(course.visible ? '#e0f2fe' : '#f3f4f6', course.visible ? '#0369a1' : '#6b7280');
+    const statsStyle = { display: 'flex', alignItems: 'center', gap: 12, fontSize: 14 };
+    const statItemStyle = { display: 'flex', alignItems: 'center', gap: 4, color: '#64748b' };
+    const arrowStyle = {
+      transition: 'all 0.2s',
+      color: isSelected ? '#2563eb' : '#9ca3af',
+      transform: isSelected ? 'translateX(4px)' : 'none',
+    };
+    const breadcrumbStyle = { display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12, fontSize: 12, color: '#64748b' };
+    const summaryStyle = { marginBottom: 12, fontSize: 14, color: '#64748b', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' };
     return (
       <div 
         key={course.id}
-        className={`group bg-white border-2 rounded-lg p-4 cursor-pointer transition-all duration-200
-          ${isSelected 
-            ? 'border-sky-500 bg-sky-50 shadow-md' 
-            : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
-          }`}
+        style={cardStyle}
         onClick={() => handleCourseSelect(course)}
       >
         {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1 min-w-0">
-            <h4 className={`font-semibold truncate ${
-              isSelected ? 'text-blue-900' : 'text-gray-900'
-            }`} title={course.name}>
-              {course.name}
-            </h4>
+        <div style={headerStyle}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h4 style={nameStyle} title={course.name}>{course.name}</h4>
             {course.shortname && (
-              <p className="text-sm text-blue-600 font-medium">
-                {course.shortname}
-              </p>
+              <p style={shortnameStyle}>{course.shortname}</p>
             )}
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-              course.visible 
-                ? 'bg-sky-100 text-sky-800' 
-                : 'bg-gray-100 text-gray-600'
-            }`}>
-              {course.visible ? 'Visible' : 'Hidden'}
-            </span>
-            {isSelected && (
-              <CheckCircle size={20} className="text-blue-600" />
-            )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <span style={visibleBadgeStyle}>{course.visible ? 'Visible' : 'Hidden'}</span>
+            {isSelected && <CheckCircle size={20} color="#2563eb" />}
           </div>
         </div>
-        
         {/* Category Breadcrumb */}
-        <div className="flex items-center gap-1 mb-3 text-xs text-gray-600">
+        <div style={breadcrumbStyle}>
           <Home size={12} />
           <span>{course.categoryName}</span>
         </div>
-        
         {/* Summary */}
         {course.summary && (
-          <div className="mb-3">
-            <p className="text-sm text-gray-600 line-clamp-2">
-              {course.summary.replace(/<[^>]*>/g, '')}
-            </p>
+          <div style={summaryStyle}>
+            <p>{course.summary.replace(/<[^>]*>/g, '')}</p>
           </div>
         )}
-        
         {/* Stats */}
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              <Users size={14} className="text-gray-500" />
-              <span className="text-gray-600">{course.enrolledusers || 0}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <GraduationCap size={14} className="text-gray-500" />
-              <span className="text-blue-600 font-medium">ID: {course.id}</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 }}>
+          <div style={statsStyle}>
+            {/* <div style={statItemStyle}>
+              <Users size={14} />
+              <span>{course.enrolledusers || 0}</span>
+            </div> */}
+            <div style={statItemStyle}>
+              <GraduationCap size={14} />
+              <span style={{ color: '#2563eb', fontWeight: 500 }}>ID: {course.id}</span>
             </div>
           </div>
-          <ArrowRight size={16} className={`transition-all duration-200 ${
-            isSelected 
-              ? 'text-blue-600 transform translate-x-1' 
-              : 'text-gray-400 group-hover:text-blue-500 group-hover:transform group-hover:translate-x-1'
-          }`} />
+          {/* <ArrowRight size={16} style={arrowStyle} /> */}
         </div>
       </div>
     );
@@ -610,213 +640,272 @@ const CategoriesComponent = ({
       )
     : [];
 
-  // Don't render if modal is not open
-  if (!isOpen) return null;
+  // Modal styles
+const modalOverlayStyle = {
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  width: '100vw',
+  height: '100vh',
+  background: 'rgba(30,41,59,0.25)',
+  zIndex: 1000,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 24,
+};
+const modalContentStyle = {
+  background: '#fff',
+  borderRadius: 20,
+  boxShadow: '0 8px 32px 0 rgba(30,41,59,0.18)',
+  width: '100%',
+  maxWidth: 1200,
+  maxHeight: '95vh',
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  position: 'relative',
+};
 
-  return (
-    <>
-      <div className="fixed inset-0 bg-opacity-40 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[95vh] flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-sky-100 rounded-lg">
-                <Building2 size={24} className="text-blue-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Course Categories & Courses</h2>
-                {/* <p className="text-sm text-gray-600">
-                  Select a category to view its courses, then choose a course to filter questions
-                </p> */}
-              </div>
-              <div className="flex items-center gap-2">
-                {selectedCategory && (
-                  <span className="bg-sky-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                    Category Selected
-                  </span>
-                )}
-                {selectedCourse && (
-                  <span className="bg-sky-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                    Course: {selectedCourse.name}
-                  </span>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X size={20} />
+// Modal root for portal
+const modalRoot = document.getElementById('modal-root') || document.body;
+
+// Modal close on background click or Esc
+function useModalClose(onClose, isOpen) {
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose, isOpen]);
+}
+
+// Don't render if modal is not open
+if (!isOpen) return null;
+
+// Modal overlay and modal styles
+const overlayStyle = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(30,41,59,0.40)',
+  zIndex: 1000,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 16,
+};
+const modalStyle = {
+  background: '#fff',
+  borderRadius: 18,
+  boxShadow: '0 8px 32px 0 rgba(30,41,59,0.18)',
+  width: '100%',
+  maxWidth: 1200,
+  maxHeight: '95vh',
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  outline: 'none',
+};
+
+// Modal content
+const modalContent = (
+  <div style={overlayStyle} onClick={onClose}>
+    <div
+      style={modalStyle}
+      ref={modalRef}
+      tabIndex={-1}
+      onClick={e => e.stopPropagation()}
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 24, borderBottom: '1px solid #e5e7eb' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ padding: 8, background: '#e0f2fe', borderRadius: 12 }}>
+            <Home size={24} color="#0ea5e9" />
+          </div>
+          <div>
+            <h2 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', margin: 0 }}>Course Categories & Courses</h2>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          style={{ padding: 8, color: '#64748b', background: 'none', border: 'none', borderRadius: 8, cursor: 'pointer', transition: 'background 0.2s' }}
+          onMouseOver={e => (e.currentTarget.style.background = '#f1f5f9')}
+          onMouseOut={e => (e.currentTarget.style.background = 'none')}
+          aria-label="Close"
+        >
+          <X size={20} />
+        </button>
+      </div>
+      {/* Status Messages */}
+      {error && (
+        <div style={{ margin: '24px 24px 0 24px', background: '#fef2f2', borderLeft: '4px solid #f87171', padding: 12, borderRadius: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <AlertCircle size={16} color="#f87171" style={{ marginRight: 8 }} />
+            <span style={{ color: '#b91c1c', fontSize: 14 }}>{error}</span>
+            <button onClick={clearError} style={{ marginLeft: 'auto', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}>
+              <X size={14} />
             </button>
           </div>
-
-          {/* Status Messages */}
-          {error && (
-            <div className="mx-6 mt-4 bg-red-50 border-l-4 border-red-400 p-3 rounded">
-              <div className="flex items-center">
-                <AlertCircle size={16} className="text-red-400 mr-2" />
-                <span className="text-red-700 text-sm">{error}</span>
-                <button onClick={clearError} className="ml-auto text-red-400 hover:text-red-600">
-                  <X size={14} />
-                </button>
-              </div>
-            </div>
-          )}
-          {success && (
-            <div className={`mx-6 mt-4 border-l-4 p-3 rounded ${
-              success.type === 'error' ? 'bg-red-50 border-red-400' : 
-              success.type === 'info' ? 'bg-blue-50 border-blue-400' :
-              'bg-sky-50 border-sky-400'
-            }`}>
-              <div className="flex items-center">
-                <Check size={16} className={`mr-2 ${
-                  success.type === 'error' ? 'text-red-400' : 
-                  success.type === 'info' ? 'text-blue-400' :
-                  'text-sky-400'
-                }`} />
-                <span className={`text-sm ${
-                  success.type === 'error' ? 'text-red-700' : 
-                  success.type === 'info' ? 'text-blue-700' :
-                  'text-sky-700'
-                }`}>
-                  {success.message}
-                </span>
-                <button onClick={() => setSuccess(null)} className="ml-auto hover:opacity-75">
-                  <X size={14} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Content */}
-          <div className="flex-1 overflow-hidden p-6 flex gap-6">
-            {/* Left: Categories */}
-            <div className="w-1/2 border-r pr-6 flex flex-col">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Course Categories</h3>
-                <div className="flex gap-2">
-                  {selectedCategory && (
-                    <>
-                      {/* <button
-                        onClick={() => handleRefreshCourses(selectedCategory)}
-                        disabled={loadingStates.courses.has(selectedCategory)}
-                        className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-sm transition-colors flex items-center gap-1"
-                      >
-                        <RefreshCw size={14} className={loadingStates.courses.has(selectedCategory) ? 'animate-spin' : ''} />
-                        Refresh Courses
-                      </button> */}
-                      <button
-                        onClick={handleClearSelection}
-                        className="bg-red-500 text-black hover:bg-red px-3 py-1 rounded text-sm transition-colors"
-                      >
-                        Clear Selection
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto">
-                {loadingStates.categories ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader className="animate-spin h-6 w-6 text-sky-600 mr-2" />
-                    <span className="text-gray-600">Loading categories...</span>
-                  </div>
-                ) : categories.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <Building2 size={48} className="mx-auto mb-4 text-gray-300" />
-                    <p className="text-lg font-medium text-gray-700 mb-2">No categories found</p>
-                    <p className="text-sm">Check your API connection.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    {categories.map(category => renderCategory(category))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right: Courses */}
-            <div className="w-1/2 pl-6 flex flex-col">
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900">Courses</h3>
-                  {selectedCategory && (
-                    <span className="text-sm text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                      {loadingStates.courses.has(selectedCategory) ? 'Loading...' : `${filteredCourses.length} courses`}
-                    </span>
-                  )}
-                </div>
-                <div className="relative">
-                  <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search courses..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto">
-                {!selectedCategory ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <BookOpen size={48} className="mx-auto mb-4 text-gray-300" />
-                    <p className="text-lg font-medium text-gray-700 mb-2">Select a category</p>
-                    <p className="text-sm">Choose a category to view its courses.</p>
-                  </div>
-                ) : loadingStates.courses.has(selectedCategory) ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader className="animate-spin h-6 w-6 text-blue-600 mr-2" />
-                    <span className="text-gray-600">Loading courses...</span>
-                  </div>
-                ) : filteredCourses.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <BookOpen size={48} className="mx-auto mb-4 text-gray-300" />
-                    <p className="text-lg font-medium text-gray-700 mb-2">No courses found</p>
-                    <p className="text-sm">No courses available in the selected category.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3">
-                    {filteredCourses.map(course => renderCourse(course))}
-                  </div>
-                )}
-              </div>
-            </div>
+        </div>
+      )}
+      {success && (
+        <div style={{ margin: '24px 24px 0 24px', background: success.type === 'error' ? '#fef2f2' : success.type === 'info' ? '#eff6ff' : '#f0f9ff', borderLeft: `4px solid ${success.type === 'error' ? '#f87171' : success.type === 'info' ? '#60a5fa' : '#38bdf8'}`, padding: 12, borderRadius: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <Check size={16} color={success.type === 'error' ? '#f87171' : success.type === 'info' ? '#60a5fa' : '#38bdf8'} style={{ marginRight: 8 }} />
+            <span style={{ color: success.type === 'error' ? '#b91c1c' : success.type === 'info' ? '#2563eb' : '#0ea5e9', fontSize: 14 }}>{success.message}</span>
+            <button onClick={() => setSuccess(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+              <X size={14} />
+            </button>
           </div>
-
-          {/* Footer */}
-          <div className="border-t border-gray-200 p-4 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              {selectedCategory 
-                ? loadingStates.courses.has(selectedCategory)
-                  ? 'Loading courses...'
-                  : `${filteredCourses.length} course(s) in selected category`
-                : 'Select a category to view courses'
-              }
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-              >
-                Close
-              </button>
-              {selectedCourse && (
+        </div>
+      )}
+      {/* Content */}
+      <div style={{ flex: 1, overflow: 'hidden', padding: 24, display: 'flex', gap: 24 }}>
+        {/* Left: Categories */}
+        <div style={{ width: '50%', borderRight: '1px solid #e5e7eb', paddingRight: 24, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: '#0f172a', margin: 0 }}>Course Categories</h3>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {selectedCategory && (
                 <button
-                  onClick={confirmCourseSelection}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                  onClick={handleClearSelection}
+                  style={{
+                    background: '#ef4444',
+                    color: '#fff',
+                    padding: '6px 16px',
+                    borderRadius: 8,
+                    fontSize: 14,
+                    fontWeight: 500,
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s',
+                    boxShadow: '0 1px 2px 0 rgba(0,0,0,0.03)',
+                  }}
+                  onMouseOver={e => (e.currentTarget.style.background = '#dc2626')}
+                  onMouseOut={e => (e.currentTarget.style.background = '#ef4444')}
                 >
-                  Proceed to Questions
+                  Clear Selection
                 </button>
               )}
             </div>
           </div>
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {loadingStates.categories ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0' }}>
+                <Loader className="animate-spin" size={24} color="#0ea5e9" style={{ marginRight: 8 }} />
+                <span style={{ color: '#64748b' }}>Loading categories...</span>
+              </div>
+            ) : categories.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 0', color: '#64748b' }}>
+                <Building2 size={48} color="#cbd5e1" style={{ margin: '0 auto 16px' }} />
+                <p style={{ fontSize: 18, fontWeight: 500, color: '#334155', marginBottom: 8 }}>No categories found</p>
+                <p style={{ fontSize: 14 }}>Check your API connection.</p>
+              </div>
+            ) : (
+              <div>
+                {categories.map(category => renderCategory(category))}
+              </div>
+            )}
+          </div>
+        </div>
+        {/* Right: Courses */}
+        <div style={{ width: '50%', paddingLeft: 24, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: '#0f172a', margin: 0 }}>Courses</h3>
+              {selectedCategory && (
+                <span style={{ fontSize: 14, color: '#2563eb', background: '#e0f2fe', padding: '2px 10px', borderRadius: 8 }}>
+                  {loadingStates.courses.has(selectedCategory) ? 'Loading...' : `${filteredCourses.length} courses`}
+                </span>
+              )}
+            </div>
+            <div style={{ position: 'relative' }}>
+              <Search size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <input
+                type="text"
+                placeholder="Search courses..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 16px 8px 40px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 8,
+                  fontSize: 15,
+                  outline: 'none',
+                  transition: 'border 0.2s',
+                  marginBottom: 0,
+                }}
+              />
+            </div>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {!selectedCategory ? (
+              <div style={{ textAlign: 'center', padding: '48px 0', color: '#64748b' }}>
+                <BookOpen size={48} color="#cbd5e1" style={{ margin: '0 auto 16px' }} />
+                <p style={{ fontSize: 18, fontWeight: 500, color: '#334155', marginBottom: 8 }}>Select a category</p>
+                <p style={{ fontSize: 14 }}>Choose a category to view its courses.</p>
+              </div>
+            ) : loadingStates.courses.has(selectedCategory) ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0' }}>
+                <Loader className="animate-spin" size={24} color="#2563eb" style={{ marginRight: 8 }} />
+                <span style={{ color: '#64748b' }}>Loading courses...</span>
+              </div>
+            ) : filteredCourses.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 0', color: '#64748b' }}>
+                <BookOpen size={48} color="#cbd5e1" style={{ margin: '0 auto 16px' }} />
+                <p style={{ fontSize: 18, fontWeight: 500, color: '#334155', marginBottom: 8 }}>No courses found</p>
+                <p style={{ fontSize: 14 }}>No courses available in the selected category.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+                {filteredCourses.map(course => renderCourse(course))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </>
-  );
+      {/* Footer */}
+      <div style={{ borderTop: '1px solid #e5e7eb', padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: 14, color: '#64748b' }}>
+          {selectedCategory 
+            ? loadingStates.courses.has(selectedCategory)
+              ? 'Loading courses...'
+              : `${filteredCourses.length} course(s) in selected category`
+            : 'Select a category to view courses'
+          }
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            onClick={onClose}
+            style={{ padding: '8px 24px', background: '#64748b', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, fontSize: 15, cursor: 'pointer', transition: 'background 0.2s' }}
+            onMouseOver={e => (e.currentTarget.style.background = '#334155')}
+            onMouseOut={e => (e.currentTarget.style.background = '#64748b')}
+          >
+            Close
+          </button>
+          {selectedCourse && (
+            <button
+              onClick={confirmCourseSelection}
+              style={{ padding: '8px 24px', background: '#2563eb', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 600, fontSize: 15, cursor: 'pointer', transition: 'background 0.2s' }}
+              onMouseOver={e => (e.currentTarget.style.background = '#1d4ed8')}
+              onMouseOut={e => (e.currentTarget.style.background = '#2563eb')}
+            >
+              Proceed to Questions
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// Render modal in portal
+return ReactDOM.createPortal(modalContent, document.body);
 };
 
 export default CategoriesComponent;

@@ -20,30 +20,26 @@ const LoginForm = ({ onLogin }) => {
     setIsLoading(true);
     
     try {
+      // Use the enhanced loginUser function which now stores comprehensive user data
       const response = await loginUser(username.trim(), password.trim());
       
       // Debug log to verify response
-      console.log('Login response:', response);
+      console.log(' Enhanced login response:', response);
 
       // Make sure we have all required data before proceeding
       if (!response.token) {
         throw new Error('No authentication token received');
       }
 
-      // Store all data in localStorage
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('usernameoremail', response.username);
-      localStorage.setItem('userid', response.userid);
-      
-      // Explicitly store the profile image URL
-      if (response.profileimageurl) {
-        console.log('Storing profile image URL:', response.profileimageurl);
-        localStorage.setItem('profileimageurl', response.profileimageurl);
-      } else {
-        // Clear any existing value if none provided
-        localStorage.removeItem('profileimageurl');
-        console.log('No profile image URL received');
-      }
+      // The enhanced loginUser function already stores all data in localStorage
+      // But we can verify it's stored correctly
+      console.log(' Verifying stored user data:', {
+        token: localStorage.getItem('token'),
+        username: localStorage.getItem('username'),
+        userid: localStorage.getItem('userid'),
+        profileImage: localStorage.getItem('profileimageurl'),
+        currentUser: localStorage.getItem('currentUser')
+      });
 
       // Call the onLogin handler with all data
       if (onLogin) {
@@ -56,8 +52,11 @@ const LoginForm = ({ onLogin }) => {
       } else {
         window.location.href = '/question-bank'; // Fallback redirect
       }
+
+      console.log(' Login successful! User data stored for comments.');
+      
     } catch (err) {
-      console.error('Login failed:', err);
+      console.error(' Login failed:', err);
       setError(err.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
@@ -140,6 +139,9 @@ const LoginForm = ({ onLogin }) => {
           )}
         </button>
       </form>
+      
+     
+
     </div>
   );
 };

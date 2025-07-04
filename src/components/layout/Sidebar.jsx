@@ -28,7 +28,6 @@ const Sidebar = ({ collapsed }) => {
       className={`bg-white text-black font-semibold transition-all duration-200 ease-in-out ${
         collapsed ? 'w-16' : 'w-64'
       } relative shadow-lg border-r border-gray-200`}
-      style={{ overflowY: 'hidden' }}
     >
       {/* Logo / Brand */}
       <div className="flex items-center h-16 px-4 border-b bg-white border-gray-200">

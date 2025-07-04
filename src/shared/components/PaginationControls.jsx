@@ -1,6 +1,7 @@
 // /Users/piseytep/Desktop/ReactJs/moodleQB/moodle/src/shared/components/PaginationControls.jsx
 
 import React from 'react';
+import ReactPaginate from 'react-paginate';
 
 //  FIXED: Simple SVG icons instead of @heroicons/react
 const ChevronLeftIcon = () => (
@@ -110,11 +111,18 @@ const PaginationControls = ({
     );
   }
 
-  const pageNumbers = generatePageNumbers();
+  // ReactPaginate expects 0-based page index
+  const handleReactPaginate = (selected) => {
+    if (isLoading) return;
+    const newPage = selected.selected + 1;
+    if (newPage !== safeCurrentPage && onPageChange) {
+      onPageChange(newPage);
+    }
+  };
 
   return (
     <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-2 bg-white border-t border-gray-200 ${className}`}>
-      {/*  Items Info - Left Side */}
+      {/* Items Info - Left Side */}
       <div className="flex items-center gap-4">
         <div className="text-sm text-gray-700">
           <span className="font-medium">
@@ -124,8 +132,6 @@ const PaginationControls = ({
           <span className="font-medium">{safeTotalItems.toLocaleString()}</span>
           <span className="ml-1">results</span>
         </div>
-
-        {/*  Items Per Page Selector */}
         <div className="flex items-center gap-2">
           <label htmlFor="itemsPerPage" className="text-sm text-gray-600">
             Show:
@@ -145,75 +151,38 @@ const PaginationControls = ({
           </select>
         </div>
       </div>
-
-      {/*  Pagination Controls - Right Side */}
+      {/* Pagination Controls - Right Side */}
       <div className="flex items-center gap-2">
-        {/* Previous Button */}
-        <button
-          onClick={() => handlePageChange(safeCurrentPage - 1)}
-          disabled={safeCurrentPage <= 1 || isLoading}
-          className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-500 transition-colors"
-          title="Previous page"
-        >
-          <ChevronLeftIcon />
-          <span className="ml-1">Previous</span>
-        </button>
-
-        {/* Page Numbers */}
-        <div className="hidden sm:flex items-center gap-1">
-          {pageNumbers.map((page, index) => {
-            if (page === '...') {
-              return (
-                <span
-                  key={`ellipsis-${index}`}
-                  className="px-3 py-2 text-sm text-gray-500"
-                >
-                  ...
-                </span>
-              );
-            }
-
-            const isCurrentPage = page === safeCurrentPage;
-
-            return (
-              <button
-                key={page}
-                onClick={() => handlePageChange(page)}
-                disabled={isLoading}
-                className={`
-                  inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors
-                  ${isCurrentPage
-                    ? 'bg-blue-600 text-white border border-blue-600 cursor-default'
-                    : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed'
-                  }
-                `}
-                aria-current={isCurrentPage ? 'page' : undefined}
-                title={`Go to page ${page}`}
-              >
-                {page}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Mobile Page Indicator */}
-        <div className="sm:hidden text-sm text-gray-700 px-3 py-2">
-          Page {safeCurrentPage} of {safeTotalPages}
-        </div>
-
-        {/* Next Button */}
-        <button
-          onClick={() => handlePageChange(safeCurrentPage + 1)}
-          disabled={safeCurrentPage >= safeTotalPages || isLoading}
-          className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-500 transition-colors"
-          title="Next page"
-        >
-          <span className="mr-1">Next</span>
-          <ChevronRightIcon />
-        </button>
+        <ReactPaginate
+          previousLabel={<ChevronLeftIcon />}
+          nextLabel={<ChevronRightIcon />}
+          breakLabel={"..."}
+          pageCount={safeTotalPages}
+          forcePage={safeCurrentPage - 1}
+          marginPagesDisplayed={1}
+          pageRangeDisplayed={3}
+          onPageChange={handleReactPaginate}
+          containerClassName={"pagination flex items-center gap-1"}
+          pageClassName={"page-item"}
+          pageLinkClassName={"page-link px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"}
+          previousClassName={"page-item"}
+          previousLinkClassName={"page-link px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"}
+          nextClassName={"page-item"}
+          nextLinkClassName={"page-link px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"}
+          breakClassName={"page-item"}
+          breakLinkClassName={"page-link px-3 py-2 text-sm font-medium text-gray-500"}
+          activeClassName={"active"}
+          disabledClassName={"disabled opacity-50 cursor-not-allowed"}
+          renderOnZeroPageCount={null}
+        />
       </div>
-
-      {/* Loading Indicator */}
+      <style>{`
+        .pagination .active .page-link {
+          background-color: #2563eb !important; /* blue-600 */
+          color: #fff !important;
+          border-color: #2563eb !important;
+        }
+      `}</style>
       {isLoading && (
         <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
           <div className="flex items-center gap-2 text-sm text-gray-600">

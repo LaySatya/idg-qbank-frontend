@@ -199,7 +199,7 @@ const QuestionBank = () => {
 
     try {
       setLoadingQuestionCategories(true);
-      console.log('📂 Fetching question categories for course:', courseId);
+      console.log(' Fetching question categories for course:', courseId);
       
       const categoriesUrl = `${API_BASE_URL}/questions/question_categories?courseid=${courseId}`;
       const response = await fetch(categoriesUrl, {
@@ -216,7 +216,7 @@ const QuestionBank = () => {
       }
 
       const categoriesData = await response.json();
-      console.log('📂 Question categories response:', categoriesData);
+      console.log(' Question categories response:', categoriesData);
       
       let categories = [];
       if (Array.isArray(categoriesData)) {
@@ -282,7 +282,7 @@ const fetchQuestions = useCallback(async (
     setLoading(true);
     setError(null);
 
-    console.log('🔍 Fetching questions with filters:', {
+    console.log(' Fetching questions with filters:', {
       ...currentFilters,
       tagFilter,
       page,
@@ -339,7 +339,7 @@ const fetchQuestions = useCallback(async (
     }
 
     const result = await response.json();
-    console.log('📊 API Response:', {
+    console.log(' API Response:', {
       total: result.total,
       questions: result.questions?.length,
       filtered_tagids: result.filtered_tagids,
@@ -435,7 +435,7 @@ const fetchQuestions = useCallback(async (
 
   // Enhanced setFilters with proper logging
   const setFiltersWithLogging = useCallback((newFilters) => {
-    console.log('🔧 Filters updated:', { old: filters, new: newFilters });
+    console.log(' Filters updated:', { old: filters, new: newFilters });
     setFilters(newFilters);
     
     // Persist course selection
@@ -452,7 +452,7 @@ const fetchQuestions = useCallback(async (
 
   // Enhanced course selection handler with question categories
   const handleCourseSelect = useCallback(async (course) => {
-    console.log('🎓 Course selected:', course);
+    console.log(' Course selected:', course);
   
     const courseId = course.id || course.courseId;
     const courseName = course.name || course.fullname || `Course ${courseId}`;
@@ -879,22 +879,41 @@ useEffect(() => {
                 )}
 
                 {/* Questions Table */}
-                {!loading && !error && questions.length > 0 && (
-                  <>
-                    {/* Summary Info */}
-                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                      <div className="flex justify-between items-center text-sm text-blue-800">
-                        <span>
-                          Showing {questions.length} of {totalQuestions} questions
-                          {filters.courseName && ` in "${filters.courseName}"`}
-                        </span>
-                        {Array.isArray(tagFilter) && tagFilter.length > 0 && (
-                          <span className="font-medium">
-                             Filtered by {tagFilter.length} tag{tagFilter.length !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+              {!loading && !error && questions.length > 0 && (
+  <>
+    {/* Summary Info */}
+    {/* <div className="mb-4 p-3 bg-gray-100 rounded-lg">
+      <div className="flex justify-between items-center text-sm text-black">
+        <span>
+          Showing {questions.length} of {totalQuestions} questions
+          {filters.courseName && ` in "${filters.courseName}"`}
+        </span>
+        {Array.isArray(tagFilter) && tagFilter.length > 0 && (
+          <span className="font-medium">
+             Filtered by {tagFilter.length} tag{tagFilter.length !== 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
+    </div> */}
+
+    {/* Pagination above table */}
+    <PaginationControls
+      currentPage={currentPage}
+      totalPages={totalPages}
+      totalItems={totalQuestions}
+      itemsPerPage={questionsPerPage}
+      onPageChange={(page) => {
+        if (fetchInProgressRef.current) return;
+        setCurrentPage(page);
+      }}
+      onItemsPerPageChange={(newPerPage) => {
+        if (fetchInProgressRef.current) return;
+        setQuestionsPerPage(newPerPage);
+        setCurrentPage(1);
+      }}
+      isLoading={loading}
+      className="border-t bg-gray-50"
+    />
 
                     <QuestionsTable
                       questions={filteredQuestions}
@@ -915,7 +934,6 @@ useEffect(() => {
                       dropdownRefs={dropdownRefs}
                       onPreview={setPreviewQuestion}
                       onEdit={(question) => {
-                        console.log('Editing question:', question.id);
                         setEditingQuestionData(question);
                       }}
                       onDuplicate={handleDuplicateQuestion}
@@ -926,8 +944,24 @@ useEffect(() => {
                       setQuestions={setQuestions}
                     />
 
-                    {/* Pagination */}
-                    {renderPaginationSection()}
+                    {/* Pagination below table */}
+                    <PaginationControls
+      currentPage={currentPage}
+      totalPages={totalPages}
+      totalItems={totalQuestions}
+      itemsPerPage={questionsPerPage}
+      onPageChange={(page) => {
+        if (fetchInProgressRef.current) return;
+        setCurrentPage(page);
+      }}
+      onItemsPerPageChange={(newPerPage) => {
+        if (fetchInProgressRef.current) return;
+        setQuestionsPerPage(newPerPage);
+        setCurrentPage(1);
+      }}
+      isLoading={loading}
+      className="border-t bg-gray-50"
+    />
                   </>
                 )}
               </>

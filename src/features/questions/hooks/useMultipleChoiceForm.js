@@ -129,7 +129,7 @@ export const useMultipleChoiceForm = (initialQuestion = {}) => {
 
   const saveQuestion = useCallback(async () => {
     if (!validate()) {
-      console.warn('⚠️ Validation failed');
+      console.warn(' Validation failed');
       return false;
     }
 
