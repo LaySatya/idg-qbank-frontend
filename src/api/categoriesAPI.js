@@ -136,7 +136,7 @@ export const categoriesAPI = {
         headers: getHeaders()
       });
       const data = await handleResponse(response);
-      console.log('🎓 Courses fetched for course category:', categoryId, data);
+      console.log(' Courses fetched for course category:', categoryId, data);
       
       // FIXED: Handle the correct response structure
       if (data && data.courses && Array.isArray(data.courses)) {
@@ -160,13 +160,13 @@ export const categoriesAPI = {
    */
   fetchAllCourses: async () => {
     try {
-      console.log('🎓 Fetching all courses...');
+      console.log(' Fetching all courses...');
       const response = await fetch(`${API_BASE_URL}/courses`, {
         method: 'GET',
         headers: getHeaders()
       });
       const data = await handleResponse(response);
-      console.log('🎓 All courses fetched:', data);
+      console.log(' All courses fetched:', data);
       
       if (data && data.courses && Array.isArray(data.courses)) {
         return data.courses;

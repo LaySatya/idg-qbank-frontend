@@ -52,7 +52,7 @@ export const useTrueFalseForm = (initialQuestion = null) => {
 
   const saveQuestion = useCallback(async () => {
     if (!validate()) {
-      console.warn('⚠️ Validation failed');
+      console.warn(' Validation failed');
       return false;
     }
 

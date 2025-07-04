@@ -337,7 +337,7 @@ async getQuestionsByTagsWithFilters(tagIds, additionalFilters = {}, page = 1, pe
     }
 
     const url = `${API_BASE_URL}/questions/filters?${params.toString()}`;
-    console.log('🔗 Tag filter URL:', url);
+    console.log(' Tag filter URL:', url);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -378,7 +378,7 @@ async getQuestionsByTagsWithFilters(tagIds, additionalFilters = {}, page = 1, pe
 // NEW: Replace getTags method with this
 async getAllTags() {
   try {
-    console.log('📋 Fetching all tags...');
+    console.log(' Fetching all tags...');
     
     const response = await fetch(`${API_BASE_URL}/questions/tags`, {
       method: 'GET',
@@ -554,7 +554,155 @@ async getTagsForMultipleQuestions(questionIds) {
       ];
     }
   },
+// Get question preview with enhanced image support
+async getQuestionPreview(questionId) {
+  try {
+    console.log(` Fetching preview for question ${questionId}...`);
+    
+    const response = await fetch(`${API_BASE_URL}/questions/preview?questionid=${questionId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Accept': 'text/xml, application/json, text/html',
+        'Content-Type': 'application/json'
+      }
+    });
 
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const contentType = response.headers.get('content-type');
+    console.log(' Preview response content type:', contentType);
+
+    let data;
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+      console.log(' JSON preview data:', data);
+    } else if (contentType && contentType.includes('text/xml')) {
+      const xmlText = await response.text();
+      data = {
+        id: questionId,
+        xmlContent: xmlText,
+        contentType: 'xml'
+      };
+      console.log(' XML preview data length:', xmlText.length);
+    } else {
+      // Handle HTML or other text responses
+      const textContent = await response.text();
+      data = {
+        id: questionId,
+        content: textContent,
+        contentType: contentType || 'text/plain'
+      };
+      console.log(' Text preview data length:', textContent.length);
+    }
+
+    return data;
+  } catch (error) {
+    console.error(` Failed to fetch preview for question ${questionId}:`, error);
+    throw error;
+  }
+},
+
+// Enhanced method to get question with full details for preview
+async getQuestionDetails(questionId) {
+  try {
+    console.log(` Fetching detailed question data for ${questionId}...`);
+    
+    const response = await fetch(`${API_BASE_URL}/questions/${questionId}`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+
+    const data = await handleAPIResponse(response);
+    console.log('Question details:', data);
+
+    // Process the question data to extract images and other media
+    if (data.questiontext) {
+      data.images = this.extractImagesFromHTML(data.questiontext);
+      data.processedQuestionText = this.processImageURLs(data.questiontext);
+    }
+
+    return data;
+  } catch (error) {
+    console.error(` Failed to fetch question details for ${questionId}:`, error);
+    throw error;
+  }
+},
+
+// Helper method to extract images from HTML content
+extractImagesFromHTML(htmlContent) {
+  if (!htmlContent) return [];
+  
+  const images = [];
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = htmlContent;
+  
+  const imgElements = tempDiv.querySelectorAll('img');
+  imgElements.forEach((img, index) => {
+    const src = img.getAttribute('src');
+    const alt = img.getAttribute('alt') || `Image ${index + 1}`;
+    const width = img.getAttribute('width');
+    const height = img.getAttribute('height');
+    
+    if (src) {
+      images.push({
+        src: this.resolveImageURL(src),
+        alt,
+        width,
+        height,
+        style: img.getAttribute('style') || '',
+        originalSrc: src
+      });
+    }
+  });
+  
+  return images;
+},
+
+// Helper method to resolve image URLs
+resolveImageURL(src) {
+  if (!src) return '';
+  
+  // If already absolute URL, return as is
+  if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
+    return src;
+  }
+  
+  // Handle relative URLs
+  const baseURL = API_BASE_URL.replace('/api', ''); // Remove /api if present
+  const cleanSrc = src.startsWith('/') ? src : `/${src}`;
+  
+  return `${baseURL}${cleanSrc}`;
+},
+
+// Helper method to process all image URLs in HTML content
+processImageURLs(htmlContent) {
+  if (!htmlContent) return '';
+  
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = htmlContent;
+  
+  const imgElements = tempDiv.querySelectorAll('img');
+  imgElements.forEach(img => {
+    const src = img.getAttribute('src');
+    if (src) {
+      const resolvedSrc = this.resolveImageURL(src);
+      img.setAttribute('src', resolvedSrc);
+      
+      // Add responsive styling
+      if (!img.style.maxWidth) {
+        img.style.maxWidth = '100%';
+      }
+      if (!img.style.height) {
+        img.style.height = 'auto';
+      }
+    }
+  });
+  
+  return tempDiv.innerHTML;
+},
   // Get all users
   async getAllUsers() {
     try {

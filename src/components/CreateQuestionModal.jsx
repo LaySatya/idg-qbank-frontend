@@ -139,7 +139,7 @@ const CreateQuestionModal = ({
 
   // Log available question types for debugging
   useEffect(() => {
-    console.log('📝 CreateQuestionModal received question types:', {
+    console.log(' CreateQuestionModal received question types:', {
       availableCount: availableQuestionTypes.length,
       loadingState: loadingQuestionTypes,
       filteredCount: filteredQuestionTypes.length,
@@ -337,7 +337,7 @@ const CreateQuestionModal = ({
               ) : filteredQuestionTypes.length === 0 ? (
                 <div className="text-gray-500">
                   <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4 mx-auto">
-                    <span className="text-2xl">📝</span>
+                    <span className="text-2xl"></span>
                   </div>
                   <p className="text-lg font-medium mb-2">No Question Types Available</p>
                   <p className="text-sm max-w-md">

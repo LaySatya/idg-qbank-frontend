@@ -3,36 +3,25 @@
 // ============================================================================
 import React, { useRef, useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 // Enhanced TextEditor Component
 export const TextEditor = ({ value, onChange, placeholder, error, minHeight = "120px" }) => (
-  <div className={`border rounded-lg overflow-hidden transition-all ${
-    error ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500'
-  }`}>
-    {/* Toolbar matching the screenshots */}
-    <div className="border-b border-gray-200 p-2 bg-gray-50 flex items-center gap-1">
-      <button type="button" className="p-2 hover:bg-gray-200 rounded text-sm transition-colors" title="Paragraph">¶</button>
-      <button type="button" className="p-2 hover:bg-gray-200 rounded text-sm font-bold transition-colors" title="Bold">B</button>
-      <button type="button" className="p-2 hover:bg-gray-200 rounded text-sm italic transition-colors" title="Italic">I</button>
-      <button type="button" className="p-2 hover:bg-gray-200 rounded text-sm underline transition-colors" title="Underline">U</button>
-      <div className="w-px h-6 bg-gray-300 mx-1"></div>
-      <button type="button" className="p-2 hover:bg-gray-200 rounded text-sm transition-colors" title="Numbered List">📝</button>
-      <button type="button" className="p-2 hover:bg-gray-200 rounded text-sm transition-colors" title="Bullet List">📋</button>
-      <div className="w-px h-6 bg-gray-300 mx-1"></div>
-      <button type="button" className="p-2 hover:bg-gray-200 rounded text-sm transition-colors" title="Link">🔗</button>
-      <button type="button" className="p-2 hover:bg-gray-200 rounded text-sm transition-colors" title="Unlink">🔗</button>
-      <button type="button" className="p-2 hover:bg-gray-200 rounded text-sm transition-colors" title="Image">🖼️</button>
-      <button type="button" className="p-2 hover:bg-gray-200 rounded text-sm transition-colors" title="Media">🎥</button>
-      <button type="button" className="p-2 hover:bg-gray-200 rounded text-sm transition-colors" title="File">📁</button>
-      <button type="button" className="p-2 hover:bg-gray-200 rounded text-sm transition-colors" title="H5P">H5P</button>
-    </div>
-    <textarea
-      className="w-full px-4 py-3 border-0 focus:outline-none resize-none"
-      style={{ minHeight }}
+  <div className={`transition-all ${error ? 'border-red-500 ring-1 ring-red-500' : ''}`}>
+    <ReactQuill
       value={value}
-      onChange={e => onChange(e.target.value)}
+      onChange={onChange}
       placeholder={placeholder}
+      style={{ minHeight }}
+      theme="snow"
     />
+    {error && (
+      <p className="text-sm text-red-600 flex items-center mt-2">
+        <span className="mr-1">⚠</span>
+        {error}
+      </p>
+    )}
   </div>
 );
 

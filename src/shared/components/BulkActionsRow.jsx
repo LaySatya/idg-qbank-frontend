@@ -235,7 +235,7 @@ const handleRemoveTag = async (tagId) => {
       return;
     }
     
-    // ✅ CORRECT ENDPOINT: /questions/bulk-tags (with 's')
+    //  CORRECT ENDPOINT: /questions/bulk-tags (with 's')
     const res = await fetch(`${API_BASE_URL}/questions/bulk-tags`, {
       method: 'DELETE',
       headers: {
@@ -249,9 +249,9 @@ const handleRemoveTag = async (tagId) => {
       })
     });
     
-    console.log('🔗 API Response Status:', res.status);
+    console.log('API Response Status:', res.status);
     const data = await res.json();
-    console.log('📊 API Response Data:', data);
+    console.log(' API Response Data:', data);
     
     if (res.ok && data.success) {
       // Update frontend state
