@@ -67,9 +67,9 @@ const Header = ({ toggleSidebar, onLogout, username, profileImageUrl }) => {
                 className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-md transition-colors"
               >
                 {/* Profile Image: Only try to render if we have a URL and no error */}
-                {profileImageUrl && !imgError ? (
+                {/* {profileImageUrl && !imgError ? ( */}
                   <img
-                    src={profileImageUrl}
+                    src={localStorage.getItem('profileimageurl') || profileImageUrl}
                     alt="Profile"
                     className="w-8 h-8 rounded-full object-cover"
                     onError={() => {
@@ -77,13 +77,13 @@ const Header = ({ toggleSidebar, onLogout, username, profileImageUrl }) => {
                       setImgError(true);
                     }}
                   />
-                ) : (
+                {/* ) : (
                   <span className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
                     <span className="text-indigo-800 font-medium text-sm">
                       {username ? username.charAt(0).toUpperCase() : "U"}
                     </span>
                   </span>
-                )}
+                )} */}
                 <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>

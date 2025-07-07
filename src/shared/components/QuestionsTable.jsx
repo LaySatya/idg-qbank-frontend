@@ -14,10 +14,11 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import QuestionPreviewModal from './QuestionPreviewModal';
+// import QuestionPreviewModal from './QuestionPreviewModal';
 import QuestionHistoryView from './QuestionHistoryModal';
 import ReactModal from 'react-modal';
-
+import QuestionPreviewFilter from './preview/QuestionPreviewFilter';
+import QuestionCommentsModal from './preview/comments/QuestionCommentsModal';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Simplified Tag Management Modal Component
@@ -33,6 +34,8 @@ const TagManagementModal = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [newTagName, setNewTagName] = useState('');
   const [loadingTags, setLoadingTags] = useState(false);
+
+
 
   // Load all tags and question tags when modal opens
   useEffect(() => {
@@ -97,7 +100,7 @@ const TagManagementModal = ({
       // handle error
     }
   };
-
+//add ad delete tags for place manage tag in questions table
   const addTagToQuestion = async (tag) => {
     if (!question) return;
     try {
@@ -114,29 +117,35 @@ const TagManagementModal = ({
       if (res.ok && data.success) {
         loadQuestionTags();
         if (onTagsUpdated) onTagsUpdated([...questionTags, tag]);
+        toast.success(`Tag "${tag.name}" added to question.`);
       }
     } catch (error) {}
+    ToastRoot.error(`Failed to add tag "${tag.name}" to question.`);
   };
-
-  const removeTagFromQuestion = async (tag) => {
-    if (!question) return;
-    try {
-      const res = await fetch(`${API_BASE_URL}/questions/bulk-tags`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ questionids: [question.id], tagids: [tag.id] })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        loadQuestionTags();
-        if (onTagsUpdated) onTagsUpdated(questionTags.filter(t => t.id !== tag.id));
-      }
-    } catch (error) {}
-  };
+const removeTagFromQuestion = async (tag) => {
+  if (!question) return;
+  try {
+    const res = await fetch(`${API_BASE_URL}/questions/bulk-tags`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ questionids: [question.id], tagids: [tag.id] })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      loadQuestionTags();
+      if (onTagsUpdated) onTagsUpdated(questionTags.filter(t => t.id !== tag.id));
+      toast.success(`Removed "${tag.name}" from question.`);
+    } else {
+      toast.error(`Failed to remove tag "${tag.name}" from question.`);
+    }
+  } catch (error) {
+    toast.error(`Failed to remove tag "${tag.name}" from question.`);
+  }
+};
 
   const filteredTags = allTags.filter(tag => 
     tag.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -245,81 +254,33 @@ const QuestionsTable = ({
   // History view state
   const [showHistoryView, setShowHistoryView] = useState(false);
   const [historyQuestion, setHistoryQuestion] = useState(null);
+const [commentsModalOpen, setCommentsModalOpen] = useState(false);
+const [commentsQuestion, setCommentsQuestion] = useState(null);
 
+const openCommentsModal = (question) => {
+  setCommentsQuestion(question);
+  setCommentsModalOpen(true);
+};
   // FIXED: Enhanced tag rendering with REAL API data
-  const renderTags = (question) => {
-    // Get tags from the question object - your API returns tags in the 'tags' property
-    const questionTags = question.tags || [];
-    
-    // If no tags, show standard Moodle empty state
-    if (!questionTags || questionTags.length === 0) {
-      return (
-        <div className="text-xs text-gray-400 italic">
-          <span className="text-gray-500">Tags: </span>
-          <span>None</span>
-        </div>
-      );
-    }
+const renderTags = (question) => {
+  if (!Array.isArray(question.tags) || question.tags.length === 0) {
+    return <span className="italic text-gray-400 text-xs">Tags: None</span>;
+  }
 
-    // Normalize tags to handle both string and object formats
-    const normalizedTags = questionTags.map((tag, index) => {
-      if (typeof tag === 'string') {
-        return {
-          id: `string-${index}`,
-          name: tag.trim(),
-          displayName: tag.trim()
-        };
-      } else if (tag && typeof tag === 'object') {
-        return {
-          id: tag.id || tag.tagid || `obj-${index}`,
-          name: tag.name || tag.rawname || tag.displayname || `Tag ${index}`,
-          displayName: tag.rawname || tag.name || tag.displayname || `Tag ${index}`,
-          description: tag.description || '',
-          isStandard: Boolean(tag.isstandard)
-        };
-      }
-      return null;
-    }).filter(Boolean);
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {question.tags.map((tag) => (
+        <span
+          key={tag.id}
+          className="bg-sky-100 text-gray-800 text-xs px-2 py-1 rounded-full"
+        >
+          {tag.name}
+        </span>
+      ))}
+    </div>
+  );
+};
 
-    // Moodle typically shows all tags, but we can limit for UI space
-    const maxVisibleTags = 5;
-    const visibleTags = normalizedTags.slice(0, maxVisibleTags);
-    const hiddenTagsCount = Math.max(0, normalizedTags.length - maxVisibleTags);
-
-    return (
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.25rem', marginTop: '0.5rem' }}>
-        <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#4B5563', marginRight: '0.25rem' }}>Tags:</span>
-        {visibleTags.map((tag) => (
-          <span
-            key={`tag-${question.id}-${tag.id}`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              padding: '0.125rem 0.5rem',
-              borderRadius: '0.375rem',
-              fontSize: '0.75rem',
-              fontWeight: 500,
-              cursor: 'pointer',
-              backgroundColor: '#0ea5e9', // sky-400
-              color: '#fff',
-              transition: 'background 0.2s',
-            }}
-            title={tag.description || `Tag: ${tag.displayName}`}
-          >
-            {tag.displayName}
-          </span>
-        ))}
-        {hiddenTagsCount > 0 && (
-          <span 
-            style={{ fontSize: '0.75rem', fontWeight: 500, color: '#2563eb', cursor: 'pointer' }}
-            title={`${hiddenTagsCount} more tags`}
-          >
-            +{hiddenTagsCount} more
-          </span>
-        )}
-      </div>
-    );
-  };
 
   // CRITICAL FIX: Smart tag fetching - only fetch once per question
   useEffect(() => {
@@ -537,11 +498,23 @@ const QuestionsTable = ({
   };
 
   // Handle history question
-  const handleHistory = (question) => {
-    console.log('Opening history for question:', question);
-    setHistoryQuestion(question);
-    setShowHistoryView(true);
+  // const handleHistory = (question) => {
+  //   console.log('Opening history for question:', question);
+  //   setHistoryQuestion(question);
+  //   setShowHistoryView(true);
+  // };
+const handleHistory = (question) => {
+  const questionWithQbankEntry = {
+    ...question,
+    qbankentryid: question.qbankentryid || question.qbank_entry_id || question.entryid, // pick available one
   };
+
+  console.log("Opening history for question:", questionWithQbankEntry);
+
+  setHistoryQuestion(questionWithQbankEntry);
+  setShowHistoryView(true);
+};
+
 
   // Handle back from history view
   const handleBackFromHistory = () => {
@@ -856,11 +829,13 @@ const QuestionsTable = ({
                       </span>
                     </div>
                   </td>
-                  
-                  <td className="px-3 py-4 whitespace-nowrap">
-                    <a href="#" className="text-blue-600 hover:text-blue-900" data-target={`questioncommentpreview_${question.id}`} data-questionid={question.id} data-courseid="985" data-contextid="1">
-                      {question.comments || 0}
-                    </a>
+                                    <td className="px-3 py-4 whitespace-nowrap">
+                    <button
+                      className="text-blue-600 hover:text-blue-900 underline"
+                      onClick={() => openCommentsModal(question)}
+                    >
+                      {question.comments?.length || 0} 
+                    </button>
                   </td>
                   
                   <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">{question.version}</td>
@@ -1136,9 +1111,37 @@ const QuestionsTable = ({
         }}
         setQuestions={setQuestions}
       />
+            {commentsModalOpen && commentsQuestion && (
+        <QuestionCommentsModal
+          isOpen={commentsModalOpen}
+          onRequestClose={() => setCommentsModalOpen(false)}
+          question={commentsQuestion}
+          setQuestions={setQuestions}
+        />
+      )}
 
       {/* Question Preview Modal */}
-      <QuestionPreviewModal
+      {/* <QuestionPreviewModal
+        isOpen={previewModalOpen}
+        onRequestClose={() => {
+          setPreviewModalOpen(false);
+          setPreviewQuestion(null);
+        }}
+        question={previewQuestion}
+        onEdit={(question) => {
+          setPreviewModalOpen(false);
+          openEditModal(question);
+        }}
+        onDuplicate={(questionId) => {
+          setPreviewModalOpen(false);
+          onDuplicate(questionId);
+        }}
+        onDelete={(questionId) => {
+          setPreviewModalOpen(false);
+          onDelete(questionId);
+        }}
+      /> */}
+            <QuestionPreviewFilter
         isOpen={previewModalOpen}
         onRequestClose={() => {
           setPreviewModalOpen(false);

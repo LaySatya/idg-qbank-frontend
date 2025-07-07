@@ -1217,6 +1217,32 @@ export function normalizeQuestionFromAPI(apiQuestion) {
     history: Array.isArray(apiQuestion.history) ? apiQuestion.history : []
   };
 }
+//get tag by filter
+export const fetchFilteredQuestions = async (categoryId, tagIds = [], page = 1, perPage = 10) => {
+  const token = localStorage.getItem('token');
+  const queryParams = new URLSearchParams({
+    categoryid: categoryId,
+    page,
+    per_page: perPage,
+  });
+
+  tagIds.forEach(tagId => queryParams.append('tagids[]', tagId));
+
+  const response = await fetch(`${API_BASE_URL}/questions/filters?${queryParams.toString()}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    console.error('Failed to fetch filtered questions');
+    throw new Error('Failed to fetch filtered questions');
+  }
+
+  return response.json();
+};
 
 // Enhanced demo tags generator with more realistic tags
 export function generateDemoTags(question) {

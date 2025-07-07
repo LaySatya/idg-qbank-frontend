@@ -22,33 +22,41 @@ const QuestionHistoryView = ({
       loadQuestionHistory();
     }
   }, [question]);
+const loadQuestionHistory = async () => {
+  const qbankId = question?.questionbankentryid;
 
-  const loadQuestionHistory = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/questions/history?qbankentryid=${question.id}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Accept': 'application/json'
-        }
-      });
+  if (!qbankId) {
+    toast.error('Missing question bank entry ID');
+    setLoading(false);
+    return;
+  }
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  setLoading(true);
+  setError(null);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/questions/history?qbankentryid=${qbankId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Accept': 'application/json'
       }
+    });
 
-      const data = await response.json();
-      setHistoryData(data);
-    } catch (error) {
-      console.error('Error loading question history:', error);
-      setError(error.message);
-      toast.error('Failed to load question history');
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-  };
+
+    const data = await response.json();
+    setHistoryData(data);
+  } catch (error) {
+    console.error('Error loading question history:', error);
+    setError(error.message);
+    toast.error('Failed to load question history');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Format timestamp to readable date
   const formatDate = (timestamp) => {
@@ -102,6 +110,9 @@ const QuestionHistoryView = ({
       }
     }
   };
+const latestVersionNumber = historyData?.versions?.length > 0 
+  ? Math.max(...historyData.versions.map(v => v.version)) 
+  : null;
 
   return (
     <div className="space-y-4">
@@ -201,16 +212,24 @@ const QuestionHistoryView = ({
                 <tr key={version.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100 transition-colors`}>
                   {/* Version Badge */}
                   <td className="px-3 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
+                    <div className="flex flex-col gap-1">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-blue-800">
                         v{version.version}
                       </span>
+
+                      {version.version === latestVersionNumber && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                          Current
+                        </span>
+                      )}
+
                       {version.version === 1 && (
-                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-green-800">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                           Original
                         </span>
                       )}
                     </div>
+
                   </td>
                   
                   {/* Question text and content */}

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 
 //  SHARED API UTILITIES
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -378,52 +378,8 @@ export const useBulkOperations = () => {
   };
 };
 
-//  COMBINED HOOK FOR BULK EDIT COMPONENTS
-// export const useBulkEditAPI = (selectedQuestions = []) => {
-//   const tags = useTags();
-//   const categories = useCategories();
-//   const smartTagRemoval = useSmartTagRemoval(selectedQuestions);
-//   const bulkOperations = useBulkOperations();
 
-//   const isLoading = tags.loading || categories.loading || bulkOperations.loading;
-//   const hasErrors = tags.error || categories.error || bulkOperations.error;
 
-//   const refreshAll = useCallback(() => {
-//     tags.refreshTags();
-//     categories.refreshCategories();
-//   }, [tags.refreshTags, categories.refreshCategories]);
-
-//   return {
-//     // Tags
-//     tags: tags.tags,
-//     tagsLoading: tags.loading,
-//     tagsError: tags.error,
-//     addCustomTag: tags.addCustomTag,
-//     refreshTags: tags.refreshTags,
-
-//     // Categories  
-//     categories: categories.categories,
-//     categoriesLoading: categories.loading,
-//     categoriesError: categories.error,
-//     refreshCategories: categories.refreshCategories,
-
-//     // Smart tag removal
-//     existingTags: smartTagRemoval.existingTags,
-//     hasExistingTags: smartTagRemoval.hasExistingTags,
-
-//     // Bulk operations
-//     bulkUpdateQuestions: bulkOperations.bulkUpdateQuestions,
-//     bulkUpdateStatus: bulkOperations.bulkUpdateStatus,
-//     bulkLoading: bulkOperations.loading,
-//     bulkError: bulkOperations.error,
-
-//     // Combined states
-//     isLoading,
-//     hasErrors,
-//     refreshAll
-//   };
-// };
-// ...
 export const useBulkEditAPI = (selectedQuestions = []) => {
   const tags = useTags();
   const categories = useCategories();

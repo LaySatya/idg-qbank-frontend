@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast'; // ← ADD THIS IMPORT
+import { Toaster } from 'react-hot-toast'; 
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import Dashboard from './pages/Dashboard';
@@ -9,14 +9,15 @@ import ManageUsers from './pages/ManageUsers';
 import LoginPage from './pages/LoginPage';
 import { logoutUser } from './api/userapi';
 import './styles/moodle-question-bank.css';
-
+import ReactModal from 'react-modal';
+ReactModal.setAppElement('#root');
 const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-
+// const pfToken = import.meta.env.MOODLE_TOKEN;
   // Check for existing authentication on app load
   useEffect(() => {
     const verifyAuth = async () => {
@@ -24,6 +25,7 @@ const App = () => {
       const usernameoremail = localStorage.getItem('usernameoremail');
       const userid = localStorage.getItem('userid');
       const profileimageurl = localStorage.getItem('profileimageurl');
+      
       if (token && usernameoremail && usernameoremail !== 'undefined' && userid) {
         try {
           // Add token verification API call if needed
@@ -37,16 +39,7 @@ const App = () => {
             profileImageUrl: profileimageurl // or provide a value if available
           });
         } catch (error) {
-          // Optionally, fetch the user's profile image URL here if available
-          // For example, if you have an API to get user details:
-          // const userDetails = await fetchUserDetails(userid, token);
-          // setCurrentUser({ 
-          //   token, 
-          //   username: usernameoremail,
-          //   id: userid,
-          //   profileimageurl: userDetails.profileimageurl
-          // });
-          // If token is invalid, clear storage
+         
           localStorage.removeItem('token');
           localStorage.removeItem('usernameoremail');
           localStorage.removeItem('userid');
@@ -60,24 +53,25 @@ const App = () => {
     verifyAuth();
   }, [navigate]);
 
-  const handleLogin = (token, username, userid, profileimageurl) => {
-    console.log('Handling login with:', { token, username, userid });
-    
-    localStorage.setItem('token', token);
-    localStorage.setItem('usernameoremail', username);
-    localStorage.setItem('userid', userid);
-    localStorage.setItem('profileimageurl', profileimageurl || ''); // Store profile image URL if available
-    setIsAuthenticated(true);
-    setCurrentUser({
-      token,
-      username,
-      id: userid,
-      profileimageurl
-    });
-    
-    // Navigate to dashboard by default
-    navigate('/dashboard');
-  };
+const handleLogin = (token, username, userid, profileimageurl) => {
+  console.log('Handling login with:', { token, username, userid });
+
+  localStorage.setItem('token', token);
+  localStorage.setItem('usernameoremail', username);
+  localStorage.setItem('userid', userid);
+  // localStorage.setItem('profileimageurl', profileimageurl ? profileimageurl + '?=' + pfToken : '');
+
+  setIsAuthenticated(true);
+  setCurrentUser({
+    token,
+    username,
+    id: userid,
+    // profileImageUrl: profileimageurl ? profileimageurl + '?=' + pfToken : ''
+  });
+
+  // Navigate to dashboard by default
+  navigate('/dashboard');
+};
 
   const handleLogout = async () => {
     try {
@@ -108,7 +102,7 @@ const App = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* ADD TOASTER COMPONENT HERE ↓ */}
       <Toaster
         position="top-right"
@@ -146,7 +140,7 @@ const App = () => {
       />
       
       {isAuthenticated && <Sidebar collapsed={sidebarCollapsed} />}
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col flex-1 overflow-hidden">
         {isAuthenticated && (
           <Header 
             toggleSidebar={() => setSidebarCollapsed(prev => !prev)} 
@@ -155,7 +149,7 @@ const App = () => {
             profileImageUrl={currentUser?.profileimageurl}
           />
         )}
-        <main className="flex-1 overflow-auto p-4">
+        <main className=" flex-1/2 overflow-auto p-4">
           <Routes>
             {/* Login Route */}
             <Route
@@ -214,7 +208,7 @@ const App = () => {
                   <p className="text-gray-600 mb-6">Page not found</p>
                   <button 
                     onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                    className="bg-sky-600 text-white px-6 py-2 rounded-md hover:bg-sky-700 transition-colors"
                   >
                     Go Home
                   </button>

@@ -25,7 +25,7 @@ const Sidebar = ({ collapsed }) => {
 
   return (
     <aside 
-      className={`bg-white text-black font-semibold transition-all duration-200 ease-in-out ${
+      className={`bg-white text-black font-semibold transition-all duration-200 ease-in-out overflow-hidden ${
         collapsed ? 'w-16' : 'w-64'
       } relative shadow-lg border-r border-gray-200`}
     >
@@ -54,7 +54,7 @@ const Sidebar = ({ collapsed }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="py-4">
+      <nav className="  py-4">
         <ul>
           {navItems.map((item, index) => (
             <li key={index} className="mb-1">
@@ -80,7 +80,7 @@ const Sidebar = ({ collapsed }) => {
                     )}
                     {/* Active indicator for collapsed sidebar */}
                     {collapsed && isActive && (
-                      <div className="absolute right-0 top-0 bottom-0 w-1 bg-blue-700"></div>
+                      <div className="absolute right-0 top-0 bottom-0 w-1 bg-sky-700"></div>
                     )}
                   </>
                 )}

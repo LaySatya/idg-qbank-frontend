@@ -366,13 +366,14 @@ const selectedTagValues = useMemo(() => {
   }, [filters.type, typeOptions]);
 
   return (
-    <Paper elevation={2} sx={{ p: 3, mb: 2 }}>
+    <Paper elevation={2} sx={{ p: 2, mb:2, boxShadow: 0.4}}>
       {/* Grid container - Compatible with current MUI version */}
       <Grid container spacing={2} alignItems="flex-end">
         {/* Search */}
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12}>
           <TextField
             fullWidth
+            sx={{ minWidth: 350 }} 
             label="Search Questions"
             variant="outlined"
             size="small"
@@ -401,7 +402,7 @@ const selectedTagValues = useMemo(() => {
         </Grid>
 
         {/* Category */}
-        <Grid item xs={12} md={2}>
+        <Grid item xs={12}>
           <TextField
             select
             fullWidth
@@ -434,7 +435,7 @@ const selectedTagValues = useMemo(() => {
         </Grid>
 
         {/* Status */}
-        <Grid item xs={12} md={1.5}>
+        <Grid item xs={12} >
           <TextField
             select
             fullWidth
@@ -450,7 +451,7 @@ const selectedTagValues = useMemo(() => {
         </Grid>
 
         {/* Type */}
-        <Grid item xs={12} md={1.5}>
+        <Grid item xs={12} >
           <TextField
             select
             fullWidth
@@ -467,7 +468,7 @@ const selectedTagValues = useMemo(() => {
         </Grid>
 
         {/* Tag Filter - moved into main row with label */}
-        <Grid item xs={12} md={2.5}>
+        <Grid item xs={20}>
         
           <Select
             isMulti
@@ -525,7 +526,7 @@ const selectedTagValues = useMemo(() => {
         </Grid>
 
         {/* Clear Button */}
-        <Grid item xs={12} md={1.5}>
+        <Grid item xs={12} >
           {hasActiveFilters && (
             <Button
               variant="outlined"
@@ -541,8 +542,7 @@ const selectedTagValues = useMemo(() => {
       </Grid>
 
       {/* Tag filter status and clear button below row */}
-      <Box mt={2}>
-        
+      <Box>     
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <TagFilterStatus tagFilter={tagFilter} allTags={allTags} />
           <ClearTagFilterButton tagFilter={tagFilter} setTagFilter={setTagFilter} />

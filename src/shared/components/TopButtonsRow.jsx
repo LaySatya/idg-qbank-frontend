@@ -245,7 +245,7 @@ const TopButtonsRow = ({
   };
 
   return (
-    <div className="w-full bg-gradient-to-br from-white to-sky-50 border-b border-gray-200 shadow-sm mb-7">
+    <div className="w-full border-2 border-white shadow-sm mb-4">
       <div className="py-3 px-5 flex flex-col justify-between md:flex-row md:items-center md:justify-between gap-4">
         {/* Navigation Dropdown */}
         <div className="flex items-center gap-3">

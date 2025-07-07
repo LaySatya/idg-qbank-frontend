@@ -2,6 +2,7 @@
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const pfToken = import.meta.env.VITE_MOODLE_TOKEN;
 
 export const loginUser = async (username, password) => {
   try {
@@ -33,22 +34,22 @@ export const loginUser = async (username, password) => {
     }
 
     // Check if profileimageurl exists and properly format it if needed
-    let profileImageUrl = data.profileimageurl || null;
+    let profileImageUrl = data.profileimageurl + '?token=' + pfToken;
 
     // If the profileimageurl is a relative path, convert it to an absolute URL
-    if (profileImageUrl && !profileImageUrl.startsWith('http')) {
-      // Extract the base URL (without the /api part)
-      const baseUrl = API_BASE_URL.replace(/\/api$/, '');
-      profileImageUrl = `${baseUrl}${profileImageUrl}`;
-    }
+    // if (profileImageUrl && !profileImageUrl.startsWith('http')) {
+    //   // Extract the base URL (without the /api part)
+    //   const baseUrl = API_BASE_URL.replace(/\/api$/, '');
+    //   profileImageUrl = `${baseUrl}${profileImageUrl}`;
+    // }
 
-    // Add any required authentication to the profile image URL if needed
-    if (profileImageUrl && data.token) {
-      // Only append token if the URL doesn't already have parameters
-      if (!profileImageUrl.includes('?')) {
-        profileImageUrl = `${profileImageUrl}?token=${data.token}`;
-      }
-    }
+    // // Add any required authentication to the profile image URL if needed
+    // if (profileImageUrl && data.token) {
+    //   // Only append token if the URL doesn't already have parameters
+    //   if (!profileImageUrl.includes('?')) {
+    //     profileImageUrl = `${profileImageUrl}?token=${pfToken}`;
+    //   }
+    // }
 
     console.log('Processed profile image URL:', profileImageUrl);
 
@@ -178,47 +179,24 @@ export const updateCurrentUser = (updates) => {
 export const logoutUser = async () => {
   try {
     const token = localStorage.getItem('token');
+
     if (token) {
-      // Try to use fetch first, falling back to axios if needed
-      try {
-        const response = await fetch(`${API_BASE_URL}/logout`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Logout API failed');
+      await fetch(`${API_BASE_URL}/logout`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      } catch (fetchError) {
-        console.warn('Fetch logout failed, trying axios:', fetchError);
-        // Fallback to axios
-        await axios.post(`${API_BASE_URL}/logout`, {}, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-      }
+      });
     }
   } catch (error) {
-    console.error('Logout API error:', error);
-    // Continue with local logout even if API fails
+    console.warn('Logout failed:', error);
   } finally {
-    // Clear all user-related localStorage items
-    const userKeys = [
-      'token', 'username', 'userid', 'usernameoremail', 'profileimageurl',
-      'firstname', 'lastname', 'fullname', 'currentUser'
-    ];
-    
-    userKeys.forEach(key => {
-      localStorage.removeItem(key);
-    });
-    
-    console.log(' User data cleared from localStorage');
+    localStorage.clear();
+    window.location.href = '/login';
   }
 };
+
 
 // Get users for the Manage Users page
 export const getUsers = async () => {

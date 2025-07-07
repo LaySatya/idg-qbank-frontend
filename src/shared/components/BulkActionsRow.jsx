@@ -37,7 +37,9 @@ const BulkActionsRow = ({
   onBulkDelete,
   onBulkStatusChange,
   questions,
-  setQuestions
+  setQuestions,
+  fetchQuestions 
+
 }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -82,7 +84,7 @@ const BulkActionsRow = ({
     }
   };
 
-  const fetchCommonTags = async () => {
+  const fetchCommonTags = async (showError = true) => {
     if (selectedQuestions.length === 0) return;
     try {
       const tagLists = await Promise.all(
@@ -106,6 +108,7 @@ const BulkActionsRow = ({
       setCommonTags(intersection);
     } catch (error) {
       console.error('Error fetching common tags:', error);
+      if (showError) toast.error('Failed to fetch common tags');
       setCommonTags([]);
     }
   };
@@ -263,7 +266,7 @@ const handleRemoveTag = async (tagId) => {
           return { ...q, tags: newTags };
         })
       );
-      
+      setCommonTags(prevTags => prevTags.filter(t => t.id !== tagId));
       toast.success(`Removed "${tagName}" from ${questionCount} question${questionCount !== 1 ? 's' : ''}`);
       fetchCommonTags();
     } else {

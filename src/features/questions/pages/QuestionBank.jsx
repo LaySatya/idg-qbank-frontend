@@ -8,7 +8,7 @@ import { useQuestionBank } from '../../../shared/hooks/useQuestionBank';
 import { useDropdowns } from '../../../shared/hooks/useDropdowns';
 import { usePagination } from '../../../shared/hooks/usePagination';
 import { questionAPI, normalizeQuestionFromAPI } from '../../../api/questionAPI';
-
+import { fetchFilteredQuestions } from '../../../api/questionAPI';
 // Import components
 import QuestionsTable from '../../../shared/components/QuestionsTable';
 import TopButtonsRow from '../../../shared/components/TopButtonsRow';
@@ -19,6 +19,7 @@ import CategoriesComponent from '../../../shared/components/CategoriesComponent'
 import PaginationControls from '../../../shared/components/PaginationControls';
 import { EDIT_COMPONENTS, BULK_EDIT_COMPONENTS } from '../../../shared/constants/questionConstants';
 import { Toaster, toast } from 'react-hot-toast';
+
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -36,7 +37,6 @@ const useDebounce = (value, delay) => {
   return debouncedValue;
 };
 
-// Tag filtering hook - DEFINE OUTSIDE THE COMPONENT
 const useTagFiltering = () => {
   const [allTags, setAllTags] = useState([]);
   const [loadingTags, setLoadingTags] = useState(false);
@@ -47,9 +47,6 @@ const useTagFiltering = () => {
     const loadTags = async () => {
       try {
         setLoadingTags(true);
-        console.log(' Loading tags...');
-        
-        // Use the correct API method
         const response = await fetch(`${API_BASE_URL}/questions/tags`, {
           method: 'GET',
           headers: {
@@ -64,8 +61,6 @@ const useTagFiltering = () => {
         }
 
         const tags = await response.json();
-        
-        // Normalize tags
         const normalizedTags = Array.isArray(tags) ? tags.map(tag => ({
           id: String(tag.id),
           name: tag.name || tag.rawname || `Tag ${tag.id}`,
@@ -75,9 +70,7 @@ const useTagFiltering = () => {
         })).filter(tag => tag.id && tag.name) : [];
 
         setAllTags(normalizedTags);
-        console.log(' Tags loaded:', normalizedTags.length);
       } catch (error) {
-        console.error(' Failed to load tags:', error);
         setAllTags([]);
       } finally {
         setLoadingTags(false);
@@ -98,7 +91,7 @@ const useTagFiltering = () => {
         }
       }
     } catch (error) {
-      console.error('Failed to load saved tag filter:', error);
+      // ignore
     }
   }, []);
 
@@ -976,7 +969,7 @@ useEffect(() => {
   // ============================================================================
 
   return (
-    <div className="max-w-full">
+    <div className="max-w-full overflow-hidden">
       {/* Performance indicator */}
       {loading && (
         <div className="fixed top-0 left-0 w-full h-1 bg-blue-200 z-50">
