@@ -14,10 +14,10 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-// import QuestionPreviewModal from './QuestionPreviewModal';
+ import QuestionPreviewModal from './QuestionPreviewModal';
 import QuestionHistoryView from './QuestionHistoryModal';
 import ReactModal from 'react-modal';
-import QuestionPreviewFilter from './preview/QuestionPreviewFilter';
+// import QuestionPreviewFilter from './preview/QuestionPreviewFilter';
 import QuestionCommentsModal from './preview/comments/QuestionCommentsModal';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -1141,7 +1141,31 @@ const handleHistory = (question) => {
           onDelete(questionId);
         }}
       /> */}
-            <QuestionPreviewFilter
+      {/* Enhanced Question Preview Modal */}
+      <QuestionPreviewModal
+        isOpen={previewModalOpen}
+        onRequestClose={() => {
+          setPreviewModalOpen(false);
+          setPreviewQuestion(null);
+        }}
+        question={previewQuestion}
+        onEdit={(question) => {
+          setPreviewModalOpen(false);
+          // Handle edit action
+          console.log(' Edit question:', question);
+        }}
+        onDuplicate={(questionId) => {
+          setPreviewModalOpen(false);
+          // Handle duplicate action
+          console.log(' Duplicate question:', questionId);
+        }}
+        onDelete={(questionId) => {
+          setPreviewModalOpen(false);
+          // Handle delete action
+          console.log(' Delete question:', questionId);
+        }}
+      />
+            {/* <QuestionPreviewFilter
         isOpen={previewModalOpen}
         onRequestClose={() => {
           setPreviewModalOpen(false);
@@ -1160,7 +1184,7 @@ const handleHistory = (question) => {
           setPreviewModalOpen(false);
           onDelete(questionId);
         }}
-      />
+      /> */}
     </>
   );
 };

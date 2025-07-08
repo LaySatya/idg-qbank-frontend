@@ -1283,7 +1283,7 @@ const QuestionPreviewFilter = ({
                               marginBottom: '4px',
                               color: '#495057'
                             }}>
-                              👤 {author}
+                               {author}
                             </div>
                             <div style={{ 
                               fontSize: '12px', 

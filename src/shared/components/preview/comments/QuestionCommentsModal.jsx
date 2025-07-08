@@ -375,7 +375,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
                       borderColor: '#d1ecf1'
                     }
                   }}>
-                    <Avatar sx={{ 
+                    {/* <Avatar sx={{ 
                       bgcolor: 'primary.main', 
                       width: 40, 
                       height: 40,
@@ -383,8 +383,26 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
                       fontWeight: '600'
                     }}>
                       {getInitials(getAuthorName(comment))}
-                    </Avatar>
-                    
+                    </Avatar> */}
+                    {comment.user?.profileimageurl ? (
+  <Avatar 
+    src={comment.user.profileimageurl}
+    alt={getAuthorName(comment)}
+    sx={{ width: 40, height: 40 }}
+    onError={(e) => { e.target.src = ''; }} // fallback if image fails
+  />
+) : (
+  <Avatar sx={{ 
+    bgcolor: 'primary.main', 
+    width: 40, 
+    height: 40,
+    fontSize: '14px',
+    fontWeight: '600'
+  }}>
+    {getInitials(getAuthorName(comment))}
+  </Avatar>
+)}
+
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                         <Typography variant="subtitle2" fontWeight="600">
