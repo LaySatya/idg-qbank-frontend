@@ -4,13 +4,16 @@
 import React, { useState, useEffect } from 'react';
 import ReactModal from 'react-modal';
 import { toast } from 'react-hot-toast';
-import { QuestionRenderer } from './preview/QuestionRenderer';
+// import { QuestionRenderer } from './preview/QuestionRenderer';
 import { PreviewOptions } from './preview/PreviewOptions';
 import { TechnicalInfo } from './preview/TechnicalInfo';
 import { usePreviewData } from '../hooks/usePreviewData';
 import { useComments } from '../hooks/useComments';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { CommentSection } from './preview/CommentSection';
+import { resolveImageURL } from '../utils/imageUtils';
+import QuestionRenderer from './preview/QuestionPreviewRenderer';
+
 const QuestionPreviewModal = ({ 
   isOpen, 
   onRequestClose, 
@@ -18,6 +21,7 @@ const QuestionPreviewModal = ({
   onEdit,
   onDuplicate,
   onDelete 
+
 }) => {
   // State management
   const [selectedAnswer, setSelectedAnswer] = useState('');
@@ -54,8 +58,10 @@ const QuestionPreviewModal = ({
   
   const {
     comments,
+    setComments,
     addingComment,
     addComment,
+    deleteComment,
     fetchComments
   } = useComments();
 
@@ -198,24 +204,41 @@ const QuestionPreviewModal = ({
 
         {/* Main Question Content */}
         {previewData && (
-          <QuestionRenderer
-            previewData={previewData}
-            selectedAnswer={selectedAnswer}
-            questionState={questionState}
-            onAnswerChange={handleAnswerChange}
-            onStartAgain={handleStartAgain}
-            onSave={handleSave}
-            onFillCorrectResponses={handleFillCorrectResponses}
-            onSubmitAndFinish={handleSubmitAndFinish}
-            onRequestClose={onRequestClose}
-          />
+      //   <QuestionRenderer
+      //   previewData={previewData}
+      //   selectedAnswer={selectedAnswer}
+      //   questionState={questionState}
+      //   onAnswerChange={handleAnswerChange}
+      //   onStartAgain={handleStartAgain}
+      //   onSave={handleSave}
+      //   onFillCorrectResponses={handleFillCorrectResponses}
+      //   onSubmitAndFinish={handleSubmitAndFinish}
+      //   onRequestClose={onRequestClose}
+      //   resolveImageURL={resolveImageURL} //  NEW PROP
+      // />
+      // In QuestionPreviewModal.jsx - this should work as-is
+<QuestionRenderer
+  previewData={previewData}
+  selectedAnswer={selectedAnswer}
+  questionState={questionState}
+  onAnswerChange={handleAnswerChange}
+  onStartAgain={handleStartAgain}
+  onSave={handleSave}
+  onFillCorrectResponses={handleFillCorrectResponses}
+  onSubmitAndFinish={handleSubmitAndFinish}
+  onRequestClose={onRequestClose}
+  resolveImageURL={resolveImageURL}
+/>
+
         )}
 
         {/* Comments Section */}
         <CommentSection
           comments={comments}
+          setComments={setComments  }
           currentUser={currentUser}
           addingComment={addingComment}
+          onDeleteComment={deleteComment} 
           onAddComment={addComment}
           showComments={true}
           setShowComments={() => {}}

@@ -5,7 +5,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { buildGroupedCategoryTree, addQuestionCountToCategoryTree } from '@/shared/utils/categoryUtils.jsx';
 import Select from 'react-select';
-
+import Autocomplete from '@mui/material/Autocomplete';
 // Then use:
 // await questionAPI.getTagsForMultipleQuestions(questionIds);
 // MUI - Compatible with your current version
@@ -21,6 +21,8 @@ import {
   Paper,
   Typography
 } from '@mui/material';
+
+
 
 const TagFilterStatus = ({ tagFilter, allTags }) => {
   if (!Array.isArray(tagFilter) || tagFilter.length === 0) {
@@ -455,7 +457,7 @@ const selectedTagValues = useMemo(() => {
           <TextField
             select
             fullWidth
-            label="Question Type"
+            label=" Type"
             value={validType}
             onChange={handleTypeChange}
             size="small"
@@ -467,60 +469,58 @@ const selectedTagValues = useMemo(() => {
           </TextField>
         </Grid>
 
-        {/* Tag Filter - moved into main row with label */}
-        <Grid item xs={20}>
+     
+          
         
-          <Select
-            isMulti
-            value={selectedTagValues}
-            onChange={handleTagChange}
+             <Grid item xs={12}>
+          <Autocomplete
+            multiple
             options={tagOptions}
-            placeholder="Filter by tags..."
-            isSearchable
-            isClearable
-            classNamePrefix="react-select"
-            noOptionsMessage={() => "No tags match your search"}
-            styles={{
-              control: (base, state) => ({
-                ...base,
+            getOptionLabel={(option) => option.label}
+            value={tagOptions.filter(opt => tagFilter.includes(opt.value))}
+            onChange={(_, newValue) => {
+              const newTags = newValue.map(opt => opt.value);
+              setTagFilter(newTags);
+              localStorage.setItem('questionTagFilter', JSON.stringify(newTags));
+            }}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  label={option.label}
+                  {...getTagProps({ index })}
+                  key={option.value}
+                  color="primary"
+                  variant="outlined"
+                />
+              ))
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="outlined"
+                label="Tags"
+                placeholder="Select tags"
+                size="small"
+              />
+            )}
+            isOptionEqualToValue={(option, value) => option.value === value.value}
+            disableCloseOnSelect
+            fullWidth
+            sx={{
+              '& .MuiAutocomplete-inputRoot': {
                 minHeight: 40,
-                fontSize: 14,
-                borderColor: state.isFocused ? '#1976d2' : '#ccc',
-                boxShadow: state.isFocused ? '0 0 0 2px rgba(25, 118, 210, 0.2)' : 'none',
-                '&:hover': {
-                  borderColor: '#1976d2'
-                }
-              }),
-              multiValue: (base) => ({
-                ...base,
-                backgroundColor: '#e3f2fd',
-                borderRadius: 4,
-                border: '1px solid #bbdefb'
-              }),
-              multiValueLabel: (base) => ({
-                ...base,
-                color: '#1976d2',
-                fontSize: 12,
-                fontWeight: 500
-              }),
-              multiValueRemove: (base) => ({
-                ...base,
-                color: '#1976d2',
-                '&:hover': {
-                  backgroundColor: '#bbdefb',
-                  color: '#0d47a1'
-                }
-              }),
-              option: (base, state) => ({
-                ...base,
-                backgroundColor: state.isSelected 
-                  ? '#1976d2' 
-                  : state.isFocused 
-                  ? '#f3f4f6' 
-                  : 'white',
-                color: state.isSelected ? 'white' : '#374151',
-                fontSize: 14
-              })
+                maxHeight: 40,
+                minWidth: 100,
+                maxWidth: 300,
+                overflowX: 'auto',
+                flexWrap: 'nowrap',
+                alignItems: 'center'
+              },
+              '& .MuiChip-root': {
+                maxWidth: 120,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }
             }}
           />
         </Grid>

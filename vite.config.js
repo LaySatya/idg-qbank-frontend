@@ -7,18 +7,19 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(process.cwd(), './src'),
     },
   },
   server: {
     proxy: {
+      // Keep only your backend API proxy
       '/api': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
         secure: false,
       },
+      // Removed complex moodle-images proxy - using tokens now
     },
-    //  Add this
     fs: {
       strict: false,
     },
@@ -28,6 +29,5 @@ export default defineConfig({
       input: './index.html',
     },
   },
-  //  Add this outside "server"
   base: '/',
 });

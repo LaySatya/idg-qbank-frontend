@@ -231,7 +231,7 @@ export const PreviewOptions = ({
                   cursor: 'pointer'
                 }}
                 onClick={() => {
-                  toast.success('🎨 Display options updated!');
+                  toast.success(' Display options updated!');
                 }}
               >
                 Update display options

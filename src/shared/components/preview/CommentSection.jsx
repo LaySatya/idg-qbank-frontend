@@ -1,8 +1,12 @@
+// ============================================================================
+// FIXED: CommentSection.jsx - Correct User Token Handling and Optimistic UI
+// ============================================================================
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 
 export const CommentSection = ({
   comments,
+  setComments,
   currentUser,
   addingComment,
   onAddComment,
@@ -47,25 +51,116 @@ export const CommentSection = ({
   };
 
   const getCurrentUserDisplayName = () => {
-    if (!currentUser) return 'Guest';
-    const firstname = currentUser.firstname || localStorage.getItem('firstname') || '';
-    const lastname = currentUser.lastname || localStorage.getItem('lastname') || '';
-    return `${firstname} ${lastname}`.trim() || 'Current User';
+    if (!currentUser) {
+      const token = localStorage.getItem('token');
+      if (!token) return 'Guest';
+      const firstname = localStorage.getItem('firstname') || '';
+      const lastname = localStorage.getItem('lastname') || '';
+      const username = localStorage.getItem('username') || localStorage.getItem('usernameoremail') || '';
+      return `${firstname} ${lastname}`.trim() || username || 'Current User';
+    }
+    const firstname = currentUser.firstname || '';
+    const lastname = currentUser.lastname || '';
+    return `${firstname} ${lastname}`.trim() || currentUser.username || 'Current User';
   };
 
-  const handleAddComment = async () => {
-    if (!commentText.trim()) return toast.error('Please enter a comment');
-    const result = await onAddComment(questionId, commentText, currentUser);
-    if (result.success) {
-      toast.success('Comment added!');
-      setCommentText('');
-    } else {
-      toast.error(result.error || 'Failed to add comment');
+//   const handleAddComment = async () => {
+//     if (!commentText.trim()) {
+//       return toast.error('Please enter a comment');
+//     }
+//     const token = localStorage.getItem('token');
+//     if (!token) {
+//       toast.error('Please log in to add comments');
+//       return;
+//     }
+//     const userInfo = currentUser || {
+//       id: localStorage.getItem('userid'),
+//       username: localStorage.getItem('username') || localStorage.getItem('usernameoremail'),
+//       firstname: localStorage.getItem('firstname') || '',
+//       lastname: localStorage.getItem('lastname') || '',
+//       email: localStorage.getItem('email') || localStorage.getItem('usernameoremail') || ''
+//     };
+
+//     // Optimistic UI update
+//     const optimisticComment = {
+//       id: Date.now(),
+//       content: commentText.trim(),
+//       author: userInfo.firstname || userInfo.lastname ? `${userInfo.firstname} ${userInfo.lastname}`.trim() : userInfo.username || 'Current User',
+//       username: userInfo.username || 'Current User',
+//       timecreated: Math.floor(Date.now() / 1000),
+//       userid: userInfo.id || 1,
+//       user: {
+//         id: userInfo.id || 1,
+//         firstname: userInfo.firstname || '',
+//         lastname: userInfo.lastname || '',
+//         email: userInfo.username || ''
+//       }
+//     };
+//     setComments(prev => [optimisticComment, ...prev]);
+
+//     setCommentText('');
+//     try {
+//       const result = await onAddComment(questionId, commentText, userInfo);
+//       if (!result.success) {
+//         throw new Error(result.error || 'Failed to add comment');
+//       }
+//       toast.success('Comment added successfully!');
+//     } catch (error) {
+//       toast.error(error.message || 'Failed to add comment');
+//       // Optionally rollback optimistic update here if needed
+//     }
+//   };
+const handleAddComment = async () => {
+  if (!commentText.trim()) {
+    return toast.error('Please enter a comment');
+  }
+  const token = localStorage.getItem('token');
+  if (!token) {
+    toast.error('Please log in to add comments');
+    return;
+  }
+
+  // Optimistic UI update
+  const userInfo = currentUser || {
+    id: localStorage.getItem('userid'),
+    username: localStorage.getItem('username') || localStorage.getItem('usernameoremail'),
+    firstname: localStorage.getItem('firstname') || '',
+    lastname: localStorage.getItem('lastname') || '',
+    email: localStorage.getItem('email') || localStorage.getItem('usernameoremail') || ''
+  };
+
+  const optimisticComment = {
+    id: Date.now(),
+    content: commentText.trim(),
+    author: userInfo.firstname || userInfo.lastname ? `${userInfo.firstname} ${userInfo.lastname}`.trim() : userInfo.username || 'Current User',
+    username: userInfo.username || 'Current User',
+    timecreated: Math.floor(Date.now() / 1000),
+    userid: userInfo.id || 1,
+    user: {
+      id: userInfo.id || 1,
+      firstname: userInfo.firstname || '',
+      lastname: userInfo.lastname || '',
+      email: userInfo.username || ''
     }
   };
+  setComments(prev => [optimisticComment, ...prev]);
 
+  setCommentText('');
+  try {
+    // Only send questionId and commentText to onAddComment
+    const result = await onAddComment(questionId, commentText);
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to add comment');
+    }
+    toast.success('Comment added successfully!');
+  } catch (error) {
+    toast.error(error.message || 'Failed to add comment');
+    // Optionally rollback optimistic update here if needed
+  }
+};
   const canDeleteComment = (comment) => {
-    return currentUser?.id === comment.userid;
+    const currentUserId = currentUser?.id || localStorage.getItem('userid');
+    return currentUserId && (currentUserId == comment.userid || currentUserId == comment.user?.id);
   };
 
   return (
@@ -100,18 +195,29 @@ export const CommentSection = ({
                 <div key={comment.id} style={{ marginBottom: '16px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     {profileImg ? (
-                      <img src={profileImg} alt="avatar" style={{ width: 32, height: 32, borderRadius: '50%' }} />
-                    ) : (
-                      <div style={{
-                        width: 32, height: 32,
-                        backgroundColor: '#007bff',
-                        color: '#fff', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center',
-                        borderRadius: '50%', fontWeight: 'bold'
-                      }}>
-                        {getInitials(displayName)}
-                      </div>
-                    )}
+                      <img 
+                        src={profileImg} 
+                        alt="avatar" 
+                        style={{ width: 32, height: 32, borderRadius: '50%' }}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div style={{
+                      width: 32, 
+                      height: 32,
+                      backgroundColor: '#007bff',
+                      color: '#fff', 
+                      display: profileImg ? 'none' : 'flex',
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      borderRadius: '50%', 
+                      fontWeight: 'bold'
+                    }}>
+                      {getInitials(displayName)}
+                    </div>
                     <div>
                       <div style={{ fontWeight: 'bold' }}>{displayName}</div>
                       <div style={{ fontSize: '12px', color: '#888' }}>{formatDate(comment.timecreated)}</div>
@@ -145,7 +251,14 @@ export const CommentSection = ({
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               placeholder="Write a comment..."
-              style={{ width: '100%', minHeight: 80, padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }}
+              style={{ 
+                width: '100%', 
+                minHeight: 80, 
+                padding: '10px', 
+                borderRadius: '4px', 
+                border: '1px solid #ccc',
+                resize: 'vertical'
+              }}
               disabled={addingComment}
               onKeyDown={(e) => {
                 if (e.ctrlKey && e.key === 'Enter') {
@@ -160,11 +273,11 @@ export const CommentSection = ({
                 disabled={addingComment || !commentText.trim()}
                 style={{
                   padding: '6px 12px',
-                  backgroundColor: '#007bff',
+                  backgroundColor: addingComment || !commentText.trim() ? '#ccc' : '#007bff',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
-                  cursor: addingComment ? 'not-allowed' : 'pointer'
+                  cursor: addingComment || !commentText.trim() ? 'not-allowed' : 'pointer'
                 }}
               >
                 {addingComment ? 'Posting...' : 'Post Comment'}

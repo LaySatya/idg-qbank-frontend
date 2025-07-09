@@ -257,6 +257,34 @@ const QuestionsTable = ({
 const [commentsModalOpen, setCommentsModalOpen] = useState(false);
 const [commentsQuestion, setCommentsQuestion] = useState(null);
 
+
+///get tyep icon 
+const [qtypeIcons, setQtypeIcons] = useState({});
+useEffect(() => {
+  async function fetchQtypeIcons() {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/questions/qtypes`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      const data = await res.json();
+      const iconMap = {};
+      data.forEach(qt => {
+        iconMap[qt.name] = qt;
+      });
+      setQtypeIcons(iconMap);
+    } catch (e) {
+      setQtypeIcons({});
+    }
+  }
+  fetchQtypeIcons();
+}, []);
+
+
+
 const openCommentsModal = (question) => {
   setCommentsQuestion(question);
   setCommentsModalOpen(true);
@@ -428,52 +456,69 @@ const renderTags = (question) => {
   }, [openActionDropdown, openStatusDropdown, setOpenActionDropdown, setOpenStatusDropdown, dropdownRefs]);
 
   // Get question type icon
-  const getQuestionTypeIcon = (qtype, question) => {
-    if (!question) {
-      return <span className="w-6 h-6 inline-block">•</span>;
-    }
+  // const getQuestionTypeIcon = (qtype, question) => {
+  //   if (!question) {
+  //     return <span className="w-6 h-6 inline-block">•</span>;
+  //   }
     
-    const normalizedType = qtype || question.questionType || question.qtype;
+  //   const normalizedType = qtype || question.questionType || question.qtype;
     
-    switch (normalizedType) {
-      case 'calculated':
-        return <img src="/src/assets/icon/Calculated.svg" className="w-6 h-6" alt="Calculated" />;
-      case 'calculatedmulti':
-        return <img src="/src/assets/icon/Calculated-multichoice.svg" className="w-6 h-6" alt="Calculated multichoice" />;
-      case 'calculatedsimple':
-        return <img src="/src/assets/icon/Calculated simple.svg" className="w-6 h-6" alt="Calculated simple" />;
-      case 'ddimageortext':
-        return <img src="/src/assets/icon/Drag and drop onto image.svg" className="w-6 h-6" alt="Drag and drop onto image" />;
-      case 'ddmarker':
-        return <img src="/src/assets/icon/Drag and drop markers.svg" className="w-6 h-6" alt="Drag and Drop Markers" />;
-      case 'ddwtos':
-        return <img src="/src/assets/icon/Drag and drop into text.svg" className="w-6 h-6" alt="Drag and drop into text" />;
-      case 'description':
-        return <img src="/src/assets/icon/Description.svg" className="w-6 h-6" alt="Description" />;
-      case 'essay':
-        return <img src="/src/assets/icon/Essay.svg" className="w-6 h-6" alt="Essay" />;
-      case 'gapselect':
-        return <img src="/src/assets/icon/Select-missing words.svg" className="w-6 h-6" alt="Select missing words" />;
-      case 'match':
-        return <img src="/src/assets/icon/Matching.svg" className="w-6 h-6" alt="Matching" />;
-      case'multianswer':
-        return <img src="/src/assets/icon/Embedded answers (Cloze).svg" className="w-6 h-6" alt="Embedded answers (Cloze)" />;
-      case 'multichoice':
-        return <img src="/src/assets/icon/Multiple-choice.svg" className="w-6 h-6" alt="Multiple Choice" />;
-      case'numerical':
-        return <img src="/src/assets/icon/Numerical.svg" className="w-6 h-6" alt="Numerical" />;
-      case'ordering':
-        return <img src="/src/assets/icon/Ordering.svg" className="w-6 h-6" alt="Ordering" />;
+  //   switch (normalizedType) {
+  //     case 'calculated':
+  //       return <img src="/src/assets/icon/Calculated.svg" className="w-6 h-6" alt="Calculated" />;
+  //     case 'calculatedmulti':
+  //       return <img src="/src/assets/icon/Calculated-multichoice.svg" className="w-6 h-6" alt="Calculated multichoice" />;
+  //     case 'calculatedsimple':
+  //       return <img src="/src/assets/icon/Calculated simple.svg" className="w-6 h-6" alt="Calculated simple" />;
+  //     case 'ddimageortext':
+  //       return <img src="/src/assets/icon/Drag and drop onto image.svg" className="w-6 h-6" alt="Drag and drop onto image" />;
+  //     case 'ddmarker':
+  //       return <img src="/src/assets/icon/Drag and drop markers.svg" className="w-6 h-6" alt="Drag and Drop Markers" />;
+  //     case 'ddwtos':
+  //       return <img src="/src/assets/icon/Drag and drop into text.svg" className="w-6 h-6" alt="Drag and drop into text" />;
+  //     case 'description':
+  //       return <img src="/src/assets/icon/Description.svg" className="w-6 h-6" alt="Description" />;
+  //     case 'essay':
+  //       return <img src="/src/assets/icon/Essay.svg" className="w-6 h-6" alt="Essay" />;
+  //     case 'gapselect':
+  //       return <img src="/src/assets/icon/Select-missing words.svg" className="w-6 h-6" alt="Select missing words" />;
+  //     case 'match':
+  //       return <img src="/src/assets/icon/Matching.svg" className="w-6 h-6" alt="Matching" />;
+  //     case'multianswer':
+  //       return <img src="/src/assets/icon/Embedded answers (Cloze).svg" className="w-6 h-6" alt="Embedded answers (Cloze)" />;
+  //     case 'multichoice':
+  //       return <img src="/src/assets/icon/Multiple-choice.svg" className="w-6 h-6" alt="Multiple Choice" />;
+  //     case'numerical':
+  //       return <img src="/src/assets/icon/Numerical.svg" className="w-6 h-6" alt="Numerical" />;
+  //     case'ordering':
+  //       return <img src="/src/assets/icon/Ordering.svg" className="w-6 h-6" alt="Ordering" />;
      
-      case 'randomsamatch':
-        return <img src="/src/assets/icon/Random short-answer matching.svg" className="w-6 h-6" alt="Random Short Answer Matching" />;
-      case 'shortanswer':
-        return <img src="/src/assets/icon/Short-answer.svg" className="w-6 h-6" alt="Short Answer" />;
-      case 'truefalse':
-        return <img src="/src/assets/icon/True-False.svg" className="w-6 h-6" alt="True/False" />;
-      default:
-        return <span className="icon text-gray-400">?</span>;
+  //     case 'randomsamatch':
+  //       return <img src="/src/assets/icon/Random short-answer matching.svg" className="w-6 h-6" alt="Random Short Answer Matching" />;
+  //     case 'shortanswer':
+  //       return <img src="/src/assets/icon/Short-answer.svg" className="w-6 h-6" alt="Short Answer" />;
+  //     case 'truefalse':
+  //       return <img src="/src/assets/icon/True-False.svg" className="w-6 h-6" alt="True/False" />;
+  //     default:
+  //       return <span className="icon text-gray-400">?</span>;
+  //   }
+  // };
+    const getQuestionTypeIcon = (qtype, question) => {
+    if (!question) return <span className="w-6 h-6 inline-block">•</span>;
+    const normalizedType = qtype || question.questionType || question.qtype;
+    const qtypeInfo = qtypeIcons[normalizedType];
+    if (qtypeInfo && qtypeInfo.iconurl) {
+      return (
+        <img
+          src={qtypeInfo.iconurl}
+          className="w-6 h-6"
+          alt={qtypeInfo.label || normalizedType}
+          title={qtypeInfo.label || normalizedType}
+          style={{ background: '#fff', borderRadius: 4 }}
+        />
+      );
     }
+    return <span className="icon text-gray-400">?</span>;
   };
 
   // Open modal when clicking question name

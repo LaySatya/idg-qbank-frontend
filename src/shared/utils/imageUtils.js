@@ -1,10 +1,10 @@
 // ============================================================================
-// FIXED: htmlProcessor.js - Image URL Processing for Local Environment
+// SIMPLIFIED: imageUtils.js - Image URL Processing for Backend Integration
 // ============================================================================
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const MOODLE_BASE_URL = import.meta.env.VITE_MOODLE_BASE_URL ;
-//  FIXED: Enhanced image URL resolution for your local environment
+
+//  SIMPLIFIED: Image URL resolution per backend requirements
 export const resolveImageURL = (src, questionId = null, contextId = '1') => {
   if (!src) {
     console.warn(' Empty image src provided');
@@ -13,47 +13,42 @@ export const resolveImageURL = (src, questionId = null, contextId = '1') => {
   
   console.log(` Resolving image URL: ${src}`);
   
-  // If already absolute URL, return as is
+  // If already absolute URL, return as is (no token needed per backend)
   if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
     console.log(` Already absolute URL: ${src}`);
     return src;
   }
   
-  // CRITICAL FIX: Handle your local Moodle server URLs
-  if (src.includes('pluginfile.php') || src.includes('webservice/pluginfile.php')) {
-    // Your URLs are like: http://10.5.5.205/pluginfile.php/59/qtype_ddimageortext/dragimage/544/1/367/shading.png
-    
-    // If it's already a complete local URL but missing protocol
-       if (src.startsWith(MOODLE_BASE_URL + '/pluginfile.php')) {
+  //  SIMPLIFIED: Direct Moodle URLs - no token needed
+  if (src.includes('pluginfile.php')) {
+    // If it already has the full path but missing protocol
+     if (src.startsWith(MOODLE_BASE_URL.replace(/^https?:\/\//, '') + '/pluginfile.php')) {
       const fullSrc = `http://${src}`;
-      console.log(` Fixed local URL: ${fullSrc}`);
+      console.log(`Fixed local URL: ${fullSrc}`);
       return fullSrc;
     }
     
     // If it's a relative pluginfile URL, make it absolute
     if (src.startsWith('/pluginfile.php')) {
       const fullSrc = `${MOODLE_BASE_URL}${src}`;
-
       console.log(` Fixed relative pluginfile URL: ${fullSrc}`);
       return fullSrc;
     }
     
     // If it already has protocol, return as is
-    console.log(`Moodle pluginfile URL: ${src}`);
+    console.log(` Moodle pluginfile URL: ${src}`);
     return src;
   }
   
-  // Handle @@PLUGINFILE@@ placeholders
+  // Handle @@PLUGINFILE@@ placeholders (if any)
   if (src.includes('@@PLUGINFILE@@')) {
     const cleanSrc = src.replace('@@PLUGINFILE@@/', '');
-    // Use your local Moodle server
     const fullSrc = `${MOODLE_BASE_URL}/pluginfile.php/${contextId}/question/questiontext/${questionId}/${cleanSrc}`;
-
     console.log(` @@PLUGINFILE@@ resolved: ${fullSrc}`);
     return fullSrc;
   }
   
-  // Handle relative URLs - point to your local server
+  // Handle other relative URLs
   const cleanSrc = src.startsWith('/') ? src : `/${src}`;
   const fullSrc = `${MOODLE_BASE_URL}${cleanSrc}`;
   
@@ -61,19 +56,40 @@ export const resolveImageURL = (src, questionId = null, contextId = '1') => {
   return fullSrc;
 };
 
-//  FIXED: Process HTML content for images with your local server
+//  SIMPLIFIED: No token helper (per backend requirements)
+export function getMoodleImageUrl(fileurl) {
+  if (!fileurl) return '';
+  
+  console.log(` Processing Moodle image URL: ${fileurl}`);
+  
+  // If already complete URL, return as is
+  if (fileurl.startsWith('http://') || fileurl.startsWith('https://')) {
+    console.log(` Complete URL: ${fileurl}`);
+    return fileurl;
+  }
+  
+  // Add base URL if relative
+  if (!fileurl.startsWith('/')) {
+    fileurl = '/' + fileurl;
+  }
+  
+  const finalUrl = `${MOODLE_BASE_URL}${fileurl}`;
+  console.log(` Final image URL: ${finalUrl}`);
+  return finalUrl;
+}
+
+//  SIMPLIFIED: Process HTML content for images
 export const processHTMLContent = (htmlContent, questionId = null, contextId = '1') => {
   if (!htmlContent) return '';
   
   console.log(' Processing HTML content for images...');
-  console.log(` Original HTML (first 200 chars): ${htmlContent.substring(0, 200)}...`);
   
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = htmlContent;
   
   // Process all images in the content
   const images = tempDiv.querySelectorAll('img');
-  console.log(` Found ${images.length} images to process`);
+  console.log(`Found ${images.length} images to process`);
   
   images.forEach((img, index) => {
     const originalSrc = img.getAttribute('src');
@@ -84,7 +100,7 @@ export const processHTMLContent = (htmlContent, questionId = null, contextId = '
       img.setAttribute('src', resolvedSrc);
       console.log(` Updated image src: ${originalSrc} → ${resolvedSrc}`);
       
-      // Add error handling attributes
+      // Add error handling
       img.setAttribute('onerror', `
         console.error(' Failed to load image: ${resolvedSrc}'); 
         this.style.border='2px solid red'; 
@@ -109,10 +125,6 @@ export const processHTMLContent = (htmlContent, questionId = null, contextId = '
       
       // Add title for debugging
       img.setAttribute('title', `Original: ${originalSrc}\nResolved: ${resolvedSrc}`);
-      
-      // Add loading state
-      img.style.backgroundColor = '#f8f9fa';
-      img.style.minHeight = '50px';
     } else {
       console.warn(` Image ${index + 1} has no src attribute`);
     }
@@ -121,20 +133,18 @@ export const processHTMLContent = (htmlContent, questionId = null, contextId = '
   // Handle @@PLUGINFILE@@ placeholders in the HTML
   let processedHTML = tempDiv.innerHTML;
   
-  //  FIXED: Replace @@PLUGINFILE@@ references with your local server
+  // Replace @@PLUGINFILE@@ references
   processedHTML = processedHTML.replace(/@@PLUGINFILE@@\/([^"'\s]+)/g, (match, filename) => {
     const resolvedURL = `${MOODLE_BASE_URL}/pluginfile.php/${contextId}/question/questiontext/${questionId}/${filename}`;
-
     console.log(` Replaced @@PLUGINFILE@@: ${match} → ${resolvedURL}`);
     return resolvedURL;
   });
   
-  // Handle other Moodle file references for your local server
+  // Handle other Moodle file references
   processedHTML = processedHTML.replace(/src=["']([^"']*pluginfile\.php[^"']*)["']/g, (match, url) => {
     if (!url.startsWith('http')) {
       const resolvedURL = url.startsWith('/') ? `${MOODLE_BASE_URL}${url}` : `${MOODLE_BASE_URL}/${url}`;
-
-      console.log(`Fixed pluginfile URL: ${url} → ${resolvedURL}`);
+      console.log(` Fixed pluginfile URL: ${url} → ${resolvedURL}`);
       return `src="${resolvedURL}"`;
     }
     return match;
@@ -144,43 +154,29 @@ export const processHTMLContent = (htmlContent, questionId = null, contextId = '
   return processedHTML;
 };
 
-//  FIXED: Enhanced debugging for your environment
-export const debugHTMLProcessing = (htmlContent, questionId, contextId) => {
-  console.group(' HTML Processing Debug');
-  console.log('Input HTML:', htmlContent);
-  console.log('Question ID:', questionId);
-  console.log(' Context ID:', contextId);
-  console.log(' API Base URL:', API_BASE_URL);
- console.log('Local Server Expected:', MOODLE_BASE_URL);
-
+//  DEBUGGING: Enhanced debugging for your environment
+export const debugImageURL = (url, description = '') => {
+  console.group(` Image URL Debug: ${description}`);
+  console.log(' Original URL:', url);
   
-  const processedHTML = processHTMLContent(htmlContent, questionId, contextId);
-  console.log(' Processed HTML:', processedHTML);
+  const resolved = resolveImageURL(url);
+  console.log(' Resolved URL:', resolved);
   
-  // Test image URLs
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = processedHTML;
-  const images = tempDiv.querySelectorAll('img');
+  // Test if URL looks correct
+ if (resolved.includes(MOODLE_BASE_URL.replace(/^https?:\/\//, '')) || resolved.includes(MOODLE_BASE_URL)) {
+    console.log(' Points to correct Moodle server');
+  } else {
+    console.log(' May not point to correct server');
+  }
   
-  console.log(` Image URLs after processing (${images.length} images):`);
-  images.forEach((img, index) => {
-    const src = img.getAttribute('src');
-    console.log(`  ${index + 1}. ${src}`);
-    
-    // Test if URL is reachable (in a real environment)
-        if (src.startsWith(MOODLE_BASE_URL.replace(/^https?:\/\//, '') + '/pluginfile.php')) {
-      console.log(`     Points to local server`);
-    } else {
-      console.log(`     May not be accessible`);
-    }
-  });
+  // Check if it's a complete URL
+  if (resolved.startsWith('http://') || resolved.startsWith('https://')) {
+    console.log(' Complete URL');
+  } else {
+    console.log(' Incomplete URL');
+  }
   
   console.groupEnd();
   
-  return {
-    original: htmlContent,
-    processed: processedHTML,
-    imageCount: images.length,
-    localServerUsed: processedHTML.includes(MOODLE_BASE_URL.replace(/^https?:\/\//, ''))
-  };
+  return resolved;
 };
