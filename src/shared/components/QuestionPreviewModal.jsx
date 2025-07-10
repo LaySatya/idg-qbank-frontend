@@ -94,9 +94,14 @@ const QuestionPreviewModal = ({
     }
     toast.success('Answer saved');
   };
-
-  const handleFillCorrectResponses = () => {
-    if (previewData?.answers) {
+const handleFillCorrectResponses = () => {
+  // Only handle toast for types that use answers
+  if (
+    previewData.qtype === 'multichoice' ||
+    previewData.qtype === 'truefalse' ||
+    previewData.qtype === 'numerical'
+  ) {
+    if (previewData?.answers && previewData.answers.length > 0) {
       const correctAnswer = previewData.answers.find(answer => answer.isCorrect);
       if (correctAnswer) {
         setSelectedAnswer(correctAnswer.id.toString());
@@ -106,9 +111,16 @@ const QuestionPreviewModal = ({
         toast.error('No correct answer found');
       }
     }
-  };
+  }
+  // For other types (like match), do nothing here.
+};
 
-  const handleSubmitAndFinish = () => {
+const handleSubmitAndFinish = () => {
+  // Only check for selectedAnswer for multichoice and truefalse
+  if (
+    previewData.qtype === 'multichoice' ||
+    previewData.qtype === 'truefalse'
+  ) {
     if (!selectedAnswer) {
       toast.error('Please select an answer first');
       return;
@@ -120,11 +132,14 @@ const QuestionPreviewModal = ({
     
     if (selectedAnswerData?.isCorrect) {
       setQuestionState('correct');
-      toast.success('Correct! Well done.');
+      // toast.success('Correct! Well done.');
     } else {
       setQuestionState('incorrect');
-      toast.error('Incorrect. The correct answer is highlighted.');
+      // toast.error('Incorrect. The correct answer is highlighted.');
     }
+    return;
+  }
+
   };
 
   // Modal styles

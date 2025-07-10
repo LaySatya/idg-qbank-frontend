@@ -107,11 +107,11 @@ const getQuestionTypeInfo = (qtype) => {
   }
   // fallback to emoji if not found
   const types = {
-    'multichoice': { label: 'Multiple choice', icon: '☑️', color: 'bg-blue-100 border-blue-300' },
+    'multichoice': { label: 'Multiple choice', icon: '', color: 'bg-blue-100 border-blue-300' },
     'truefalse': { label: 'True/False', icon: '✓/✗', color: 'bg-green-100 border-green-300' },
     // ...rest of your fallback types...
   };
-  return types[qtype] || { label: qtype, icon: '❓', color: 'bg-gray-100 border-gray-300' };
+  return types[qtype] || { label: qtype, icon: '', color: 'bg-gray-100 border-gray-300' };
 };
   const typeInfo = getQuestionTypeInfo(previewData.qtype);
 
@@ -174,17 +174,20 @@ const getQuestionTypeInfo = (qtype) => {
 
     return (
       <div className="prose max-w-none mb-6">
-        <div 
-          className="text-gray-800 leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: processedQuestionText }}
-        />
+                           <div 
+                      className="text-gray-800 leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: processedQuestionText.replace(/<img[^>]*>/g, '') }}
+                    />
       </div>
     );
   };
 
   const renderMultipleChoice = () => (
+    
     <div className="space-y-3">
-      {previewData.answers?.map((answer, index) => {
+           {previewData.answers?.map((answer, index) => {
+        console.log('MC answer:', answer.answer);
+     
         const isSelected = selectedAnswer === answer.id || localSelectedAnswers[previewData.id] === answer.id;
         const isCorrect = answer.fraction > 0;
         const showAsCorrect = showCorrectAnswers && isCorrect;
@@ -207,6 +210,8 @@ const getQuestionTypeInfo = (qtype) => {
               if (onAnswerChange) onAnswerChange(answer.id);
             }}
           >
+
+                     
             <div className="flex items-center space-x-3">
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                 isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
@@ -214,7 +219,7 @@ const getQuestionTypeInfo = (qtype) => {
                 {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
               </div>
               <div className="flex-1">
-                <div dangerouslySetInnerHTML={{ __html: answer.answer }} />
+                <div dangerouslySetInnerHTML={{ __html: answer.answer.replace(/<img[^>]*>/g, '') }} />
                 {answer.feedback && showCorrectAnswers && (
                   <div className="mt-2 text-sm text-gray-600 italic">
                     Feedback: {answer.feedback}
@@ -452,74 +457,94 @@ const getQuestionTypeInfo = (qtype) => {
     </div>
   );
 
+  const [matchingSelections, setMatchingSelections] = useState({});
+  const [matchingResults, setMatchingResults] = useState({});
+  
   const renderMatching = () => {
-    console.log(' Matching Question Data:', {
-      match_subquestions: previewData.match_subquestions,
-      resolveImageURL: typeof resolveImageURL
+    // Collect all possible answers (deduplicate by text)
+    const answerOptions = Array.from(
+      new Set(
+        (previewData.matchSubquestions || [])
+          .map(subq => subq.answertext?.replace(/<[^>]+>/g, '').trim())
+          .filter(Boolean)
+      )
+    );
+  
+    // Prepare correct answers for comparison
+    const correctAnswers = {};
+    (previewData.matchSubquestions || []).forEach(subq => {
+      correctAnswers[subq.id] = subq.answertext?.replace(/<[^>]+>/g, '').trim();
     });
-
+  
+    // When showCorrectAnswers is true, compare user selections to correct answers
+    const showFeedback = showCorrectAnswers;
+  
     return (
       <div className="space-y-4">
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <p className="text-green-800 text-sm">
-             Match each item on the left with the correct answer on the right.
+            Match each item on the left with the correct answer on the right.
           </p>
         </div>
-        
-        {previewData.match_subquestions?.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-semibold text-gray-700 mb-3">Questions</h4>
-              <div className="space-y-3">
-                {previewData.match_subquestions.map((subq, index) => (
-                  subq.questiontext && (
-                    <div
-                      key={subq.id || index}
-                      className="p-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                    >
-                      <div 
-                        dangerouslySetInnerHTML={{ 
-                          __html: resolveImageURL ? 
-                            subq.questiontext.replace(/src="([^"]*@@PLUGINFILE@@[^"]*)"/g, (match, url) => {
-                              const resolvedUrl = resolveImageURL(url);
-                              console.log(' Resolved matching image:', { original: url, resolved: resolvedUrl });
-                              return `src="${resolvedUrl}"`;
-                            }) : 
-                            subq.questiontext 
-                        }} 
-                      />
-                    </div>
-                  )
+        {(previewData.matchSubquestions || []).map((subq, idx) => {
+          const userAnswer = matchingSelections[subq.id] || '';
+          const correctAnswer = correctAnswers[subq.id];
+          const isCorrect = userAnswer && userAnswer === correctAnswer;
+  
+          return (
+            <div key={subq.id || idx} className="flex items-center gap-4 mb-2">
+              <div
+                className="flex-1"
+                dangerouslySetInnerHTML={{ __html: subq.questiontext }}
+              />
+              <select
+                className={`border rounded px-2 py-1 ${showFeedback ? (isCorrect ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50') : ''}`}
+                value={userAnswer}
+                disabled={showFeedback}
+                onChange={e =>
+                  setMatchingSelections({
+                    ...matchingSelections,
+                    [subq.id]: e.target.value
+                  })
+                }
+              >
+                <option value="">Select answer</option>
+                {answerOptions.map((ans, i) => (
+                  <option key={i} value={ans}>{ans}</option>
                 ))}
-              </div>
+              </select>
+              {showFeedback && (
+                isCorrect ? (
+                  <Check className="text-green-600" size={20} />
+                ) : (
+                  <>
+                    <X className="text-red-600" size={20} />
+                    <span className="text-xs text-gray-500 ml-2">
+                      Correct: <span className="font-semibold text-green-700">{correctAnswer}</span>
+                    </span>
+                  </>
+                )
+              )}
             </div>
-            
-            <div>
-              <h4 className="font-semibold text-gray-700 mb-3">Answers</h4>
-              <div className="space-y-3">
-                {previewData.match_subquestions.map((subq, index) => (
-                  subq.answertext && (
-                    <div
-                      key={`answer-${subq.id || index}`}
-                      className="p-3 bg-blue-50 border border-blue-300 rounded-lg hover:bg-blue-100 cursor-pointer"
-                    >
-                      <div dangerouslySetInnerHTML={{ __html: subq.answertext }} />
-                    </div>
-                  )
-                ))}
-              </div>
-            </div>
+          );
+        })}
+        {showFeedback && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-blue-800 text-sm">
+            Feedback: You have correctly selected {
+              Object.keys(correctAnswers).filter(
+                id => matchingSelections[id] === correctAnswers[id]
+              ).length
+            } out of {Object.keys(correctAnswers).length}.
           </div>
         )}
       </div>
     );
   };
-
   const renderNumerical = () => (
     <div className="space-y-4">
       <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
         <p className="text-cyan-800 text-sm">
-          🔢 Enter your numerical answer in the field below.
+           Enter your numerical answer in the field below.
         </p>
       </div>
       
@@ -665,15 +690,16 @@ const getQuestionTypeInfo = (qtype) => {
   };
 const renderActionButtons = () => {
   const handleStartAgain = () => {
-    setSelectedAnswers({});
+        setLocalSelectedAnswers({});
     setLocalSelectedAnswers({});
+    setMatchingSelections({}); 
     setShowCorrectAnswers(false);
     if (onStartAgain) onStartAgain();
   };
 
   const handleFillCorrectResponses = () => {
     setShowCorrectAnswers(true);
-
+  
     if (previewData.qtype === 'multichoice' && previewData.answers) {
       const correctAnswer = previewData.answers.find(answer => answer.fraction > 0);
       if (correctAnswer) {
@@ -681,13 +707,13 @@ const renderActionButtons = () => {
         if (onAnswerChange) onAnswerChange(correctAnswer.id);
       }
     }
-
+  
     if (previewData.qtype === 'truefalse') {
       const correctAnswer = previewData.usages?.[0]?.attempts?.[0]?.rightanswer || 'True';
       setLocalSelectedAnswers({...localSelectedAnswers, [previewData.id]: correctAnswer});
       if (onAnswerChange) onAnswerChange(correctAnswer);
     }
-
+  
     if (previewData.qtype === 'numerical' && previewData.answers) {
       const correctAnswer = previewData.answers.find(answer => answer.fraction > 0);
       if (correctAnswer) {
@@ -697,17 +723,34 @@ const renderActionButtons = () => {
         });
       }
     }
-
+  
+    // --- ADD THIS FOR MATCHING ---
+    if (previewData.qtype === 'match' && previewData.matchSubquestions) {
+      const correctSelections = {};
+      previewData.matchSubquestions.forEach(subq => {
+        // Remove HTML tags from answertext
+        correctSelections[subq.id] = subq.answertext?.replace(/<[^>]+>/g, '').trim();
+      });
+      setMatchingSelections(correctSelections);
+    }
+    // --- END ADD ---
+  
     if (onFillCorrectResponses) onFillCorrectResponses();
   };
 
   const handleSubmitAndFinish = () => {
-    const hasAnswers = Object.keys(localSelectedAnswers).length > 0 || selectedAnswer;
+  let hasAnswers = false;
 
-    if (!hasAnswers && previewData.qtype !== 'description') {
-      // alert removed
-      return;
-    }
+  if (previewData.qtype === 'match') {
+    hasAnswers = Object.keys(matchingSelections).length > 0;
+  } else {
+    hasAnswers = Object.keys(localSelectedAnswers).length > 0 || selectedAnswer;
+  }
+
+  if (!hasAnswers && previewData.qtype !== 'description') {
+    // alert removed
+    return;
+  }
 
     setShowCorrectAnswers(true);
 
