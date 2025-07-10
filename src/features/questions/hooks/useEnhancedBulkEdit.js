@@ -30,9 +30,9 @@ const createFreshBulkChoices = (choices, questionIndex) => {
 
 export const useEnhancedBulkEdit = (questionsToEdit, isBulk) => {
     // State to hold the processed bulk questions
-  console.log("Questions passed to bulk edit:", questionsToEdit);
-  console.log("Questions passed to bulk edit (full):", JSON.stringify(questionsToEdit, null, 2));
-          // ...rest of your hook...
+  // console.log("Questions passed to bulk edit:", questionsToEdit);
+  // console.log("Questions passed to bulk edit (full):", JSON.stringify(questionsToEdit, null, 2));
+        
         
   const [bulkQuestions, setBulkQuestions] = useState([]);
   const [bulkTagDropdowns, setBulkTagDropdowns] = useState({});
@@ -55,7 +55,7 @@ export const useEnhancedBulkEdit = (questionsToEdit, isBulk) => {
   const [pendingChanges, setPendingChanges] = useState({});
 
   useEffect(() => {
-    console.log('useEnhancedBulkEdit: Processing questions', questionsToEdit, 'isBulk:', isBulk);
+    // console.log('useEnhancedBulkEdit: Processing questions', questionsToEdit, 'isBulk:', isBulk);
 
     if (isBulk && questionsToEdit) {
       const processedQuestions = questionsToEdit.map((q, index) => ({

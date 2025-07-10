@@ -15,7 +15,7 @@ const ChoiceEditor = ({
   isBulk = false,
   gradeOptions = []
 }) => {
-  console.log("ChoiceEditor received choices:", choices);
+  // console.log("ChoiceEditor received choices:", choices);
 
   return (
     <div>

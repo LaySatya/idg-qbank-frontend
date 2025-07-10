@@ -1,13 +1,13 @@
 // ============================================================================
 // components/questions/CreateMultipleChoiceQuestion.jsx - UPDATED WITH ENHANCED BULK EDIT
 // ============================================================================
-
+ import { useMemo } from "react";
 import React, { useState, useEffect } from 'react';
 import { X, Save, ChevronDown, AlertCircle, Layers } from 'lucide-react';
 import { useMultipleChoiceForm } from '../../hooks/useMultipleChoiceForm';
 import { useEnhancedBulkEdit } from '../../hooks/useEnhancedBulkEdit';
 import GlobalBulkEditPanel from "../shared/GlobalBulkEditPanel";
-
+import ReactModal from 'react-modal';
 import {
   TagDropdown,
   TextEditor,
@@ -22,6 +22,7 @@ import QuestionSettings from '../shared/QuestionSettings';
 import ChoiceEditor from '../shared/ChoiceEditor';
 import GradingInfo from '../shared/GradingInfo';
 import { AVAILABLE_TAGS, GRADE_OPTIONS } from "../../../../shared/constants/questionConstants";
+import questionAPI from "../../../../api/questionAPI";
 
 const CreateMultipleChoiceQuestion = ({ 
   question = {}, 
@@ -30,8 +31,14 @@ const CreateMultipleChoiceQuestion = ({
   onSave, 
   isBulk 
 }) => {
+  useEffect(() => {
   console.log("Choices in edit modal:", question.choices);
-  const questionsToEdit = questions || (question ? [question] : []);
+}, [question.choices]);
+
+  const questionsToEdit = useMemo(
+    () => questions || (question ? [question] : []),
+    [questions, question]
+  );
 
   // Single question form logic
   const {
@@ -52,16 +59,15 @@ const CreateMultipleChoiceQuestion = ({
     bulkQuestions,
     bulkTagDropdowns,
     handleBulkChange,
+    handleBulkChoiceChange,
     handleBulkTagToggle,
-    toggleBulkTagDropdown,
-    // Add these for global bulk edit:
+    onToggleBulkTagDropdown: toggleBulkTagDropdown,
     globalBulkChanges,
     pendingChanges,
     handleGlobalBulkChange,
     handleGlobalTagOperation,
     applyGlobalBulkChanges
-  } = useBulkTrueFalseEdit(questionsToEdit, isBulk);
-
+  } = useEnhancedBulkEdit(questionsToEdit, isBulk);
   const [expandedSections, setExpandedSections] = useState({
     general: true,
     answers: true,
@@ -73,7 +79,11 @@ const CreateMultipleChoiceQuestion = ({
   
   // New state for bulk edit mode toggle
   const [bulkEditMode, setBulkEditMode] = useState('global'); // 'global' or 'individual'
+ const [allTags, setAllTags] = useState([]);
 
+  useEffect(() => {
+    questionAPI.getTags().then(setAllTags);
+  }, []);
   // Reset form when question changes
   useEffect(() => {
     resetForm(question);
@@ -111,8 +121,36 @@ const CreateMultipleChoiceQuestion = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-60">
-      <div className="bg-white rounded-lg shadow-xl w-[95%] max-w-7xl h-[95vh] flex flex-col">
+<ReactModal
+  isOpen={true}
+  onRequestClose={onClose}
+  contentLabel="Edit Multiple Choice Question"
+  style={{
+    overlay: {
+      zIndex: 1000,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    content: {
+      position: 'static',
+      inset: 'unset',
+      padding: 0,
+      border: 'none',
+      background: 'none',
+      overflow: 'visible',
+      maxWidth: '95vw',
+      width: '100%',
+      maxHeight: '95vh',
+      borderRadius: '20px',
+      boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+      margin: 'auto'
+    }
+  }}
+  ariaHideApp={false}
+>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl h-[95vh] flex flex-col border border-gray-200">
         {/* Header */}
         <Header 
           isBulk={isBulk} 
@@ -171,7 +209,7 @@ const CreateMultipleChoiceQuestion = ({
                       onGlobalTagOperation={handleGlobalTagOperation}
                       onApplyGlobalChanges={applyGlobalBulkChanges}
                       questionCount={bulkQuestions.length}
-                      selectedQuestions={bulkQuestions}   // <-- ADD THIS LINE!
+                      selectedQuestions={bulkQuestions}   
                     />
                   ) : (
                     <BulkEditForm
@@ -197,6 +235,7 @@ const CreateMultipleChoiceQuestion = ({
                   onTagToggle={handleTagToggle}
                   expandedSections={expandedSections}
                   onToggleSection={toggleSection}
+                  allTags={allTags} 
                 />
               )}
             </div>
@@ -210,7 +249,7 @@ const CreateMultipleChoiceQuestion = ({
           isBulk={isBulk}
         />
       </div>
-    </div>
+    </ReactModal>
   );
 };
 
@@ -327,7 +366,8 @@ const SingleEditForm = ({
   onRemoveChoice,
   onTagToggle,
   expandedSections,
-  onToggleSection
+  onToggleSection,
+  allTags
 }) => {
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
 
@@ -692,14 +732,15 @@ const SingleEditForm = ({
         {expandedSections.tags && (
           <div className="pt-4">
             <FormField label="Tags" required error={errors.tags}>
-              <TagDropdown
-                tags={formData.tags}
-                onTagToggle={onTagToggle}
-                isOpen={tagDropdownOpen}
-                onToggle={() => setTagDropdownOpen(open => !open)}
-                availableTags={AVAILABLE_TAGS}
-                error={!!errors.tags}
-              />
+            <TagDropdown
+              tags={formData.tags}
+              onTagToggle={onTagToggle}
+              isOpen={tagDropdownOpen}
+              onToggle={() => setTagDropdownOpen(open => !open)}
+              availableTags={allTags}
+              error={!!errors.tags}
+            />
+
             </FormField>
           </div>
         )}
@@ -901,13 +942,13 @@ const BulkEditForm = ({
               {(questionSections[idx]?.tags ?? false) && (
                 <div className="pt-4">
                   <FormField label="Tags" required>
-                    <TagDropdown
-                      tags={q.tags}
-                      onTagToggle={(tag) => onBulkTagToggle(idx, tag)}
-                      isOpen={!!tagDropdowns[idx]}
-                      onToggle={() => onToggleBulkTagDropdown(idx)}
-                      availableTags={AVAILABLE_TAGS}
-                    />
+                  <TagDropdown
+                    tags={q.tags}
+                    onTagToggle={(tag) => onBulkTagToggle(idx, tag)}
+                    isOpen={!!tagDropdowns[idx]}
+                    onToggle={() => onToggleBulkTagDropdown(idx)}
+                    availableTags={allTags}
+                  />
                   </FormField>
                 </div>
               )}

@@ -1,6 +1,8 @@
 // components/questions/CreateTrueFalseQuestion.jsx
 import React, { useState, useEffect } from 'react';
+import ReactModal from 'react-modal';
 import { X, Save, ChevronDown, AlertCircle } from 'lucide-react';
+
 import { useTrueFalseForm } from '../../hooks/useTrueFalseForm';
 import { useBulkTrueFalseEdit } from '../../hooks/useBulkTrueFalseEdit';
 import GlobalBulkEditPanel from '../shared/GlobalBulkEditPanel';
@@ -15,6 +17,7 @@ import {
   Select,
   ValidationErrors
 } from "../shared/SharedComponents";
+import questionAPI from "../../../../api/questionAPI"; 
 // import { AVAILABLE_TAGS } from '../questions/constants/questionConstants';
 
 const CreateTrueFalseQuestion = ({ 
@@ -35,7 +38,11 @@ const CreateTrueFalseQuestion = ({
     validate,
     resetForm
   } = useTrueFalseForm(existingQuestion);
+const [allTags, setAllTags] = useState([]);
 
+useEffect(() => {
+  questionAPI.getTags().then(setAllTags);
+}, []);
   // Bulk edit logic
   const {
     bulkQuestions,
@@ -181,8 +188,36 @@ const [bulkEditMode, setBulkEditMode] = useState('global'); // global or individ
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-60">
-      <div className="bg-white rounded-lg shadow-xl w-[95%] max-w-6xl h-[95vh] flex flex-col">
+   <ReactModal
+     isOpen={true}
+     onRequestClose={onClose}
+     contentLabel="Edit Multiple Choice Question"
+     style={{
+       overlay: {
+         zIndex: 1000,
+         backgroundColor: 'rgba(0,0,0,0.6)',
+         display: 'flex',
+         alignItems: 'center',
+         justifyContent: 'center'
+       },
+       content: {
+         position: 'static',
+         inset: 'unset',
+         padding: 0,
+         border: 'none',
+         background: 'none',
+         overflow: 'visible',
+         maxWidth: '95vw',
+         width: '100%',
+         maxHeight: '95vh',
+         borderRadius: '20px',
+         boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+         margin: 'auto'
+       }
+     }}
+     ariaHideApp={false}
+   >
+         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl h-[95vh] flex flex-col border border-gray-200">
         {/* Header */}
         <Header 
           isBulk={isBulk} 
@@ -248,6 +283,7 @@ const [bulkEditMode, setBulkEditMode] = useState('global'); // global or individ
                       correctAnswerOptions={correctAnswerOptions}
                       statusOptions={statusOptions}
                       showInstructionsOptions={showInstructionsOptions}
+                      allTags={allTags}
                     />
                   )}
                 </>
@@ -262,6 +298,7 @@ const [bulkEditMode, setBulkEditMode] = useState('global'); // global or individ
                   correctAnswerOptions={correctAnswerOptions}
                   statusOptions={statusOptions}
                   showInstructionsOptions={showInstructionsOptions}
+                  allTags={allTags} // Use the fetched tags from API
                 />
               )}
             </div>
@@ -275,7 +312,7 @@ const [bulkEditMode, setBulkEditMode] = useState('global'); // global or individ
           isBulk={isBulk}
         />
       </div>
-    </div>
+    </ReactModal>
   );
 };
 
@@ -375,7 +412,8 @@ const SingleEditForm = ({
   onToggleSection,
   correctAnswerOptions,
   statusOptions,
-  showInstructionsOptions
+  showInstructionsOptions,
+  allTags
 }) => {
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
 
@@ -576,13 +614,13 @@ const SingleEditForm = ({
         {expandedSections.tags && (
           <div className="pt-4">
             <FormField label="Tags" required error={errors.tags}>
-              <TagDropdown
+                           <TagDropdown
                 tags={question.tags}
                 onTagToggle={onTagToggle}
                 isOpen={tagDropdownOpen}
                 onToggle={() => setTagDropdownOpen(!tagDropdownOpen)}
                 error={errors.tags}
-                availableTags={AVAILABLE_TAGS}
+                availableTags={allTags} // <-- use allTags from API
               />
               <p className="text-sm text-gray-500 mt-2">
                 Select tags to categorize and filter this question. You can search for existing tags or create new ones.
@@ -844,12 +882,12 @@ const BulkEditForm = ({
               {(questionSections[idx]?.tags ?? false) && (
                 <div className="pt-4">
                   <FormField label="Tags" required>
-                    <TagDropdown
+                     <TagDropdown
                       tags={q.tags}
                       onTagToggle={(tag) => onBulkTagToggle(idx, tag)}
                       isOpen={!!tagDropdowns[idx]}
                       onToggle={() => onToggleBulkTagDropdown(idx)}
-                      availableTags={AVAILABLE_TAGS}
+                      availableTags={allTags} // <-- use allTags from API
                     />
                   </FormField>
                 </div>

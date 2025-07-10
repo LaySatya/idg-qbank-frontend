@@ -3,9 +3,12 @@
 // ============================================================================
 
 import React, { useRef, useEffect, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, X } from 'lucide-react';
+import Quill from 'quill';
 import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+ReactQuill.Quill = Quill;
+
+// import 'react-quill/dist/quill.snow.css';
 
 // Enhanced TextEditor Component
 export const TextEditor = ({ value, onChange, placeholder, error, minHeight = "120px" }) => (
@@ -26,10 +29,17 @@ export const TextEditor = ({ value, onChange, placeholder, error, minHeight = "1
   </div>
 );
 
-// Enhanced TagDropdown Component
-export const TagDropdown = ({ tags, onTagToggle, isOpen, onToggle, error, availableTags }) => {
+
+export const TagDropdown = ({
+  tags = [],
+  onTagToggle,
+  isOpen,
+  onToggle,
+  error,
+  availableTags = []
+}) => {
   const dropdownRef = useRef();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -38,68 +48,91 @@ export const TagDropdown = ({ tags, onTagToggle, isOpen, onToggle, error, availa
         onToggle(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onToggle]);
 
-  const filteredTags = availableTags.filter(tag =>
-    tag.toLowerCase().includes(searchTerm.toLowerCase())
+  // Only show tags not already selected
+  const safeAvailableTags = availableTags.filter(
+    tag => tag && typeof tag.id !== "undefined" && typeof tag.name === "string"
+  );
+  const unselectedTags = safeAvailableTags.filter(
+    tag =>
+      !tags.some(t => t.id === tag.id) &&
+      tag.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="relative" ref={dropdownRef}>
+      {/* Selected tags as chips, or search if none */}
       <div
         onClick={() => onToggle(!isOpen)}
-        className={`w-full px-4 py-3 border rounded-lg cursor-pointer bg-white flex items-center justify-between min-h-[52px] transition-all ${
-          error ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300 hover:border-gray-400'
-        } ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
+        className={`w-full px-4 py-3 border rounded-lg cursor-pointer bg-white flex items-center flex-wrap min-h-[52px] transition-all ${
+          error
+            ? "border-red-500 ring-1 ring-red-500"
+            : "border-gray-300 hover:border-gray-400"
+        } ${isOpen ? "ring-2 ring-blue-500 border-blue-500" : ""}`}
+        tabIndex={0}
+        role="button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
       >
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 flex-1">
           {tags.length > 0 ? (
-            tags.map(tag => (
-              <span key={tag} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors">
-                {tag}
+            tags.map((tag) => (
+              <span
+                key={tag.id}
+                className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
+              >
+                {tag.name}
                 <button
                   type="button"
-                  onClick={e => { e.stopPropagation(); onTagToggle(tag); }}
+                  onClick={e => {
+                    e.stopPropagation();
+                    onTagToggle(tag);
+                  }}
                   className="ml-2 text-blue-600 hover:text-blue-800 focus:outline-none"
+                  aria-label={`Remove ${tag.name}`}
                 >
-                  ×
+                  <X size={14} />
                 </button>
               </span>
             ))
           ) : (
-            <span className="text-gray-500">Any tags</span>
-          )}
-        </div>
-        <div className="flex items-center space-x-1">
-          <select className="border-0 bg-transparent text-sm">
-            <option>Search</option>
-          </select>
-          <ChevronDown size={16} className={`transform transition-transform text-gray-400 ${isOpen ? 'rotate-180' : ''}`} />
-        </div>
-      </div>
-      {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-          <div className="p-3 border-b border-gray-200">
             <input
               type="text"
               placeholder="Search tags..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              onClick={e => e.stopPropagation()}
+              autoFocus
             />
-          </div>
-          {filteredTags.map(tag => (
+          )}
+        </div>
+        <ChevronDown
+          size={18}
+          className={`ml-2 text-gray-400 transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </div>
+
+      {/* Dropdown menu: only show unselected tags, filtered by searchTerm */}
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+          {unselectedTags.length === 0 && (
+            <div className="px-4 py-3 text-gray-500 text-sm">No tags found</div>
+          )}
+          {unselectedTags.map((tag) => (
             <div
-              key={tag}
+              key={tag.id}
               onClick={() => onTagToggle(tag)}
-              className={`px-4 py-3 cursor-pointer hover:bg-gray-50 flex items-center justify-between transition-colors ${
-                tags.includes(tag) ? 'bg-blue-50 text-blue-700' : ''
-              }`}
+              className="px-4 py-2 cursor-pointer hover:bg-blue-50 flex items-center justify-between transition-colors"
+              role="option"
+              tabIndex={0}
             >
-              <span className="text-sm">{tag}</span>
-              {tags.includes(tag) && <span className="text-blue-600 font-bold">✓</span>}
+              <span className="text-sm">{tag.name}</span>
             </div>
           ))}
         </div>
@@ -107,7 +140,6 @@ export const TagDropdown = ({ tags, onTagToggle, isOpen, onToggle, error, availa
     </div>
   );
 };
-
 // Enhanced FormField Component
 export const FormField = ({ 
   label, 

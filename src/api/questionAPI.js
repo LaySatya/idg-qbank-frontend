@@ -173,7 +173,7 @@ export const questionAPI = {
       });
       
       const data = await handleAPIResponse(response);
-      console.log(' Raw tags response:', data);
+      // console.log(' Raw tags response:', data);
       
       if (Array.isArray(data)) {
         const processedTags = data.map(tag => ({

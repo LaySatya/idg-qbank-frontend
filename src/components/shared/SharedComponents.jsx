@@ -3,7 +3,12 @@
 // ============================================================================
 import React, { useRef, useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import Quill from 'quill';
 import ReactQuill from 'react-quill';
+
+
+ReactQuill.Quill = Quill;
+
 import 'react-quill/dist/quill.snow.css';
 
 // Enhanced TextEditor Component

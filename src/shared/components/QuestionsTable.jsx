@@ -12,7 +12,11 @@ import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import Quill from 'quill';
 import ReactQuill from 'react-quill';
+
+ReactQuill.Quill = Quill;
+
 import 'react-quill/dist/quill.snow.css';
  import QuestionPreviewModal from './QuestionPreviewModal';
 import QuestionHistoryView from './QuestionHistoryModal';
@@ -20,7 +24,8 @@ import ReactModal from 'react-modal';
 // import QuestionPreviewFilter from './preview/QuestionPreviewFilter';
 import QuestionCommentsModal from './preview/comments/QuestionCommentsModal';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
+import CreateMultipleChoiceQuestion from '../../features/questions/components/forms/CreateMultipleChoiceQuestion';
+import CreateTrueFalseQuestion from '../../features/questions/components/forms/CreateTrueFalseQuestion';
 // Simplified Tag Management Modal Component
 const TagManagementModal = ({ 
   isOpen, 
@@ -234,10 +239,15 @@ const QuestionsTable = ({
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [pendingSaveQuestionId, setPendingSaveQuestionId] = useState(null);
   const [pendingSaveTitle, setPendingSaveTitle] = useState('');
+  //edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editModalQuestion, setEditModalQuestion] = useState(null);
+  const [editModalType, setEditModalType] = useState(null);
   const [editModalName, setEditModalName] = useState('');
   const [editModalText, setEditModalText] = useState('');
+  
+
+ 
   
   // Tag management modal state
   const [tagModalOpen, setTagModalOpen] = useState(false);
@@ -284,7 +294,11 @@ useEffect(() => {
 }, []);
 
 
-
+const openEditModalByType = (question) => {
+  setEditModalQuestion(question);
+  setEditModalOpen(true);
+  setEditModalType(question.qtype); // or question.questionType
+};
 const openCommentsModal = (question) => {
   setCommentsQuestion(question);
   setCommentsModalOpen(true);
@@ -940,7 +954,7 @@ const handleHistory = (question) => {
                                   tabIndex="-1"
                                   onClick={(e) => {
                                     e.preventDefault();
-                                    openEditModal(question);
+                                    openEditModalByType(question);
                                     setOpenActionDropdown(null);
                                   }}
                                 >
@@ -1097,6 +1111,31 @@ const handleHistory = (question) => {
           }
         }}
       >
+              {editModalOpen && editModalQuestion && (
+          <>
+            {editModalType === 'multichoice' && (
+              <CreateMultipleChoiceQuestion
+                question={editModalQuestion}
+                onClose={() => setEditModalOpen(false)}
+                onSave={(updatedQuestion) => {
+                  setEditModalOpen(false);
+                  // Optionally update questions state here
+                }}
+              />
+            )}
+            {editModalType === 'truefalse' && (
+              <CreateTrueFalseQuestion
+                existingQuestion={editModalQuestion}
+                onClose={() => setEditModalOpen(false)}
+                onSave={(updatedQuestion) => {
+                  setEditModalOpen(false);
+                  // Optionally update questions state here
+                }}
+              />
+            )}
+            {/* Add more types as needed */}
+          </>
+        )}
         <h3 className="text-xl font-bold mb-6">Edit Question</h3>
         <form className="space-y-5">
           <div>
