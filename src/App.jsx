@@ -114,12 +114,14 @@ const handleLogin = (token, username, userid, profileimageurl) => {
           // Define default options
           className: '',
           duration: 4000,
-          style: {
-            background: '#363636',
-            color: '#fff',
+            style: {
+            background: '#fff',
+            color: '#222',
             fontWeight: '500',
             fontSize: '14px',
-            minWidth: '300px'
+            minWidth: '300px',
+            border: '1px solid #eee',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.07)'
           },
           // Default options for specific types
           success: {
