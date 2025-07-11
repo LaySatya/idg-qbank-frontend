@@ -525,9 +525,9 @@ async getTagsForMultipleQuestions(questionIds) {
   },
 
   // Get question types - Fixed URL
+  // Get question types - Fixed URL
   async getQuestionTypes() {
     try {
-      // Fixed: Use correct URL path
       const response = await fetch(`${API_BASE_URL}/questions/qtypes`, {
         method: 'GET',
         headers: getAuthHeaders()
@@ -537,21 +537,11 @@ async getTagsForMultipleQuestions(questionIds) {
       if (Array.isArray(data)) types = data;
       else if (data.qtypes && Array.isArray(data.qtypes)) types = data.qtypes;
       else if (data.data && Array.isArray(data.data)) types = data.data;
-      return types.map(type => {
-        const qtype = typeof type === 'string' ? type : (type.qtype || type.type || type.name);
-        return {
-          value: qtype,
-          label: qtype.charAt(0).toUpperCase() + qtype.slice(1).replace(/([A-Z])/g, ' $1')
-        };
-      });
+      // Return the objects as-is, so FiltersRow can use name, label, iconurl, etc.
+      return types;
     } catch (error) {
       console.error('Failed to fetch question types:', error);
-      return [
-        { value: 'multichoice', label: 'Multiple Choice' },
-        { value: 'truefalse', label: 'True/False' },
-        { value: 'essay', label: 'Essay' },
-        { value: 'shortanswer', label: 'Short Answer' }
-      ];
+      return [];
     }
   },
 // Get question preview with enhanced image support
@@ -935,73 +925,73 @@ processImageURLs(htmlContent) {
   },
 
   // Bulk delete questions
-  async bulkDeleteQuestions(questionIds) {
-    try {
-      console.log(' Bulk deleting questions:', questionIds);
+  // async bulkDeleteQuestions(questionIds) {
+  //   try {
+  //     console.log(' Bulk deleting questions:', questionIds);
       
-      const response = await fetch(`${API_BASE_URL}/questions/bulk-delete`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ questionids: questionIds })
-      });
+  //     const response = await fetch(`${API_BASE_URL}/questions/bulk-delete`, {
+  //       method: 'DELETE',
+  //       headers: getAuthHeaders(),
+  //       body: JSON.stringify({ questionids: questionIds })
+  //     });
       
-      const data = await handleAPIResponse(response);
-      console.log(' Bulk delete successful:', data);
+  //     const data = await handleAPIResponse(response);
+  //     console.log(' Bulk delete successful:', data);
       
-      return data;
-    } catch (error) {
-      console.error('Failed to bulk delete questions:', error);
-      throw error;
-    }
-  },
+  //     return data;
+  //   } catch (error) {
+  //     console.error('Failed to bulk delete questions:', error);
+  //     throw error;
+  //   }
+  // },
 
   // Export questions
-  async exportQuestions(questionIds, format = 'xml') {
-    try {
-      console.log(' Exporting questions:', { questionIds, format });
+  // async exportQuestions(questionIds, format = 'xml') {
+  //   try {
+  //     console.log(' Exporting questions:', { questionIds, format });
       
-      const response = await fetch(`${API_BASE_URL}/questions/export`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          questionids: questionIds,
-          format: format
-        })
-      });
+  //     const response = await fetch(`${API_BASE_URL}/questions/export`, {
+  //       method: 'POST',
+  //       headers: getAuthHeaders(),
+  //       body: JSON.stringify({
+  //         questionids: questionIds,
+  //         format: format
+  //       })
+  //     });
       
-      if (format === 'xml' || format === 'json') {
-        return await response.text();
-      } else {
-        return await response.blob();
-      }
-    } catch (error) {
-      console.error(' Failed to export questions:', error);
-      throw error;
-    }
-  },
+  //     if (format === 'xml' || format === 'json') {
+  //       return await response.text();
+  //     } else {
+  //       return await response.blob();
+  //     }
+  //   } catch (error) {
+  //     console.error(' Failed to export questions:', error);
+  //     throw error;
+  //   }
+  // },
 
   // Duplicate questions
-  async duplicateQuestions(questionIds) {
-    try {
-      console.log(' Duplicating questions:', questionIds);
+  // async duplicateQuestions(questionIds) {
+  //   try {
+  //     console.log(' Duplicating questions:', questionIds);
       
-      const response = await fetch(`${API_BASE_URL}/questions/duplicate`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          questionids: questionIds
-        })
-      });
+  //     const response = await fetch(`${API_BASE_URL}/questions/duplicate`, {
+  //       method: 'POST',
+  //       headers: getAuthHeaders(),
+  //       body: JSON.stringify({
+  //         questionids: questionIds
+  //       })
+  //     });
       
-      const data = await handleAPIResponse(response);
-      console.log(' Questions duplicated:', data);
+  //     const data = await handleAPIResponse(response);
+  //     console.log(' Questions duplicated:', data);
       
-      return data;
-    } catch (error) {
-      console.error(' Failed to duplicate questions:', error);
-      throw error;
-    }
-  },
+  //     return data;
+  //   } catch (error) {
+  //     console.error(' Failed to duplicate questions:', error);
+  //     throw error;
+  //   }
+  // },
 
   // Get question statistics
   async getQuestionStatistics(questionIds = null) {

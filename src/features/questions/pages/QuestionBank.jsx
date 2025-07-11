@@ -1,9 +1,9 @@
 // ============================================================================
-// src/features/questions/pages/QuestionBank.jsx - COMPLETE FIXED VERSION
+// src/features/questions/pages/QuestionBank.jsx - COMPLETELY FIXED VERSION
 // ============================================================================
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
-// CORRECTED IMPORTS - Add the missing ones back
+// CORRECTED IMPORTS
 import { useQuestionBank } from '../../../shared/hooks/useQuestionBank';
 import { useDropdowns } from '../../../shared/hooks/useDropdowns';
 import { usePagination } from '../../../shared/hooks/usePagination';
@@ -19,7 +19,6 @@ import CategoriesComponent from '../../../shared/components/CategoriesComponent'
 import PaginationControls from '../../../shared/components/PaginationControls';
 import { EDIT_COMPONENTS, BULK_EDIT_COMPONENTS } from '../../../shared/constants/questionConstants';
 import { Toaster, toast } from 'react-hot-toast';
-
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -113,9 +112,6 @@ const QuestionBank = () => {
   const fetchInProgressRef = useRef(false);
   const lastFetchParamsRef = useRef(null);
 
-  //  Use the tag filtering hook
-  const { allTags, loadingTags, tagFilter, setTagFilter } = useTagFiltering();
-  
   // State management using custom hooks
   const {
     questions,
@@ -162,12 +158,20 @@ const QuestionBank = () => {
   const [availableQuestionTypes, setAvailableQuestionTypes] = useState([]);
   const [availableCategories, setAvailableCategories] = useState([]);
 
+  const { allTags, loadingTags, tagFilter, setTagFilter } = useTagFiltering();
+  
+  //  FIX: Add debounced tag filter to prevent rapid API calls
+  const debouncedTagFilter = useDebounce(tagFilter, 500);
+
   // NEW: Question categories for the selected course
   const [questionCategories, setQuestionCategories] = useState([]);
   const [loadingQuestionCategories, setLoadingQuestionCategories] = useState(false);
 
-  // Add category question count state
-  const [categoryQuestionCount, setCategoryQuestionCount] = useState(0);
+  // Memoize after both are declared!
+  const memoizedAvailableCategories = useMemo(
+    () => questionCategories.length > 0 ? questionCategories : availableCategories,
+    [questionCategories, availableCategories]
+  );
 
   // Memoized filtered questions for better performance
   const filteredQuestions = useMemo(() => {
@@ -179,6 +183,15 @@ const QuestionBank = () => {
       q.questionText?.toLowerCase().includes(query)
     );
   }, [questions, debouncedSearchQuery]);
+
+  const [categoryCountMap, setCategoryCountMap] = useState({});
+
+  // ============================================================================
+  //  FIX: Use refs for function dependencies to prevent recreated functions
+  // ============================================================================
+  
+  const fetchQuestionCategoriesRef = useRef();
+  const fetchCategoryCountsRef = useRef();
 
   // ============================================================================
   // FETCH QUESTION CATEGORIES FOR COURSE
@@ -192,7 +205,7 @@ const QuestionBank = () => {
 
     try {
       setLoadingQuestionCategories(true);
-      console.log(' Fetching question categories for course:', courseId);
+      console.log('📂 Fetching question categories for course:', courseId);
       
       const categoriesUrl = `${API_BASE_URL}/questions/question_categories?courseid=${courseId}`;
       const response = await fetch(categoriesUrl, {
@@ -209,7 +222,7 @@ const QuestionBank = () => {
       }
 
       const categoriesData = await response.json();
-      console.log(' Question categories response:', categoriesData);
+      console.log('📂 Question categories response:', categoriesData);
       
       let categories = [];
       if (Array.isArray(categoriesData)) {
@@ -234,7 +247,7 @@ const QuestionBank = () => {
       console.log(' Question categories loaded:', normalizedCategories.length);
       
     } catch (error) {
-      console.error('Error fetching question categories:', error);
+      console.error(' Error fetching question categories:', error);
       setQuestionCategories([]);
     } finally {
       setLoadingQuestionCategories(false);
@@ -242,165 +255,237 @@ const QuestionBank = () => {
   }, []);
 
   // ============================================================================
-  //  CLEAN FETCH FUNCTION
+  // FETCH CATEGORY COUNTS
+  // ============================================================================
+
+  const fetchCategoryCounts = useCallback(async () => {
+    try {
+      const courseId = filters.courseId;
+      if (!courseId) return;
+      
+      console.log(' Fetching category counts from API...');
+      const url = `${API_BASE_URL}/questions/question_categories?courseid=${courseId}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch category counts: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const categories = data.categories || data;
+      
+      if (!Array.isArray(categories)) {
+        console.error(' Invalid categories response format:', data);
+        return;
+      }
+      
+      // Create a map of category IDs to question counts
+      const newCategoryCountMap = {};
+      categories.forEach(cat => {
+        if (cat.id && typeof cat.questioncount === 'number') {
+          newCategoryCountMap[cat.id] = cat.questioncount;
+        }
+      });
+      
+      console.log(' Category counts loaded:', newCategoryCountMap);
+      
+      //  FIX: Only update if different to prevent unnecessary re-renders
+      setCategoryCountMap(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(newCategoryCountMap)) {
+          console.log(' Category counts unchanged, skipping update');
+          return prev;
+        }
+        return newCategoryCountMap;
+      });
+      
+    } catch (error) {
+      console.error(' Error fetching category counts:', error);
+    }
+  }, [filters.courseId]);
+
+  //  FIX: Assign functions to refs to prevent dependency issues
+  fetchQuestionCategoriesRef.current = fetchQuestionCategoriesForCourse;
+  fetchCategoryCountsRef.current = fetchCategoryCounts;
+
+  // ============================================================================
+  //  FIXED FETCH FUNCTION WITH PROPER DEPENDENCIES
   // ============================================================================
   
-const fetchQuestions = useCallback(async (
-  currentFilters = filters,
-  page = currentPage,
-  perPage = questionsPerPage
-) => {
-  const requestKey = JSON.stringify({
-    courseId: currentFilters.courseId,
-    page,
-    perPage,
-    filters: {
+  const fetchQuestions = useCallback(async (
+    currentFilters = filters,
+    page = currentPage,
+    perPage = questionsPerPage
+  ) => {
+    //  FIX: Better request deduplication with more stable key
+    const requestKey = JSON.stringify({
+      courseId: currentFilters.courseId,
       category: currentFilters.category,
       status: currentFilters.status,
       type: currentFilters.type,
-      search: currentFilters.searchQuery,
-      tags: tagFilter
-    }
-  });
-
-  if (fetchInProgressRef.current && lastFetchParamsRef.current === requestKey) {
-    console.log(' DUPLICATE CALL PREVENTED:', { page, currentFilters });
-    return;
-  }
-
-  fetchInProgressRef.current = true;
-  lastFetchParamsRef.current = requestKey;
-
-  try {
-    setLoading(true);
-    setError(null);
-
-    console.log(' Fetching questions with filters:', {
-      ...currentFilters,
-      tagFilter,
+      searchQuery: currentFilters.searchQuery,
+      tagFilter: debouncedTagFilter, //  Use debounced version
       page,
       perPage
     });
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setError('Authentication required. Please log in.');
+    //  FIX: Enhanced duplicate prevention
+    if (fetchInProgressRef.current) {
+      console.log(' Request blocked - fetch already in progress');
       return;
     }
 
-    if (!currentFilters.courseId || currentFilters.courseId === 'All') {
+    if (lastFetchParamsRef.current === requestKey) {
+      console.log(' Request blocked - duplicate detected');
+      return;
+    }
+
+    fetchInProgressRef.current = true;
+    lastFetchParamsRef.current = requestKey;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log(' Fetching questions with filters:', {
+        ...currentFilters,
+        tagFilter: debouncedTagFilter,
+        page,
+        perPage
+      });
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Authentication required. Please log in.');
+        return;
+      }
+
+      if (!currentFilters.courseId || currentFilters.courseId === 'All') {
+        setQuestions([]);
+        setTotalQuestions(0);
+        return;
+      }
+
+      const hasTagFilter = Array.isArray(debouncedTagFilter) && debouncedTagFilter.length > 0;
+
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('per_page', perPage.toString());
+
+      // CRITICAL FIX: Proper tag filtering using your API
+      if (hasTagFilter) {
+        console.log(' Adding tag filters to API call:', debouncedTagFilter);
+        debouncedTagFilter.forEach(tagId => {
+          params.append('tagids[]', tagId.toString());
+        });
+      }
+
+      // Add other filters
+      if (currentFilters.category !== 'All') params.append('categoryid', currentFilters.category);
+      if (currentFilters.status !== 'All') params.append('status', currentFilters.status);
+      if (currentFilters.type !== 'All') params.append('qtype', currentFilters.type);
+      if (currentFilters.searchQuery) params.append('searchterm', currentFilters.searchQuery);
+
+      const url = `${API_BASE_URL}/questions/filters?${params}`;
+      console.log(' Final API URL:', url);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log(' API Response:', {
+        total: result.total,
+        questions: result.questions?.length,
+        current_page: result.current_page
+      });
+
+      // Transform questions from API response
+      const transformedQuestions = (result.questions || []).map(q => ({
+        id: q.id,
+        title: q.name || `Question ${q.id}`,
+        questionText: q.questiontext || '',
+        qtype: q.qtype || 'multichoice',
+        status: q.status || 'ready',
+        version: `v${q.version || 1}`,
+        categoryId: q.category,
+        contextid: q.contextid,
+        createdBy: {
+          name: q.createdbyuser ?
+            `${q.createdbyuser.firstname} ${q.createdbyuser.lastname}`.trim() : 'Unknown',
+          date: q.timecreated ? new Date(q.timecreated * 1000).toLocaleDateString() : ''
+        },
+        modifiedBy: {
+          name: q.modifiedbyuser ?
+            `${q.modifiedbyuser.firstname} ${q.modifiedbyuser.lastname}`.trim() : 'Unknown',
+          date: q.timemodified ? new Date(q.timemodified * 1000).toLocaleDateString() : ''
+        },
+        choices: (q.answers || []).map(answer => ({
+          id: answer.id,
+          text: answer.answer,
+          isCorrect: answer.fraction > 0,
+          feedback: answer.feedback || ''
+        })),
+        tags: q.tags || [],
+        usage: (q.usages || []).length,
+        lastUsed: q.usages && q.usages.length > 0 ? 'Recently' : 'Never',
+        comments: 0,
+        stamp: q.stamp,
+        versionid: q.versionid,
+        questionbankentryid: q.questionbankentryid,
+        idnumber: q.idnumber || q.id
+      }));
+
+      setQuestions(transformedQuestions);
+      setTotalQuestions(result.total || transformedQuestions.length);
+      setCurrentPage(result.current_page || page);
+
+      console.log(' Questions loaded successfully:', {
+        count: transformedQuestions.length,
+        total: result.total,
+        currentPage: result.current_page
+      });
+
+    } catch (error) {
+      console.error(' Fetch error:', error);
+      setError(error.message);
       setQuestions([]);
       setTotalQuestions(0);
-      return;
+    } finally {
+      setLoading(false);
+      fetchInProgressRef.current = false;
+      
+      // Clear request key after delay to allow new requests
+      setTimeout(() => {
+        if (lastFetchParamsRef.current === requestKey) {
+          lastFetchParamsRef.current = null;
+        }
+      }, 1000);
     }
-
-    const hasTagFilter = Array.isArray(tagFilter) && tagFilter.length > 0;
-
-    const params = new URLSearchParams();
-    params.append('page', page.toString());
-    params.append('per_page', perPage.toString());
-
-    //  CRITICAL FIX: Proper tag filtering using your API
-    if (hasTagFilter) {
-      console.log(' Adding tag filters to API call:', tagFilter);
-      // Use the exact format from your API documentation: tagids[]
-      tagFilter.forEach(tagId => {
-        params.append('tagids[]', tagId.toString());
-      });
-    }
-
-    // Add other filters
-    if (currentFilters.category !== 'All') params.append('categoryid', currentFilters.category);
-    if (currentFilters.status !== 'All') params.append('status', currentFilters.status);
-    if (currentFilters.type !== 'All') params.append('qtype', currentFilters.type);
-    if (currentFilters.searchQuery) params.append('searchterm', currentFilters.searchQuery);
-
-    const url = `${API_BASE_URL}/questions/filters?${params}`;
-    console.log(' Final API URL:', url);
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    console.log(' API Response:', {
-      total: result.total,
-      questions: result.questions?.length,
-      filtered_tagids: result.filtered_tagids,
-      current_page: result.current_page
-    });
-
-    // Transform questions from API response
-    const transformedQuestions = (result.questions || []).map(q => ({
-      id: q.id,
-      title: q.name || `Question ${q.id}`,
-      questionText: q.questiontext || '',
-      qtype: q.qtype || 'multichoice',
-      status: q.status || 'ready',
-      version: `v${q.version || 1}`,
-      categoryId: q.category,
-      contextid: q.contextid,
-      createdBy: {
-        name: q.createdbyuser ?
-          `${q.createdbyuser.firstname} ${q.createdbyuser.lastname}`.trim() : 'Unknown',
-        date: q.timecreated ? new Date(q.timecreated * 1000).toLocaleDateString() : ''
-      },
-      modifiedBy: {
-        name: q.modifiedbyuser ?
-          `${q.modifiedbyuser.firstname} ${q.modifiedbyuser.lastname}`.trim() : 'Unknown',
-        date: q.timemodified ? new Date(q.timemodified * 1000).toLocaleDateString() : ''
-      },
-      choices: (q.answers || []).map(answer => ({
-        id: answer.id,
-        text: answer.answer,
-        isCorrect: answer.fraction > 0,
-        feedback: answer.feedback || ''
-      })),
-      tags: q.tags || [], // API already returns filtered tags
-      usage: (q.usages || []).length,
-      lastUsed: q.usages && q.usages.length > 0 ? 'Recently' : 'Never',
-      comments: 0,
-      stamp: q.stamp,
-      versionid: q.versionid,
-      questionbankentryid: q.questionbankentryid,
-      idnumber: q.idnumber || q.id
-    }));
-
-    //  IMPORTANT: Use API results directly - don't filter again on client side
-    // The API already handles tag filtering, so we trust its results
-    setQuestions(transformedQuestions);
-    setTotalQuestions(result.total || transformedQuestions.length);
-    setCurrentPage(result.current_page || page);
-
-    console.log(' Questions loaded successfully:', {
-      count: transformedQuestions.length,
-      total: result.total,
-      hasTagFilter,
-      currentPage: result.current_page,
-      filtered_tagids: result.filtered_tagids
-    });
-
-  } catch (error) {
-    console.error(' Fetch error:', error);
-    setError(error.message);
-    setQuestions([]);
-    setTotalQuestions(0);
-  } finally {
-    setLoading(false);
-    fetchInProgressRef.current = false;
-  }
-}, [tagFilter]);
-
-
+  }, [
+    //  FIX: Only include truly stable dependencies
+    filters.courseId,
+    filters.category,
+    filters.status,
+    filters.type,
+    debouncedTagFilter //  Use debounced version
+  ]);
 
   // Load static data with caching
   const loadStaticData = useCallback(async () => {
@@ -412,7 +497,7 @@ const fetchQuestions = useCallback(async (
       setAvailableQuestionTypes(types);
       setAvailableCategories(categories);
     } catch (error) {
-      console.error('Failed to load static data:', error);
+      console.error(' Failed to load static data:', error);
     }
   }, []);
 
@@ -426,8 +511,14 @@ const fetchQuestions = useCallback(async (
     setCurrentView(view);
   }, []);
 
-  // Enhanced setFilters with proper logging
+  //  FIX: Enhanced setFilters with stability check
   const setFiltersWithLogging = useCallback((newFilters) => {
+    //  FIX: Prevent unnecessary updates
+    if (JSON.stringify(filters) === JSON.stringify(newFilters)) {
+      console.log(' Filters unchanged, skipping update');
+      return;
+    }
+
     console.log(' Filters updated:', { old: filters, new: newFilters });
     setFilters(newFilters);
     
@@ -438,12 +529,12 @@ const fetchQuestions = useCallback(async (
         localStorage.setItem('CourseName', newFilters.courseName);
       }
     } else {
-      localStorage.removeItem('userPreferredCourseId');
-      localStorage.removeItem('userPreferredCourseName');
+      localStorage.removeItem('CourseID');
+      localStorage.removeItem('CourseName');
     }
   }, [filters]);
 
-  // Enhanced course selection handler with question categories
+  // Enhanced course selection handler
   const handleCourseSelect = useCallback(async (course) => {
     console.log(' Course selected:', course);
   
@@ -458,9 +549,9 @@ const fetchQuestions = useCallback(async (
     setSelectedCourse({ id: courseId, name: courseName });
   
     // 1. Fetch categories for this course
-    await fetchQuestionCategoriesForCourse(courseId);
+    await fetchQuestionCategoriesRef.current(courseId);
   
-    // 2. Now set filters with the correct categoryIds
+    // 2. Set filters
     setFiltersWithLogging({
       category: 'All',
       status: 'All',
@@ -474,14 +565,13 @@ const fetchQuestions = useCallback(async (
     setCurrentPage(1);
   
     toast.success(`Filtering questions for: ${courseName}`);
-  }, [setFiltersWithLogging, fetchQuestionCategoriesForCourse, setTagFilter]);
+  }, [setFiltersWithLogging, setTagFilter]);
 
   // Status change handlers
   const handleStatusChange = useCallback(async (questionId, newStatus) => {
     const prevQuestions = [...questions];
     
     try {
-      // Optimistic update
       setQuestions(prev =>
         prev.map(q =>
           q.id === questionId ? { ...q, status: newStatus } : q
@@ -560,98 +650,93 @@ const fetchQuestions = useCallback(async (
   }, [questions, username]);
 
   // ============================================================================
-  // FIXED EFFECTS
+  //  FIXED EFFECTS - SPLIT INTO SEPARATE CONCERNS
   // ============================================================================
   
-  // Main effect to fetch questions when filters change
+  // Effect 1: Filter changes (NOT including pagination)
   useEffect(() => {
     if (currentView !== 'questions') return;
+    
+    console.log(' Filters changed, fetching questions...');
     
     const currentFilters = {
       ...filters,
       searchQuery: debouncedSearchQuery
     };
     
-    // Reset to page 1 when filters change
-    const shouldResetPage = (
-      debouncedSearchQuery !== '' || 
-      filters.status !== 'All' || 
-      filters.type !== 'All' ||
-      (Array.isArray(tagFilter) && tagFilter.length > 0)
-    ) && currentPage !== 1;
-
-    if (shouldResetPage) {
-      console.log('Resetting to page 1 due to filter change');
-      setCurrentPage(1);
-      fetchQuestions(currentFilters, 1, questionsPerPage);
-    } else {
-      fetchQuestions(currentFilters, currentPage, questionsPerPage);
-    }
+    // Always reset to page 1 when filters change
+    setCurrentPage(1);
+    fetchQuestions(currentFilters, 1, questionsPerPage);
+    
   }, [
     filters.courseId,
     filters.category, 
     filters.status, 
     filters.type,
     debouncedSearchQuery,
-    tagFilter, //  This will trigger when tags change
+    debouncedTagFilter, //  Use debounced version
     currentView,
-    currentPage,
     questionsPerPage,
     fetchQuestions
   ]);
 
-  // Load static data on mount
+  // Effect 2: Pagination only (when page > 1)
+  useEffect(() => {
+    if (currentView !== 'questions') return;
+    if (currentPage === 1) return; // Skip page 1 (handled by filter effect)
+    
+    console.log(' Page changed, fetching questions...');
+    
+    const currentFilters = {
+      ...filters,
+      searchQuery: debouncedSearchQuery
+    };
+    
+    fetchQuestions(currentFilters, currentPage, questionsPerPage);
+    
+  }, [currentPage]); //  ONLY currentPage dependency
+
+  //  Effect 3: Load static data on mount
   useEffect(() => {
     loadStaticData();
   }, [loadStaticData]);
 
-  // Load question categories when course changes
+  //  Effect 4: Course changes - load categories and counts
   useEffect(() => {
     if (filters.courseId && filters.courseId !== 'All') {
-      fetchQuestionCategoriesForCourse(filters.courseId);
+      console.log('🏢 Course changed, fetching categories and counts...');
+      
+      // Use refs to avoid function dependency issues
+      fetchQuestionCategoriesRef.current(filters.courseId)
+        .then(() => {
+          return fetchCategoryCountsRef.current();
+        })
+        .catch(error => {
+          console.error(' Failed to fetch categories/counts:', error);
+        });
     } else {
       setQuestionCategories([]);
+      setCategoryCountMap({});
     }
-  }, [filters.courseId, fetchQuestionCategoriesForCourse]);
+  }, [filters.courseId]); //  ONLY courseId dependency
 
-const [availableCourses, setAvailableCourses] = useState([]);
-
-useEffect(() => {
-  // Temporarily disable courses loading since the API endpoints are not available
-  console.log('Courses loading disabled - no available endpoints');
-  setAvailableCourses([]);
-}, []);
-
-
-  useEffect(() => {
+  //  Calculate category question count with useMemo instead of useEffect
+  const categoryQuestionCount = useMemo(() => {
     if (!questions || questions.length === 0) {
-      setCategoryQuestionCount(0);
-      return;
+      return 0;
     }
 
-    // Calculate count based on current filter
-    let count = 0;
-    
     if (filters.category === 'All') {
-      // If "All" is selected, use total questions
-      count = totalQuestions || questions.length;
-    } else {
-      // Count questions that match the selected category
-      count = questions.filter(q => {
-        const questionCategoryId = String(q.categoryId || q.categoryid || q.category || '');
-        const selectedCategoryId = String(filters.category || '');
-        return questionCategoryId === selectedCategoryId;
-      }).length;
-      
-      // If no questions match in current page, use totalQuestions as it might be server-filtered
-      if (count === 0 && totalQuestions > 0) {
-        count = totalQuestions;
-      }
+      return totalQuestions || questions.length;
     }
+
+    const count = questions.filter(q => {
+      const questionCategoryId = String(q.categoryId || q.categoryid || q.category || '');
+      const selectedCategoryId = String(filters.category || '');
+      return questionCategoryId === selectedCategoryId;
+    }).length;
     
-    console.log(`Category question count: ${count} (category: ${filters.category}, total: ${totalQuestions})`);
-    setCategoryQuestionCount(count);
-    
+    return count === 0 && totalQuestions > 0 ? totalQuestions : count;
   }, [questions, filters.category, totalQuestions]);
 
   // ============================================================================
@@ -695,47 +780,6 @@ useEffect(() => {
   // ============================================================================
   // RENDER METHODS
   // ============================================================================
-
-  const renderPaginationSection = () => {
-    if (loading || questions.length === 0 || totalQuestions === 0) {
-      return null;
-    }
-
-    return (
-      <div className="mt-6">
-        <PaginationControls
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={totalQuestions}
-          itemsPerPage={questionsPerPage}
-          onPageChange={(page) => {
-            console.log(`📄 Pagination: Changing to page ${page}`);
-            
-            // CRITICAL: Prevent multiple calls
-            if (fetchInProgressRef.current) {
-              console.log('📄 Pagination blocked - fetch in progress');
-              return;
-            }
-            
-            setCurrentPage(page);
-          }}
-          onItemsPerPageChange={(newPerPage) => {
-            console.log(`📄 Items per page: Changing to ${newPerPage}`);
-            
-            if (fetchInProgressRef.current) {
-              console.log('📄 Items per page change blocked - fetch in progress');
-              return;
-            }
-            
-            setQuestionsPerPage(newPerPage);
-            setCurrentPage(1);
-          }}
-          isLoading={loading}
-          className="border-t bg-gray-50"
-        />
-      </div>
-    );
-  };
 
   const renderCurrentView = () => {
     switch (currentView) {
@@ -785,14 +829,15 @@ useEffect(() => {
               setTagFilter={setTagFilter}
               allTags={allTags}
               availableQuestionTypes={availableQuestionTypes}
-              availableCategories={questionCategories.length > 0 ? questionCategories : availableCategories}
-              availableCourses={availableCourses}
+              availableCategories={memoizedAvailableCategories}
+              availableCourses={[]}
               loadingQuestionTypes={loading}
               loadingQuestionTags={loadingTags}
               loadingCategories={loadingQuestionCategories}
               questions={questions}
               allQuestions={questions}
               categoryQuestionCount={categoryQuestionCount}
+              categoryCountMap={categoryCountMap} 
             />
 
             {/* Course Selection Guard */}
@@ -813,9 +858,9 @@ useEffect(() => {
                   <div className="text-center py-8">
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                     <p className="mt-2 text-gray-600">Loading questions...</p>
-                    {Array.isArray(tagFilter) && tagFilter.length > 0 && (
+                    {Array.isArray(debouncedTagFilter) && debouncedTagFilter.length > 0 && (
                       <p className="mt-1 text-sm text-blue-600">
-                        Filtering by {tagFilter.length} tag{tagFilter.length !== 1 ? 's' : ''}
+                        Filtering by {debouncedTagFilter.length} tag{debouncedTagFilter.length !== 1 ? 's' : ''}
                       </p>
                     )}
                   </div>
@@ -840,7 +885,7 @@ useEffect(() => {
                           onClick={() => setError(null)}
                           className="px-3 py-1 bg-red-200 text-red-800 rounded hover:bg-red-300"
                         >
-                           Dismiss
+                          Dismiss
                         </button>
                       </div>
                     </div>
@@ -872,41 +917,26 @@ useEffect(() => {
                 )}
 
                 {/* Questions Table */}
-              {!loading && !error && questions.length > 0 && (
-  <>
-    {/* Summary Info */}
-    {/* <div className="mb-4 p-3 bg-gray-100 rounded-lg">
-      <div className="flex justify-between items-center text-sm text-black">
-        <span>
-          Showing {questions.length} of {totalQuestions} questions
-          {filters.courseName && ` in "${filters.courseName}"`}
-        </span>
-        {Array.isArray(tagFilter) && tagFilter.length > 0 && (
-          <span className="font-medium">
-             Filtered by {tagFilter.length} tag{tagFilter.length !== 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
-    </div> */}
-
-    {/* Pagination above table */}
-    <PaginationControls
-      currentPage={currentPage}
-      totalPages={totalPages}
-      totalItems={totalQuestions}
-      itemsPerPage={questionsPerPage}
-      onPageChange={(page) => {
-        if (fetchInProgressRef.current) return;
-        setCurrentPage(page);
-      }}
-      onItemsPerPageChange={(newPerPage) => {
-        if (fetchInProgressRef.current) return;
-        setQuestionsPerPage(newPerPage);
-        setCurrentPage(1);
-      }}
-      isLoading={loading}
-      className="border-t bg-gray-50"
-    />
+                {!loading && !error && questions.length > 0 && (
+                  <>
+                    {/* Pagination above table */}
+                    <PaginationControls
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={totalQuestions}
+                      itemsPerPage={questionsPerPage}
+                      onPageChange={(page) => {
+                        if (fetchInProgressRef.current) return;
+                        setCurrentPage(page);
+                      }}
+                      onItemsPerPageChange={(newPerPage) => {
+                        if (fetchInProgressRef.current) return;
+                        setQuestionsPerPage(newPerPage);
+                        setCurrentPage(1);
+                      }}
+                      isLoading={loading}
+                      className="border-t bg-gray-50"
+                    />
 
                     <QuestionsTable
                       questions={filteredQuestions}
@@ -939,22 +969,22 @@ useEffect(() => {
 
                     {/* Pagination below table */}
                     <PaginationControls
-      currentPage={currentPage}
-      totalPages={totalPages}
-      totalItems={totalQuestions}
-      itemsPerPage={questionsPerPage}
-      onPageChange={(page) => {
-        if (fetchInProgressRef.current) return;
-        setCurrentPage(page);
-      }}
-      onItemsPerPageChange={(newPerPage) => {
-        if (fetchInProgressRef.current) return;
-        setQuestionsPerPage(newPerPage);
-        setCurrentPage(1);
-      }}
-      isLoading={loading}
-      className="border-t bg-gray-50"
-    />
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={totalQuestions}
+                      itemsPerPage={questionsPerPage}
+                      onPageChange={(page) => {
+                        if (fetchInProgressRef.current) return;
+                        setCurrentPage(page);
+                      }}
+                      onItemsPerPageChange={(newPerPage) => {
+                        if (fetchInProgressRef.current) return;
+                        setQuestionsPerPage(newPerPage);
+                        setCurrentPage(1);
+                      }}
+                      isLoading={loading}
+                      className="border-t bg-gray-50"
+                    />
                   </>
                 )}
               </>
@@ -969,7 +999,7 @@ useEffect(() => {
   // ============================================================================
 
   return (
-    <div className="max-w-full overflow-hidden">
+    <div className="max-w-full ">
       {/* Performance indicator */}
       {loading && (
         <div className="fixed top-0 left-0 w-full h-1 bg-blue-200 z-50">
@@ -1012,30 +1042,6 @@ useEffect(() => {
         {renderCurrentView()}
       </main>
 
-      {/* Toast notifications */}
-      {/* <Toaster
-        position="top-center"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-          success: {
-            duration: 2000,
-            style: {
-              background: '#10B981',
-            },
-          },
-          error: {
-            duration: 4000,
-            style: {
-              background: '#EF4444',
-            },
-          },
-        }}
-      /> */}
-
       {/* Modals */}
       {currentView === 'questions' && (
         <Modals
@@ -1068,8 +1074,6 @@ useEffect(() => {
           availableQuestionTypes={availableQuestionTypes}
         />
       )}
-
-    
     </div>
   );
 };

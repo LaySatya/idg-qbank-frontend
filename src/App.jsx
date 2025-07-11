@@ -101,8 +101,8 @@ const handleLogin = (token, username, userid, profileimageurl) => {
     );
   }
 
-  return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+ return (
+    <div className="flex h-screen bg-gray-50">
       {/* ADD TOASTER COMPONENT HERE ↓ */}
       <Toaster
         position="top-right"
@@ -111,10 +111,9 @@ const handleLogin = (token, username, userid, profileimageurl) => {
         containerClassName=""
         containerStyle={{}}
         toastOptions={{
-          // Define default options
           className: '',
           duration: 4000,
-            style: {
+          style: {
             background: '#fff',
             color: '#222',
             fontWeight: '500',
@@ -123,7 +122,6 @@ const handleLogin = (token, username, userid, profileimageurl) => {
             border: '1px solid #eee',
             boxShadow: '0 2px 8px rgba(0,0,0,0.07)'
           },
-          // Default options for specific types
           success: {
             duration: 4000,
             theme: {
@@ -142,7 +140,7 @@ const handleLogin = (token, username, userid, profileimageurl) => {
       />
       
       {isAuthenticated && <Sidebar collapsed={sidebarCollapsed} />}
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-col flex-1">
         {isAuthenticated && (
           <Header 
             toggleSidebar={() => setSidebarCollapsed(prev => !prev)} 
@@ -151,7 +149,7 @@ const handleLogin = (token, username, userid, profileimageurl) => {
             profileImageUrl={currentUser?.profileimageurl}
           />
         )}
-        <main className=" flex-1/2 overflow-auto p-4">
+        <main className="flex-1 overflow-auto p-4">
           <Routes>
             {/* Login Route */}
             <Route

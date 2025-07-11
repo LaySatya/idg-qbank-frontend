@@ -247,7 +247,10 @@ const QuestionsTable = ({
   const [editModalText, setEditModalText] = useState('');
   
 
- 
+ //preview  direct to real moodle
+ const [showMoodlePreview, setShowMoodlePreview] = useState(false);
+const [moodlePreviewUrl, setMoodlePreviewUrl] = useState('');
+const [loadingMoodlePreview, setLoadingMoodlePreview] = useState(false);
   
   // Tag management modal state
   const [tagModalOpen, setTagModalOpen] = useState(false);
@@ -534,6 +537,32 @@ const renderTags = (question) => {
     }
     return <span className="icon text-gray-400">?</span>;
   };
+///real moodle preview directly 
+const handlePreviewMoodle = async (question) => {
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_BASE_URL}/questions/preview_moodle_question?questionid=${question.id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+    const data = await res.json();
+    if (data.status && data.previewurl) {
+      //  Option 1: New tab (best for user experience)
+      // window.open(data.previewurl, '_blank');
+
+      // OR
+      window.open(data.previewurl, '_blank', 'noopener,noreferrer');
+      //  Option 2: Same tab (replaces your app)
+      //  window.location.href = data.previewurl;
+    } else {
+      toast.error(data.message || 'Failed to get preview URL');
+    }
+  } catch (error) {
+    toast.error('Failed to fetch Moodle preview');
+  }
+};
 
   // Open modal when clicking question name
   const openEditModal = (question) => {
@@ -714,11 +743,61 @@ const handleHistory = (question) => {
           // You can add API call here to revert to the selected version
         }}
       />
+
+      
     );
   }
 
   return (
     <>
+        <ReactModal
+      isOpen={showMoodlePreview}
+      onRequestClose={() => {
+        setShowMoodlePreview(false);
+        setMoodlePreviewUrl('');
+      }}
+      contentLabel="Preview in Real Moodle"
+      style={{
+        overlay: { zIndex: 1000 },
+        content: {
+          maxWidth: 1200,
+          minHeight: 600,
+          margin: 'auto',
+          top: '10%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          padding: '0',
+          borderRadius: '16px',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+          overflow: 'hidden'
+        }
+      }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ padding: 16, borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 className="text-lg font-bold">Preview in Real Moodle</h3>
+          <button onClick={() => setShowMoodlePreview(false)} className="text-gray-500 hover:text-gray-800 text-xl">&times;</button>
+        </div>
+        <div style={{ flex: 1, minHeight: 500, background: '#f9f9f9' }}>
+          {loadingMoodlePreview ? (
+            <div className="flex items-center justify-center h-full">
+              <span>Loading preview...</span>
+            </div>
+          ) : moodlePreviewUrl ? (
+            <iframe
+              src={moodlePreviewUrl}
+              title="Moodle Preview"
+              style={{ width: '100%', height: '100%', border: 'none' }}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <span className="text-red-500">Failed to load preview.</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </ReactModal>
       <div
         // className="overflow-x-auto"
         // style={{ minHeight: '300px', height: 'unset', maxHeight: 'unset', overflowY: 'auto' }}
@@ -888,7 +967,7 @@ const handleHistory = (question) => {
                       </span>
                     </div>
                   </td>
-                                    <td className="px-3 py-4 whitespace-nowrap">
+                   <td className="px-3 py-4 whitespace-nowrap">
                     <button
                       className="text-blue-600 hover:text-blue-900 underline"
                       onClick={() => openCommentsModal(question)}
@@ -947,6 +1026,21 @@ const handleHistory = (question) => {
                             </a>
                             {openActionDropdown === question.id && (
                               <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+                                                                <a
+                                  href="#"
+                                  className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors"
+                                  role="menuitem"
+                                  tabIndex="-1"
+                                  onClick={async (e) => {
+                                    e.preventDefault();
+                                    await handlePreviewMoodle(question);
+                                    setOpenActionDropdown(null);
+                                  }}
+                                >
+                                  <i className="fa fa-eye w-4 text-center mr-2 text-blue-500"></i>
+                                  <span>Preview Moodle</span>
+                                </a>
+                                
                                 <a
                                   href="#"
                                   className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"

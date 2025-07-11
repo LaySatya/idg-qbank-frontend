@@ -231,6 +231,7 @@ const CategoriesComponent = ({
           summary: course.summary || '',
           visible: course.visible !== 0,
           startdate: course.startdate,
+          questioncount: course.questioncount || 0,
           enddate: course.enddate,
           enrolledusers: course.enrolledusers || 0,
           progress: course.progress || 0,

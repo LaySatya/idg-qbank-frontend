@@ -457,52 +457,58 @@ export const validateCategoryTree = (tree) => {
  * @param {Array} questions - Flat array of questions (each with categoryid)
  * @returns {Array} The same tree, with .questionCount on each node
  */
-export function addQuestionCountToCategoryTree(tree, questions) {
-  // Build a map: categoryId -> count
-  const countMap = {};
-  const questionCatIds = new Set();
-  questions.forEach(q => {
-    // Support multiple possible field names for category ID
-    const catId = String(q.categoryid || q.categoryId || q.category).trim();
-    if (!catId || catId === 'undefined' || catId === 'null') return;
-    questionCatIds.add(catId);
-    countMap[catId] = (countMap[catId] || 0) + 1;
-    console.log('[QCOUNT] Question:', q.id, 'categoryid:', q.categoryid, 'categoryId:', q.categoryId, 'category:', q.category, '-> used:', catId);
-  });
-
-  // Collect all unique category node IDs from the tree
-  const treeCatIds = new Set();
-  function collectNodeIds(nodes) {
+export function addQuestionCountToCategoryTree(tree, questions, categoryCountMap = {}) {
+  // First apply API counts from categoryCountMap
+  function applyApiCounts(nodes) {
     if (!Array.isArray(nodes)) return;
+    
     nodes.forEach(node => {
-      const nodeId = String(node.id).trim();
-      treeCatIds.add(nodeId);
-      if (node.children) collectNodeIds(node.children);
+      if (node && node.id) {
+        // Prioritize counts from categoryCountMap (from separate API call)
+        if (categoryCountMap && categoryCountMap[node.id]) {
+          node.questioncount = categoryCountMap[node.id];
+          node.totalQuestionCount = categoryCountMap[node.id];
+        }
+        
+        if (node.children) applyApiCounts(node.children);
+      }
     });
   }
-  collectNodeIds(tree);
-
-  // Print all unique IDs for debugging
-  console.log('[QCOUNT] Unique question category IDs:', Array.from(questionCatIds));
-  console.log('[QCOUNT] Unique tree node IDs:', Array.from(treeCatIds));
-
-  // Find mismatches
-  const questionIdsNotInTree = Array.from(questionCatIds).filter(id => !treeCatIds.has(id));
-  const treeIdsNotInQuestions = Array.from(treeCatIds).filter(id => !questionCatIds.has(id));
-  if (questionIdsNotInTree.length > 0) {
-    console.warn('[QCOUNT] Category IDs in questions but not in tree:', questionIdsNotInTree);
+  
+  applyApiCounts(tree);
+  
+  // Calculate counts for currently visible questions (if needed)
+  const currentCountMap = {};
+  
+  if (Array.isArray(questions) && questions.length > 0) {
+    questions.forEach(q => {
+      const catId = String(q.categoryid || q.categoryId || q.category).trim();
+      if (!catId || catId === 'undefined' || catId === 'null') return;
+      currentCountMap[catId] = (currentCountMap[catId] || 0) + 1;
+    });
   }
-  if (treeIdsNotInQuestions.length > 0) {
-    console.info('[QCOUNT] Category IDs in tree but not in any question:', treeIdsNotInQuestions);
-  }
-
-  // Recursively add questionCount to each node
+  
+  console.log('[QCOUNT] Current page question counts:', currentCountMap);
+  console.log('[QCOUNT] API category counts:', categoryCountMap);
+  
+  // Add visible count to each node
   function traverse(nodes) {
     if (!Array.isArray(nodes)) return;
     nodes.forEach(node => {
       const nodeId = String(node.id).trim();
-      node.questionCount = countMap[nodeId] || 0;
-      console.log('[QCOUNT] Category node:', nodeId, 'name:', node.name, 'questionCount:', node.questionCount);
+      
+      // Add visible count (for current page)
+      node.questionCount = currentCountMap[nodeId] || 0;
+      
+      // Ensure totalQuestionCount is set from API data
+      if (!node.totalQuestionCount) {
+        node.totalQuestionCount = categoryCountMap[nodeId] || node.questioncount || 0;
+      }
+      
+      console.log('[QCOUNT] Category node:', nodeId, 'name:', node.name, 
+                  'visibleCount:', node.questionCount,
+                  'totalCount:', node.totalQuestionCount);
+                  
       if (node.children) traverse(node.children);
     });
   }
