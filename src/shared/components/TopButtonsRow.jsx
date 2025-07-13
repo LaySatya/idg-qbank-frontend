@@ -248,11 +248,11 @@ const TopButtonsRow = ({
     <div className="w-full border-2 border-white shadow-sm mb-4">
       <div className="py-3 px-5 flex flex-col justify-between md:flex-row md:items-center md:justify-between gap-4">
         {/* Navigation Dropdown */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 ">
           <label htmlFor="url_select" className="sr-only">
             Question bank tertiary navigation
           </label>
-          <select
+          {/* <select
             id="url_select"
             className="block rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium shadow-sm focus:border-sky-500 focus:ring focus:ring-sky-200 focus:ring-opacity-100 min-w-[200px] transition-colors duration-200"
             name="jump"
@@ -266,7 +266,7 @@ const TopButtonsRow = ({
             <option value="/question/bank/managecategories/category.php">Categories</option>
             <option value="/question/bank/importquestions/import.php">Import</option>
             <option value="/question/bank/exportquestions/export.php">Export</option>
-          </select>
+          </select> */}
 
           {/* Quick Categories Button - only show when not in categories view */}
           {/* {currentView !== 'categories' && (
@@ -284,7 +284,7 @@ const TopButtonsRow = ({
   
         {/* Main Actions */}
                 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 justify-start flex-1">
           {/* Create new question - only show in questions view */}
           
         
@@ -293,7 +293,7 @@ const TopButtonsRow = ({
             <button
               type="button"
               onClick={() => setShowCategoriesModal(true)}
-              className="inline-flex text-white items-center gap-2 rounded-md bg-sky-600 text-black px-4 py-2 font-semibold shadow hover:bg-sky-700 transition"
+              className="inline-flex  items-center gap-2 rounded-md bg-sky-400 text-gray-800 px-4 py-2 font-semibold shadow hover:bg-sky-500 transition"
             >
              
               Open Categories

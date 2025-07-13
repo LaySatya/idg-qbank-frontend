@@ -29,18 +29,17 @@ const TagFilterStatus = ({ tagFilter, allTags }) => {
     return tag ? tag.name : `Tag ${tagId}`;
   });
 
-  return (
-    <Box sx={{ mt: 1, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
-      <Typography variant="body2" color="info.dark">
-        <FontAwesomeIcon icon={faFilter} style={{ marginRight: 8 }} />
-        Filtering by {tagFilter.length} tag{tagFilter.length !== 1 ? 's' : ''}: 
-        <strong> {selectedTagNames.join(', ')}</strong>
-      </Typography>
-    </Box>
-  );
+  // return (
+  //   <Box sx={{ mt: 1, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+  //     <Typography variant="body2" color="info.dark">
+  //       <FontAwesomeIcon icon={faFilter} style={{ marginRight: 8 }} />
+  //       Filtering by {tagFilter.length} tag{tagFilter.length !== 1 ? 's' : ''}: 
+  //       <strong> {selectedTagNames.join(', ')}</strong>
+  //     </Typography>
+  //   </Box>
+  // );
 };
 
-// Clear tag filter button
 const ClearTagFilterButton = ({ tagFilter, setTagFilter }) => {
   if (!Array.isArray(tagFilter) || tagFilter.length === 0) {
     return null;
@@ -52,21 +51,20 @@ const ClearTagFilterButton = ({ tagFilter, setTagFilter }) => {
     console.log('🗑️ Tag filter cleared');
   };
 
-  return (
-    <Button
-      size="small"
-      variant="outlined"
-      color="error"
-      onClick={handleClearTags}
-      startIcon={<FontAwesomeIcon icon={faTimes} />}
-      sx={{ ml: 1 }}
-    >
-      Clear Tags ({tagFilter.length})
-    </Button>
-  );
+  // return (
+  //   <Button
+  //     size="small"
+  //     variant="outlined"
+  //     color="error"
+  //     onClick={handleClearTags}
+  //     startIcon={<FontAwesomeIcon icon={faTimes} />}
+  //     sx={{ ml: 1 }}
+  //   >
+  //     Clear Tags ({tagFilter.length})
+  //   </Button>
+  // );
 };
 
-//  FIXED: Debounce hook with proper cleanup
 const useDebounce = (value, delay) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
   
@@ -100,22 +98,17 @@ const FiltersRow = ({
   categoryCountMap = {}, 
 }) => {
   const [internalSearchQuery, setInternalSearchQuery] = useState(searchQuery);
-
-  //  FIXED: Refs for throttling and debouncing
   const lastRequestTimeRef = useRef(0);
   const lastCategoryChangeRef = useRef(0);
-  const MIN_REQUEST_INTERVAL = 300; // Minimum 300ms between requests
+  const MIN_REQUEST_INTERVAL = 300;
 
-  // FIXED: Proper debounce functions
   const debouncedSearchQuery = useDebounce(internalSearchQuery, 300);
   const debouncedTagFilter = useDebounce(tagFilter, 500);
 
-  //  FIXED: Sync internal search with external prop
   useEffect(() => {
     setInternalSearchQuery(searchQuery);
   }, [searchQuery]);
 
-  //  FIXED: Apply debounced search changes
   useEffect(() => {
     if (debouncedSearchQuery !== searchQuery) {
       setSearchQuery(debouncedSearchQuery);
@@ -131,9 +124,9 @@ const FiltersRow = ({
     }
     
     return allTags
-      .filter(tag => tag && tag.id && tag.name) // Only valid tags
+      .filter(tag => tag && tag.id && tag.name)
       .map(tag => ({
-        value: String(tag.id), // Ensure string value for react-select
+        value: String(tag.id),
         label: tag.name,
         rawname: tag.rawname,
         isstandard: tag.isstandard,
@@ -141,30 +134,17 @@ const FiltersRow = ({
       }));
   }, [allTags]);
 
-  // Category options for Chips
-  const categoryOptions = useMemo(() => [
-    { value: 'All', label: 'All Categories' },
-    ...availableCategories
-      .filter(cat => cat && cat.id && cat.name) // Added null checks
-      .map(cat => ({
-        value: String(cat.id),
-        label: cat.name
-      }))
-  ], [availableCategories]);
-
-  // Type options for select
   const typeOptions = useMemo(() => [
     { value: 'All', label: 'All Question Types' },
     ...availableQuestionTypes
       .filter(type => type && type.name && type.label)
       .map(type => ({
-        value: type.name, // Use 'name' as the value
+        value: type.name,
         label: type.label,
         iconurl: type.iconurl
       }))
   ], [availableQuestionTypes]);
 
-  // Status options for select
   const statusOptions = useMemo(() => [
     { value: 'All', label: 'All Statuses' },
     ...questionStatuses.map(status => ({
@@ -173,7 +153,6 @@ const FiltersRow = ({
     }))
   ], [questionStatuses]);
 
-  //  FIXED: Stable category processing
   const normalizedQuestions = useMemo(() => 
     questions.map(q => ({
       ...q,
@@ -194,7 +173,11 @@ const FiltersRow = ({
     [categoriesWithCounts]
   );
 
-  // Check if any filter is active
+  // FIXED: Calculate total questions across all categories
+  const totalQuestionsAllCategories = useMemo(() => {
+    return Object.values(categoryCountMap).reduce((sum, count) => sum + (count || 0), 0);
+  }, [categoryCountMap]);
+
   const hasActiveFilters = useMemo(() =>
     internalSearchQuery.trim() ||
     filters.category !== 'All' ||
@@ -205,18 +188,15 @@ const FiltersRow = ({
     [internalSearchQuery, filters.category, filters.status, filters.type, tagFilter, filters.courseId]
   );
 
-  //  FIXED: Clear all filters with proper cleanup
   const handleClearFilters = useCallback(() => {
     console.log('🧹 Clearing all filters including tags');
     
-    // Clear everything at once to prevent multiple updates
     const clearedFilters = {
       status: 'All',
       type: 'All',
       category: 'All',
-      courseId: filters.courseId, // Keep course selection
+      courseId: filters.courseId,
       courseName: filters.courseName
-      //  REMOVED: _resetTimestamp (was causing issues)
     };
     
     setFilters(clearedFilters);
@@ -224,32 +204,26 @@ const FiltersRow = ({
     setSearchQuery('');
     setTagFilter([]);
     
-    // Clear localStorage
     localStorage.removeItem('questionTagFilter');
     localStorage.removeItem('questionCategoryId');
     localStorage.removeItem('questionCategoryName');
     
   }, [setFilters, setSearchQuery, setTagFilter, filters.courseId, filters.courseName]);
 
-  //  FIXED: Search input change with proper debouncing
   const handleSearchChange = useCallback((e) => {
     const value = e.target.value;
     setInternalSearchQuery(value);
-    // The debounced effect will handle setting the actual search query
   }, []);
 
-  //  FIXED: Category change with throttling and duplicate prevention
   const handleCategoryChange = useCallback((e) => {
     const newCategory = e.target.value;
     const now = Date.now();
     
-    //  Prevent unnecessary updates
     if (filters.category === newCategory) {
       console.log(' Category unchanged, skipping update');
       return;
     }
 
-    //  Throttle rapid category changes
     if (now - lastCategoryChangeRef.current < MIN_REQUEST_INTERVAL) {
       console.log(' Category change throttled - too rapid');
       return;
@@ -259,24 +233,21 @@ const FiltersRow = ({
     const selectedCat = availableCategories.find(cat => String(cat.id) === newCategory);
     const selectedName = selectedCat ? selectedCat.name : '';
 
-    console.log(' Category changing:', { from: filters.category, to: newCategory });
+    console.log(' Category changing:', { from: filters.category, to: newCategory, name: selectedName });
 
     setFilters(prev => ({
       ...prev,
       category: newCategory,
       categoryName: selectedName
-      //  REMOVED: _filterChangeTimestamp (causes infinite updates)
     }));
 
     localStorage.setItem('questionCategoryId', newCategory);
     localStorage.setItem('questionCategoryName', selectedName);
   }, [setFilters, availableCategories, filters.category]);
 
-  //  FIXED: Status change with stability
   const handleStatusChange = useCallback((e) => {
     const newStatus = e.target.value;
     
-    // Prevent unnecessary updates
     if (filters.status === newStatus) {
       console.log(' Status unchanged, skipping update');
       return;
@@ -286,11 +257,9 @@ const FiltersRow = ({
     setFilters(prev => ({ ...prev, status: newStatus }));
   }, [setFilters, filters.status]);
 
-  //  FIXED: Type change with stability
   const handleTypeChange = useCallback((e) => {
     const newType = e.target.value;
     
-    // Prevent unnecessary updates
     if (filters.type === newType) {
       console.log(' Type unchanged, skipping update');
       return;
@@ -300,11 +269,9 @@ const FiltersRow = ({
     setFilters(prev => ({ ...prev, type: newType }));
   }, [setFilters, filters.type]);
 
-  //  FIXED: Tag change with proper throttling and debouncing
   const handleTagChange = useCallback((_, newValue) => {
     const now = Date.now();
     
-    //  Throttle rapid requests
     if (now - lastRequestTimeRef.current < MIN_REQUEST_INTERVAL) {
       console.log(' Tag change throttled - too rapid');
       return;
@@ -315,7 +282,6 @@ const FiltersRow = ({
     
     const newTags = newValue ? newValue.map(opt => String(opt.value)) : [];
     
-    //  Prevent unnecessary updates
     if (JSON.stringify(newTags.sort()) === JSON.stringify([...tagFilter].sort())) {
       console.log(' Tags unchanged, skipping update');
       return;
@@ -323,28 +289,111 @@ const FiltersRow = ({
     
     console.log(' Setting tag filter to:', newTags);
     
-    // Save to localStorage
     localStorage.setItem('questionTagFilter', JSON.stringify(newTags));
-    
-    // Apply the filter immediately (no debouncing for direct user interaction)
     setTagFilter(newTags);
     
-    // Log for debugging
     if (newTags.length > 0) {
       console.log(` Filtering by ${newTags.length} tag(s): ${newTags.join(', ')}`);
     } else {
-      console.log(' Tag filter cleared');
+      console.log('Tag filter cleared');
     }
   }, [tagFilter, setTagFilter]);
 
-  //  FIXED: Selected tag values calculation
   const selectedTagValues = useMemo(() => {
     return tagOptions.filter(opt => 
       Array.isArray(tagFilter) && tagFilter.includes(opt.value)
     );
   }, [tagOptions, tagFilter]);
 
-  // Category display calculations
+  // FIXED: Better category rendering function
+  const renderCategoryOptions = useCallback((nodes, level = 0, contextLabel = '') => {
+    if (!Array.isArray(nodes)) return [];
+    if (level > 3) return [];
+    
+    return nodes.flatMap(node => {
+      if (!node || !node.name || !node.id) return [];
+      
+      let displayName = node.name;
+      let iconPrefix = '';
+      
+      // Smart display name generation
+      if (node.name.trim().toLowerCase() === 'top') {
+        // For "top" categories, show "Top for [Context Name]"
+        if (contextLabel && contextLabel !== `Context ${node.contextid}`) {
+          displayName = `Top for ${contextLabel}`;
+        } else {
+          displayName = `Top for Context ${node.contextid}`;
+        }
+        // iconPrefix = '📁 ';
+      } else if (node.name.toLowerCase().startsWith('default for ')) {
+        // For "Default for X" categories, KEEP the "Default for" prefix
+        displayName = node.name; // Keep the original name with "Default for"
+        // iconPrefix = '📂 ';
+      } else if (level > 0) {
+        // iconPrefix = '📄 ';
+      }
+      
+      // Get question count with fallback
+      const questionCount = categoryCountMap?.[node.id] || 
+                           node.totalQuestionCount || 
+                           node.questioncount || 0;
+      
+      const menuItems = [
+        <MenuItem 
+          key={`category-${node.id}-${level}`} 
+          value={String(node.id)} 
+          sx={{ 
+            pl: 2 + level * 2,
+            '&:hover': {
+              backgroundColor: '#e3f2fd'
+            }
+          }}
+        >
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            width: '100%', 
+            alignItems: 'center' 
+          }}>
+            <Box sx={{ 
+              color: level === 0 ? '#1976d2' : 'inherit',
+              fontWeight: level === 0 ? 500 : 'normal',
+              fontSize: level === 0 ? '0.9rem' : '0.875rem'
+            }}>
+              {iconPrefix}{displayName}
+            </Box>
+            <Box sx={{ 
+              color: questionCount > 0 ? '#2e7d32' : '#999', 
+              fontSize: '0.8rem',
+              fontWeight: questionCount > 0 ? 600 : 'normal',
+              minWidth: '2rem',
+              textAlign: 'right'
+            }}>
+              ({questionCount})
+            </Box>
+          </Box>
+        </MenuItem>
+      ];
+      
+      // Add children recursively
+      if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+        const childItems = renderCategoryOptions(node.children, level + 1, contextLabel);
+        menuItems.push(...childItems);
+      }
+      
+      return menuItems;
+    });
+  }, [categoryCountMap]);
+
+  // Calculate group totals properly
+  const calculateGroupTotal = useCallback((tree) => {
+    return tree.reduce((sum, node) => {
+      const nodeCount = categoryCountMap?.[node.id] || node.totalQuestionCount || node.questioncount || 0;
+      const childrenCount = node.children ? calculateGroupTotal(node.children) : 0;
+      return sum + nodeCount + childrenCount;
+    }, 0);
+  }, [categoryCountMap]);
+
   const selectedCategoryObj = useMemo(() => 
     availableCategories.find(cat => String(cat.id) === String(filters.category)),
     [availableCategories, filters.category]
@@ -352,7 +401,6 @@ const FiltersRow = ({
 
   const selectedCategoryName = selectedCategoryObj ? selectedCategoryObj.name : 'All';
 
-  // Get the total count from categoryCountMap if available, fall back to other sources
   const totalCount = useMemo(() => 
     categoryCountMap?.[filters.category] || 
     selectedCategoryObj?.totalQuestionCount || 
@@ -360,7 +408,6 @@ const FiltersRow = ({
     [categoryCountMap, filters.category, selectedCategoryObj]
   );
 
-  // Current filtered count
   const filteredCount = useMemo(() => 
     questions.filter(q => 
       String(q.categoryid || q.categoryId || q.category) === String(filters.category)
@@ -368,36 +415,6 @@ const FiltersRow = ({
     [questions, filters.category]
   );
 
-  //  FIXED: Stable render options function
-  const renderOptions = useCallback((nodes, level = 0, parentName = '', contextLabel = '') => {
-    if (!Array.isArray(nodes)) return [];
-    if (level > 1) return []; // Only show up to 2 levels deep
-    
-    return nodes.flatMap(node => {
-      if (!node || !node.name || !node.id) return [];
-      
-      let displayName = node.name;
-      if (level === 0 && node.name.trim().toLowerCase() === 'top') {
-        displayName = `Top for ${contextLabel}`;
-      }
-      
-      const questionCount = categoryCountMap?.[node.id] || node.totalQuestionCount || node.questioncount || 0;
-      
-      return [
-        <MenuItem key={`${node.id}-${level}`} value={String(node.id)} sx={{ pl: 2 + level * 2 }}>
-          {displayName}
-          <span style={{ color: '#888', marginLeft: 8, fontSize: 13 }}>
-            ({questionCount})
-          </span>
-        </MenuItem>,
-        ...(node.children && Array.isArray(node.children)
-          ? renderOptions(node.children, level + 1, node.name, contextLabel)
-          : [])
-      ];
-    });
-  }, [categoryCountMap]);
-
-  // Ensure select values are always valid
   const validCategory = useMemo(() => {
     if (filters.category === 'All') return 'All';
     const allCategoryIds = availableCategories
@@ -416,12 +433,27 @@ const FiltersRow = ({
     return typeOptions.some(opt => opt.value === filters.type) ? filters.type : 'All';
   }, [filters.type, typeOptions]);
 
+  // Debug effect
+  useEffect(() => {
+    console.log('🔍 FiltersRow Debug:', {
+      totalQuestionsAllCategories,
+      categoryGroups: categoryGroups.map(g => ({
+        label: g.label,
+        contextid: g.contextid,
+        treeLength: g.tree.length,
+        groupTotal: calculateGroupTotal(g.tree)
+      })),
+      categoryCountMap,
+      selectedCategory: filters.category,
+      selectedCategoryCount: categoryCountMap?.[filters.category]
+    });
+  }, [categoryGroups, categoryCountMap, filters.category, totalQuestionsAllCategories, calculateGroupTotal]);
+
   return (
     <Paper elevation={2} sx={{ p: 2, mb: 2, boxShadow: 0.4 }}>
-      {/* Grid container - Compatible with current MUI version */}
       <Grid container spacing={2} alignItems="flex-end">
         {/* Search */}
-        <Grid item xs={12}>
+        <Grid item sx={{ width: 400 }}>
           <TextField
             id="search-questions"
             fullWidth
@@ -459,8 +491,8 @@ const FiltersRow = ({
           />
         </Grid>
 
-        {/* Category */}
-        <Grid item xs={12}>
+        {/* Category - COMPLETELY FIXED */}
+       <Grid item sx={{ width: 300 }}>
           <TextField
             id="category-select"
             select
@@ -471,60 +503,72 @@ const FiltersRow = ({
             size="small"
             disabled={loadingCategories}
             SelectProps={{
-              renderValue: () => {
-                // Only show the category name, not the count
-                if (filters.category === 'All') {
-                  return 'All Categories';
+              renderValue: (selected) => {
+                if (selected === 'All') {
+                  return `All Categories (${totalQuestionsAllCategories})`;
                 }
-                const selectedCategory = availableCategories.find(cat => String(cat.id) === String(filters.category));
-                return selectedCategory ? selectedCategory.name : filters.categoryName || 'Unknown';
+                
+                const selectedCategory = availableCategories.find(cat => String(cat.id) === String(selected));
+                const count = categoryCountMap?.[selected] || selectedCategory?.totalQuestionCount || selectedCategory?.questioncount || 0;
+                
+                if (selectedCategory) {
+                  return `${selectedCategory.name} (${count})`;
+                }
+                
+                return filters.categoryName ? `${filters.categoryName} (${count})` : `Category ${selected} (${count})`;
               }
             }}
           >
+            {/* All Categories Option */}
             <MenuItem value="All">
-              All Categories
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                <Box sx={{ fontWeight: 500 }}>All Categories</Box>
+                <Box sx={{ color: '#2e7d32', fontSize: '0.875rem', fontWeight: 600 }}>
+                  ({totalQuestionsAllCategories})
+                </Box>
+              </Box>
             </MenuItem>
-            {categoryGroups.map(group => [
-              <MenuItem
-                key={`group-${group.contextid}`}
-                disabled
-                sx={{ fontWeight: 'bold', color: '#3b82f6' }}
-              >
-                {group.label} <span style={{ color: '#888', marginLeft: 8, fontSize: 13 }}>
-                  ({
-                    // Sum all category counts in this group
-                    group.tree.reduce((sum, cat) => {
-                      // Use the most reliable count source
-                      const count = categoryCountMap?.[cat.id] || cat.totalQuestionCount || cat.questioncount || 0;
-                      return sum + count;
-                    }, 0)
-                  })
-                </span>
-              </MenuItem>,
-              ...renderOptions(group.tree, 0, '', group.label)
-            ])}
+
+            {/* Category Groups */}
+            {categoryGroups.map(group => {
+              const groupTotal = calculateGroupTotal(group.tree);
+              
+              // FIXED: Keep group label as is, don't remove "Default for"
+              let groupLabel = group.label;
+
+              return [
+                // Group Header
+                <MenuItem
+                  key={`group-header-${group.contextid}`}
+                  disabled
+                  sx={{ 
+                    fontWeight: 'bold', 
+                    color: '#3b82f6',
+                    backgroundColor: '#f8fafc',
+                    borderBottom: '1px solid #e2e8f0',
+                    '&.Mui-disabled': {
+                      opacity: 1
+                    }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                    <Box> {groupLabel}</Box>
+                    <Box sx={{ color: '#666', fontSize: '0.875rem', fontWeight: 'normal' }}>
+                      ({groupTotal} total)
+                    </Box>
+                  </Box>
+                </MenuItem>,
+
+                // Group Categories
+                ...renderCategoryOptions(group.tree, 0, groupLabel)
+              ];
+            })}
           </TextField>
         </Grid>
 
-        {/* Status */}
-        <Grid item xs={12}>
-          <TextField
-            id="status-select"
-            select
-            fullWidth
-            label="Status"
-            value={validStatus}
-            onChange={handleStatusChange}
-            size="small"
-          >
-            {statusOptions.map(opt => (
-              <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
-            ))}
-          </TextField>
-        </Grid>
-
+        
         {/* Type */}
-        <Grid item xs={12}>
+       <Grid item sx={{ width: 300 }}>
           <TextField
             id="type-select"
             select
@@ -570,7 +614,7 @@ const FiltersRow = ({
         </Grid>
 
         {/* Tags */}
-        <Grid item xs={12}>
+        <Grid item sx={{ width: 250 }}>
           <Autocomplete
             id="tags-autocomplete"
             multiple
@@ -619,6 +663,23 @@ const FiltersRow = ({
             }}
           />
         </Grid>
+        {/* Status */}
+       <Grid item sx={{ width: 150 }}>
+          <TextField
+            id="status-select"
+            select
+            fullWidth
+            label="Status"
+            value={validStatus}
+            onChange={handleStatusChange}
+            size="small"
+          >
+            {statusOptions.map(opt => (
+              <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+            ))}
+          </TextField>
+        </Grid>
+
 
         {/* Clear Button */}
         <Grid item xs={12}>
@@ -630,13 +691,13 @@ const FiltersRow = ({
               onClick={handleClearFilters}
               fullWidth
             >
-              Clear All
+              Clear All Filters
             </Button>
           )}
         </Grid>
       </Grid>
 
-      {/* Tag filter status and clear button below row */}
+      {/* Tag filter status and clear button */}
       <Box>     
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <TagFilterStatus tagFilter={tagFilter} allTags={allTags} />
@@ -644,11 +705,26 @@ const FiltersRow = ({
         </Box>
       </Box>
 
-      {/* Display selected category question count */}
+      {/* FIXED: Display selected category question count */}
       {filters.category !== 'All' && (
         <Box sx={{ mt: 1, mb: 1 }}>
           <Typography variant="body2" color="text.secondary">
-            Showing <strong>{filteredCount}</strong> of <strong>{totalCount}</strong> total questions in <strong>{selectedCategoryName}</strong>
+            {(() => {
+              const categoryCount = categoryCountMap?.[filters.category] || 0;
+              const selectedCategory = availableCategories.find(cat => String(cat.id) === String(filters.category));
+              const categoryName = selectedCategory?.name || filters.categoryName || 'Selected Category';
+              
+              // return (
+              //   <>
+              //     {/* Showing <strong>{filteredCount}</strong> of <strong>{categoryCount}</strong> total questions in <strong>{categoryName}</strong>
+              //     {filteredCount !== categoryCount && categoryCount > 0 && (
+              //       <Box component="span" sx={{ color: '#f57c00', ml: 1 }}>
+              //         (filtered from {categoryCount} total)
+              //       </Box>
+              //     )} */}
+              //   </>
+              // );
+            })()}
           </Typography>
         </Box>
       )}

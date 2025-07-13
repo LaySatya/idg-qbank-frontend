@@ -34,13 +34,18 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
     const userid = localStorage.getItem('userid');
     const firstname = localStorage.getItem('firstname') || '';
     const lastname = localStorage.getItem('lastname') || '';
+    const profileimageurl = localStorage.getItem('profileimageurl'); 
     
     setCurrentUser({
       id: userid,
       username: username,
       fullname: `${firstname} ${lastname}`.trim() || username || 'Current User',
       firstname,
-      lastname
+      lastname,
+      profileimageurl 
+      
+      
+
     });
   }, []);
 
@@ -279,241 +284,261 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
       .substring(0, 2);
   };
 
-  return (
-    <Dialog 
-      open={isOpen} 
-      onClose={onRequestClose} 
-      maxWidth="md" 
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 3,
-          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-          maxHeight: '80vh'
-        }
-      }}
-      sx={{
-        '& .MuiDialog-container': {
-          alignItems: 'flex-start',
-          paddingTop: '10vh' // Position at top-middle
-        }
-      }}
-    >
-      <DialogTitle 
-        sx={{ 
-        //   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        //   color: 'white',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          py: 3
-        }}
-      >
-        <CommentIcon sx={{ fontSize: 28 }} />
-        <Box>
-          <Typography variant="h6" component="div" fontWeight="600">
-            Comments for Question #{question?.id}
-          </Typography>
-          <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
-            {question?.name || 'Untitled Question'}
-          </Typography>
-        </Box>
-      </DialogTitle>
+   return (
+<Dialog 
+  open={isOpen} 
+  onClose={onRequestClose} 
+  maxWidth={false}
+  PaperProps={{
+    sx: {
+      borderRadius: 3,
+      boxShadow: '0 10px 40px rgba(0,0,0,0.10)',
+      width: 520,
+      minWidth: 520,
+      maxWidth: 520,
+      height: 600,
+      minHeight: 600,
+      maxHeight: 600,
+      margin: 'auto',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column'
+    }
+  }}
+  sx={{
+    '& .MuiDialog-container': {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: '5vh'
+    }
+  }}
+>
+  <DialogTitle 
+    sx={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 2,
+      py: 2,
+      px: 3,
+      borderBottom: '1px solid #e9ecef',
+      background: '#f7f8fa'
+    }}
+  >
+    <CommentIcon sx={{ fontSize: 24 }} />
+    <Box>
+      <Typography variant="h6" fontWeight="600">
+        Comments for Question #{question?.id}
+      </Typography>
+      {/* <Typography variant="body2" sx={{ opacity: 0.8, mt: 0.5 }}>
+        {question?.name || 'Untitled Question'}
+      </Typography> */}
+    </Box>
+  </DialogTitle>
 
-      <DialogContent sx={{ p: 0 }}>
-        {/* Question Info Header */}
-        <Box sx={{ p: 3, backgroundColor: '#f8f9fa', borderBottom: '1px solid #e9ecef' }}>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <Chip
-              icon={<PersonIcon />}
-              label={`Created by: ${question?.createdBy?.name || 'Unknown'}`}
-              variant="outlined"
-              size="small"
-              sx={{ backgroundColor: 'white' }}
-            />
-            <Chip
-              icon={<AccessTimeIcon />}
-              label={`Modified by: ${question?.modifiedBy?.name || 'Unknown'}`}
-              variant="outlined"
-              size="small"
-              sx={{ backgroundColor: 'white' }}
-            />
-            <Chip
-              label={`${comments.length} Comment${comments.length !== 1 ? 's' : ''}`}
-              color="primary"
-              size="small"
-            />
-          </Box>
-        </Box>
+  <DialogContent
+    sx={{
+      p: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      flex: 1,
+      minHeight: 0 // allow flex children to shrink
+    }}
+  >
+    {/* Info Header */}
+    <Box sx={{ p: 2, backgroundColor: '#f7f8fa', borderBottom: '1px solid #e9ecef' }}>
+      <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+        {/* <Chip
+          icon={<PersonIcon />}
+          label={`Created by: ${question?.createdBy?.name || 'Unknown'}`}
+          variant="outlined"
+          size="small"
+          sx={{ backgroundColor: 'white' }}
+        />
+        <Chip
+          icon={<AccessTimeIcon />}
+          label={`Modified by: ${question?.modifiedBy?.name || 'Unknown'}`}
+          variant="outlined"
+          size="small"
+          sx={{ backgroundColor: 'white' }}
+        /> */}
+        <Chip
+          label={`${comments.length} Comment${comments.length !== 1 ? 's' : ''}`}
+          color="primary"
+          size="small"
+        />
+      </Box>
+    </Box>
 
-        {/* Comments List */}
-        <Box sx={{ maxHeight: 400, overflowY: 'auto', p: 2 }}>
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress size={40} />
-              <Typography sx={{ ml: 2, alignSelf: 'center' }}>Loading comments...</Typography>
-            </Box>
-          ) : comments.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
-              <CommentIcon sx={{ fontSize: 48, opacity: 0.3, mb: 2 }} />
-              <Typography variant="h6" gutterBottom>No comments yet</Typography>
-              <Typography variant="body2">Be the first to add a comment!</Typography>
-            </Box>
-          ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {comments.map((comment, index) => (
-                <Box key={comment.id || index}>
-                  <Box sx={{
-                    display: 'flex',
-                    gap: 2,
-                    p: 2,
-                    backgroundColor: '#f8f9fa',
-                    borderRadius: 2,
-                    border: '1px solid #e9ecef',
-                    '&:hover': {
-                      backgroundColor: '#f1f3f4',
-                      borderColor: '#d1ecf1'
-                    }
+    {/* Comments List - take all available space, scroll if needed */}
+    <Box sx={{
+      flex: 1,
+      minHeight: 0,
+      overflowY: 'auto',
+      p: 2,
+      background: '#fff'
+    }}>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress size={32} />
+          <Typography sx={{ ml: 2, alignSelf: 'center' }}>Loading comments...</Typography>
+        </Box>
+      ) : comments.length === 0 ? (
+        <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+          <CommentIcon sx={{ fontSize: 40, opacity: 0.3, mb: 2 }} />
+          <Typography variant="h6" gutterBottom>No comments yet</Typography>
+          <Typography variant="body2">Be the first to add a comment!</Typography>
+        </Box>
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {comments.map((comment, index) => (
+            <Box key={comment.id || index}>
+              <Box sx={{
+                display: 'flex',
+                gap: 1.5,
+                p: 1.5,
+                backgroundColor: '#fff',
+                borderRadius: 2,
+                border: '1px solid #e9ecef',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
+                '&:hover': {
+                  backgroundColor: '#f5f6fa',
+                  borderColor: '#d1ecf1'
+                }
+              }}>
+                {comment.user?.profileimageurl ? (
+                  <Avatar 
+                    src={comment.user.profileimageurl}
+                    alt={getAuthorName(comment)}
+                    sx={{ width: 32, height: 32 }}
+                    onError={(e) => { e.target.src = ''; }}
+                  />
+                ) : (
+                  <Avatar sx={{ 
+                    bgcolor: 'primary.main', 
+                    width: 32, 
+                    height: 32,
+                    fontSize: '13px',
+                    fontWeight: '600'
                   }}>
-                    {/* <Avatar sx={{ 
-                      bgcolor: 'primary.main', 
-                      width: 40, 
-                      height: 40,
-                      fontSize: '14px',
-                      fontWeight: '600'
-                    }}>
-                      {getInitials(getAuthorName(comment))}
-                    </Avatar> */}
-                    {comment.user?.profileimageurl ? (
-  <Avatar 
-    src={comment.user.profileimageurl}
-    alt={getAuthorName(comment)}
-    sx={{ width: 40, height: 40 }}
-    onError={(e) => { e.target.src = ''; }} // fallback if image fails
-  />
-) : (
-  <Avatar sx={{ 
-    bgcolor: 'primary.main', 
-    width: 40, 
-    height: 40,
-    fontSize: '14px',
-    fontWeight: '600'
-  }}>
-    {getInitials(getAuthorName(comment))}
-  </Avatar>
-)}
+                    {getInitials(getAuthorName(comment))}
+                  </Avatar>
+                )}
 
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <Typography variant="subtitle2" fontWeight="600">
-                          {getAuthorName(comment)}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {formatDate(comment.timecreated)}
-                        </Typography>
-                        {(currentUser?.id == comment.userid || currentUser?.username === comment.username) && (
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleDeleteComment(comment.id)}
-                            sx={{ ml: 'auto', opacity: 0.7, '&:hover': { opacity: 1 } }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        )}
-                      </Box>
-                      
-                      <Typography variant="body2" sx={{ 
-                        wordBreak: 'break-word',
-                        lineHeight: 1.5,
-                        color: 'text.primary'
-                      }}>
-                        {comment.content || comment.text || comment.comment}
-                      </Typography>
-                    </Box>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                    <Typography variant="subtitle2" fontWeight="600">
+                      {getAuthorName(comment)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {formatDate(comment.timecreated)}
+                    </Typography>
+                    {(currentUser?.id == comment.userid || currentUser?.username === comment.username) && (
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteComment(comment.id)}
+                        sx={{ ml: 'auto', opacity: 0.7, '&:hover': { opacity: 1 } }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    )}
                   </Box>
                   
-                  {index < comments.length - 1 && (
-                    <Divider sx={{ my: 1, opacity: 0.5 }} />
-                  )}
+                  <Typography variant="body2" sx={{ 
+                    wordBreak: 'break-word',
+                    lineHeight: 1.5,
+                    color: 'text.primary'
+                  }}>
+                    {comment.content || comment.text || comment.comment}
+                  </Typography>
                 </Box>
-              ))}
+              </Box>
+              
+              {index < comments.length - 1 && (
+                <Divider sx={{ my: 1, opacity: 0.5 }} />
+              )}
             </Box>
-          )}
+          ))}
         </Box>
+      )}
+    </Box>
 
-        {/* Add Comment Section */}
-        <Box sx={{ p: 3, borderTop: '1px solid #e9ecef', backgroundColor: '#fafbfc' }}>
-          {currentUser && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Avatar sx={{ 
-                bgcolor: 'secondary.main', 
-                width: 32, 
-                height: 32,
-                fontSize: '12px'
-              }}>
-                {getInitials(currentUser.fullname)}
-              </Avatar>
-              <Typography variant="body2" color="text.secondary">
-                Commenting as: <strong>{currentUser.fullname}</strong>
-              </Typography>
-            </Box>
-          )}
-          
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <TextField
-              multiline
-              rows={3}
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Add your comment here... (Press Enter to submit)"
-              variant="outlined"
-              fullWidth
-              disabled={submitting}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'white',
-                  borderRadius: 2
-                }
-              }}
-            />
-            <Button
-              variant="contained"
-              onClick={handleAddComment}
-              disabled={submitting || !newComment.trim()}
-              startIcon={submitting ? <CircularProgress size={16} /> : <SendIcon />}
-              sx={{
-                minWidth: 120,
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: '600'
-              }}
-            >
-              {submitting ? 'Sending...' : 'Send'}
-            </Button>
-          </Box>
-          
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-             Tip: Press Enter to submit, Shift+Enter for new line
+    {/* Add Comment Section - stays at bottom, never scrolls */}
+    <Box sx={{ p: 2, borderTop: '1px solid #e9ecef', backgroundColor: '#f7f8fa' }}>
+      {currentUser && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Avatar
+            src={currentUser.profileimageurl || undefined}
+            alt={currentUser.fullname}
+            sx={{
+              bgcolor: 'secondary.main',
+              width: 28,
+              height: 28,
+              fontSize: '12px'
+            }}
+          >
+            {!currentUser.profileimageurl && getInitials(currentUser.fullname)}
+          </Avatar>
+          <Typography variant="body2" color="text.secondary">
+            Commenting as: <strong>{currentUser.fullname}</strong>
           </Typography>
         </Box>
-      </DialogContent>
-
-      <DialogActions sx={{ p: 3, backgroundColor: '#f8f9fa' }}>
-        <Button 
-          onClick={onRequestClose}
+      )}
+      
+      <Box sx={{ display: 'flex', gap: 1 }}>
+        <TextField
+          multiline
+          rows={2}
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="Add your comment here... (Press Enter to submit)"
           variant="outlined"
-          sx={{ 
+          sx={{
+            width: '100%',
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: 'white',
+              borderRadius: 2
+            }
+          }}
+          disabled={submitting}
+        />
+        <Button
+          variant="contained"
+          onClick={handleAddComment}
+          disabled={submitting || !newComment.trim()}
+          startIcon={submitting ? <CircularProgress size={14} /> : <SendIcon />}
+          sx={{
+            minWidth: 90,
             borderRadius: 2,
             textTransform: 'none',
             fontWeight: '600'
           }}
         >
-          Close
+          {submitting ? 'Sending...' : 'Send'}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </Box>
+      
+      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+         Tip: Press Enter to submit, Shift+Enter for new line
+      </Typography>
+    </Box>
+  </DialogContent>
+
+  <DialogActions sx={{ p: 2, backgroundColor: '#f7f8fa' }}>
+    <Button 
+      onClick={onRequestClose}
+      variant="outlined"
+      sx={{ 
+        borderRadius: 2,
+        textTransform: 'none',
+        fontWeight: '600'
+      }}
+    >
+      Close
+    </Button>
+  </DialogActions>
+</Dialog>
   );
 };
 

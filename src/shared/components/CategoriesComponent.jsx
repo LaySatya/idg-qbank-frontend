@@ -426,6 +426,7 @@ const CategoriesComponent = ({
       cursor: 'pointer',
       marginLeft: indentWidth,
       marginBottom: 4,
+      
     };
     const expandBtnStyle = {
       padding: 4,
@@ -701,9 +702,8 @@ const modalStyle = {
   background: '#fff',
   borderRadius: 18,
   boxShadow: '0 8px 32px 0 rgba(30,41,59,0.18)',
-  width: '100%',
-  maxWidth: 1200,
-  maxHeight: '95vh',
+  width: 900, // Fixed width
+  height: 600, // Fixed height
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
@@ -772,22 +772,28 @@ const modalContent = (
             <h3 style={{ fontSize: 18, fontWeight: 600, color: '#0f172a', margin: 0 }}>Course Categories</h3>
             <div style={{ display: 'flex', gap: 8 }}>
               {selectedCategory && (
-                <button
+                   <button
                   onClick={handleClearSelection}
                   style={{
-                    background: '#ef4444',
-                    color: '#fff',
+                    background: '#ffffff', // subtle white background
+                    color: '#ef4444',       // red text
                     padding: '6px 16px',
                     borderRadius: 8,
                     fontSize: 14,
                     fontWeight: 500,
-                    border: 'none',
+                    border: '1px solid #ef4444', // red border
                     cursor: 'pointer',
-                    transition: 'background 0.2s',
+                    transition: 'background 0.2s, color 0.2s',
                     boxShadow: '0 1px 2px 0 rgba(0,0,0,0.03)',
                   }}
-                  onMouseOver={e => (e.currentTarget.style.background = '#dc2626')}
-                  onMouseOut={e => (e.currentTarget.style.background = '#ef4444')}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = '#fee2e2'; // light red on hover
+                    e.currentTarget.style.color = '#b91c1c';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = '#f3f4f6';
+                    e.currentTarget.style.color = '#ef4444';
+                  }}
                 >
                   Clear Selection
                 </button>

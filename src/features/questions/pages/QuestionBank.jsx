@@ -69,7 +69,9 @@ const useTagFiltering = () => {
         })).filter(tag => tag.id && tag.name) : [];
 
         setAllTags(normalizedTags);
+        console.log(' Tags loaded:', normalizedTags.length);
       } catch (error) {
+        console.error(' Failed to load tags:', error);
         setAllTags([]);
       } finally {
         setLoadingTags(false);
@@ -87,10 +89,11 @@ const useTagFiltering = () => {
         const parsedTags = JSON.parse(saved);
         if (Array.isArray(parsedTags)) {
           setTagFilter(parsedTags);
+          console.log(' Restored tag filter:', parsedTags);
         }
       }
     } catch (error) {
-      // ignore
+      console.error(' Failed to restore tag filter:', error);
     }
   }, []);
 
@@ -124,16 +127,22 @@ const QuestionBank = () => {
     deleteQuestion
   } = useQuestionBank([]);
 
-  // Filter state with localStorage persistence
-  const [filters, setFilters] = useState(() => ({
-    category: localStorage.getItem('questionCategoryId') || 'All',
-    status: 'All',
-    type: 'All',
-    courseId: localStorage.getItem('CourseID')
-      ? parseInt(localStorage.getItem('CourseID'))
-      : null,
-    courseName: localStorage.getItem('CourseName') || ''
-  }));
+  // FIXED: Filter state with proper localStorage persistence
+  const [filters, setFilters] = useState(() => {
+    const savedCourseId = localStorage.getItem('CourseID');
+    const savedCourseName = localStorage.getItem('CourseName');
+    const savedCategoryId = localStorage.getItem('questionCategoryId');
+    const savedCategoryName = localStorage.getItem('questionCategoryName');
+    
+    return {
+      category: savedCategoryId || 'All',
+      categoryName: savedCategoryName || '',
+      status: 'All',
+      type: 'All',
+      courseId: savedCourseId ? parseInt(savedCourseId) : null,
+      courseName: savedCourseName || ''
+    };
+  });
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debugInfo, setDebugInfo] = useState({});
@@ -160,14 +169,17 @@ const QuestionBank = () => {
 
   const { allTags, loadingTags, tagFilter, setTagFilter } = useTagFiltering();
   
-  //  FIX: Add debounced tag filter to prevent rapid API calls
+  // FIXED: Add debounced tag filter to prevent rapid API calls
   const debouncedTagFilter = useDebounce(tagFilter, 500);
 
   // NEW: Question categories for the selected course
   const [questionCategories, setQuestionCategories] = useState([]);
   const [loadingQuestionCategories, setLoadingQuestionCategories] = useState(false);
 
-  // Memoize after both are declared!
+  // FIXED: Category count map state
+  const [categoryCountMap, setCategoryCountMap] = useState({});
+
+  // Memoized available categories (prefer course-specific categories)
   const memoizedAvailableCategories = useMemo(
     () => questionCategories.length > 0 ? questionCategories : availableCategories,
     [questionCategories, availableCategories]
@@ -184,28 +196,20 @@ const QuestionBank = () => {
     );
   }, [questions, debouncedSearchQuery]);
 
-  const [categoryCountMap, setCategoryCountMap] = useState({});
-
-  // ============================================================================
-  //  FIX: Use refs for function dependencies to prevent recreated functions
-  // ============================================================================
-  
-  const fetchQuestionCategoriesRef = useRef();
-  const fetchCategoryCountsRef = useRef();
-
   // ============================================================================
   // FETCH QUESTION CATEGORIES FOR COURSE
   // ============================================================================
 
   const fetchQuestionCategoriesForCourse = useCallback(async (courseId) => {
     if (!courseId || courseId === 'All') {
+      console.log(' Clearing question categories (no course selected)');
       setQuestionCategories([]);
       return;
     }
 
     try {
       setLoadingQuestionCategories(true);
-      console.log('📂 Fetching question categories for course:', courseId);
+      console.log(' Fetching question categories for course:', courseId);
       
       const categoriesUrl = `${API_BASE_URL}/questions/question_categories?courseid=${courseId}`;
       const response = await fetch(categoriesUrl, {
@@ -222,7 +226,7 @@ const QuestionBank = () => {
       }
 
       const categoriesData = await response.json();
-      console.log('📂 Question categories response:', categoriesData);
+      console.log(' Question categories response:', categoriesData);
       
       let categories = [];
       if (Array.isArray(categoriesData)) {
@@ -240,28 +244,44 @@ const QuestionBank = () => {
         info: cat.info || '',
         infoformat: cat.infoformat || 0,
         stamp: cat.stamp,
-        idnumber: cat.idnumber || ''
+        idnumber: cat.idnumber || '',
+        questioncount: cat.questioncount || 0  // Include question count from API
       })).filter(cat => cat.id);
 
       setQuestionCategories(normalizedCategories);
       console.log(' Question categories loaded:', normalizedCategories.length);
       
+      // Extract category counts and update categoryCountMap
+      const newCategoryCountMap = {};
+      categories.forEach(cat => {
+        if (cat.id && typeof cat.questioncount === 'number') {
+          newCategoryCountMap[cat.id] = cat.questioncount;
+        }
+      });
+      
+      console.log(' Category counts from categories API:', newCategoryCountMap);
+      setCategoryCountMap(newCategoryCountMap);
+      
     } catch (error) {
       console.error(' Error fetching question categories:', error);
       setQuestionCategories([]);
+      setCategoryCountMap({});
     } finally {
       setLoadingQuestionCategories(false);
     }
   }, []);
 
   // ============================================================================
-  // FETCH CATEGORY COUNTS
+  // FETCH CATEGORY COUNTS (Additional method if needed)
   // ============================================================================
 
   const fetchCategoryCounts = useCallback(async () => {
     try {
       const courseId = filters.courseId;
-      if (!courseId) return;
+      if (!courseId) {
+        console.log(' No course selected, skipping category counts fetch');
+        return;
+      }
       
       console.log(' Fetching category counts from API...');
       const url = `${API_BASE_URL}/questions/question_categories?courseid=${courseId}`;
@@ -297,12 +317,17 @@ const QuestionBank = () => {
       
       console.log(' Category counts loaded:', newCategoryCountMap);
       
-      //  FIX: Only update if different to prevent unnecessary re-renders
+      // FIXED: Only update if different to prevent unnecessary re-renders
       setCategoryCountMap(prev => {
-        if (JSON.stringify(prev) === JSON.stringify(newCategoryCountMap)) {
+        const prevJson = JSON.stringify(prev);
+        const newJson = JSON.stringify(newCategoryCountMap);
+        
+        if (prevJson === newJson) {
           console.log(' Category counts unchanged, skipping update');
           return prev;
         }
+        
+        console.log(' Category counts updated');
         return newCategoryCountMap;
       });
       
@@ -311,12 +336,8 @@ const QuestionBank = () => {
     }
   }, [filters.courseId]);
 
-  //  FIX: Assign functions to refs to prevent dependency issues
-  fetchQuestionCategoriesRef.current = fetchQuestionCategoriesForCourse;
-  fetchCategoryCountsRef.current = fetchCategoryCounts;
-
   // ============================================================================
-  //  FIXED FETCH FUNCTION WITH PROPER DEPENDENCIES
+  // FIXED FETCH FUNCTION WITH PROPER DEPENDENCIES
   // ============================================================================
   
   const fetchQuestions = useCallback(async (
@@ -324,19 +345,19 @@ const QuestionBank = () => {
     page = currentPage,
     perPage = questionsPerPage
   ) => {
-    //  FIX: Better request deduplication with more stable key
+    // FIXED: Better request deduplication with more stable key
     const requestKey = JSON.stringify({
       courseId: currentFilters.courseId,
       category: currentFilters.category,
       status: currentFilters.status,
       type: currentFilters.type,
-      searchQuery: currentFilters.searchQuery,
-      tagFilter: debouncedTagFilter, //  Use debounced version
+      searchQuery: debouncedSearchQuery,
+      tagFilter: debouncedTagFilter,
       page,
       perPage
     });
 
-    //  FIX: Enhanced duplicate prevention
+    // FIXED: Enhanced duplicate prevention
     if (fetchInProgressRef.current) {
       console.log(' Request blocked - fetch already in progress');
       return;
@@ -368,6 +389,7 @@ const QuestionBank = () => {
       }
 
       if (!currentFilters.courseId || currentFilters.courseId === 'All') {
+        console.log(' No course selected, clearing questions');
         setQuestions([]);
         setTotalQuestions(0);
         return;
@@ -391,7 +413,7 @@ const QuestionBank = () => {
       if (currentFilters.category !== 'All') params.append('categoryid', currentFilters.category);
       if (currentFilters.status !== 'All') params.append('status', currentFilters.status);
       if (currentFilters.type !== 'All') params.append('qtype', currentFilters.type);
-      if (currentFilters.searchQuery) params.append('searchterm', currentFilters.searchQuery);
+      if (debouncedSearchQuery) params.append('searchterm', debouncedSearchQuery);
 
       const url = `${API_BASE_URL}/questions/filters?${params}`;
       console.log(' Final API URL:', url);
@@ -410,7 +432,7 @@ const QuestionBank = () => {
       }
 
       const result = await response.json();
-      console.log(' API Response:', {
+      console.log('📦 API Response:', {
         total: result.total,
         questions: result.questions?.length,
         current_page: result.current_page
@@ -425,6 +447,7 @@ const QuestionBank = () => {
         status: q.status || 'ready',
         version: `v${q.version || 1}`,
         categoryId: q.category,
+        categoryid: q.category, // Alternative field name
         contextid: q.contextid,
         createdBy: {
           name: q.createdbyuser ?
@@ -479,23 +502,26 @@ const QuestionBank = () => {
       }, 1000);
     }
   }, [
-    //  FIX: Only include truly stable dependencies
+    // FIXED: Only include truly stable dependencies
     filters.courseId,
     filters.category,
     filters.status,
     filters.type,
-    debouncedTagFilter //  Use debounced version
+    debouncedSearchQuery,
+    debouncedTagFilter
   ]);
 
   // Load static data with caching
   const loadStaticData = useCallback(async () => {
     try {
+      console.log(' Loading static data...');
       const [types, categories] = await Promise.all([
         questionAPI.getQuestionTypes(),
         questionAPI.getCategories()
       ]);
       setAvailableQuestionTypes(types);
       setAvailableCategories(categories);
+      console.log('Static data loaded:', { types: types.length, categories: categories.length });
     } catch (error) {
       console.error(' Failed to load static data:', error);
     }
@@ -511,15 +537,16 @@ const QuestionBank = () => {
     setCurrentView(view);
   }, []);
 
-  //  FIX: Enhanced setFilters with stability check
+  // FIXED: Enhanced setFilters with stability check
   const setFiltersWithLogging = useCallback((newFilters) => {
-    //  FIX: Prevent unnecessary updates
-    if (JSON.stringify(filters) === JSON.stringify(newFilters)) {
+    // FIXED: Prevent unnecessary updates
+    const filtersEqual = JSON.stringify(filters) === JSON.stringify(newFilters);
+    if (filtersEqual) {
       console.log(' Filters unchanged, skipping update');
       return;
     }
 
-    console.log(' Filters updated:', { old: filters, new: newFilters });
+    console.log('Filters updated:', { old: filters, new: newFilters });
     setFilters(newFilters);
     
     // Persist course selection
@@ -531,6 +558,17 @@ const QuestionBank = () => {
     } else {
       localStorage.removeItem('CourseID');
       localStorage.removeItem('CourseName');
+    }
+    
+    // Persist category selection
+    if (newFilters.category && newFilters.category !== 'All') {
+      localStorage.setItem('questionCategoryId', newFilters.category);
+      if (newFilters.categoryName) {
+        localStorage.setItem('questionCategoryName', newFilters.categoryName);
+      }
+    } else {
+      localStorage.removeItem('questionCategoryId');
+      localStorage.removeItem('questionCategoryName');
     }
   }, [filters]);
 
@@ -548,12 +586,13 @@ const QuestionBank = () => {
   
     setSelectedCourse({ id: courseId, name: courseName });
   
-    // 1. Fetch categories for this course
-    await fetchQuestionCategoriesRef.current(courseId);
+    // 1. Fetch categories for this course (this also updates categoryCountMap)
+    await fetchQuestionCategoriesForCourse(courseId);
   
     // 2. Set filters
     setFiltersWithLogging({
       category: 'All',
+      categoryName: '',
       status: 'All',
       type: 'All',
       courseId: courseId,
@@ -565,7 +604,7 @@ const QuestionBank = () => {
     setCurrentPage(1);
   
     toast.success(`Filtering questions for: ${courseName}`);
-  }, [setFiltersWithLogging, setTagFilter]);
+  }, [setFiltersWithLogging, setTagFilter, fetchQuestionCategoriesForCourse]);
 
   // Status change handlers
   const handleStatusChange = useCallback(async (questionId, newStatus) => {
@@ -650,23 +689,18 @@ const QuestionBank = () => {
   }, [questions, username]);
 
   // ============================================================================
-  //  FIXED EFFECTS - SPLIT INTO SEPARATE CONCERNS
+  // FIXED EFFECTS - SPLIT INTO SEPARATE CONCERNS
   // ============================================================================
   
   // Effect 1: Filter changes (NOT including pagination)
   useEffect(() => {
     if (currentView !== 'questions') return;
     
-    console.log(' Filters changed, fetching questions...');
-    
-    const currentFilters = {
-      ...filters,
-      searchQuery: debouncedSearchQuery
-    };
+    console.log('Filters changed, fetching questions...');
     
     // Always reset to page 1 when filters change
     setCurrentPage(1);
-    fetchQuestions(currentFilters, 1, questionsPerPage);
+    fetchQuestions(filters, 1, questionsPerPage);
     
   }, [
     filters.courseId,
@@ -674,7 +708,7 @@ const QuestionBank = () => {
     filters.status, 
     filters.type,
     debouncedSearchQuery,
-    debouncedTagFilter, //  Use debounced version
+    debouncedTagFilter,
     currentView,
     questionsPerPage,
     fetchQuestions
@@ -686,41 +720,28 @@ const QuestionBank = () => {
     if (currentPage === 1) return; // Skip page 1 (handled by filter effect)
     
     console.log(' Page changed, fetching questions...');
+    fetchQuestions(filters, currentPage, questionsPerPage);
     
-    const currentFilters = {
-      ...filters,
-      searchQuery: debouncedSearchQuery
-    };
-    
-    fetchQuestions(currentFilters, currentPage, questionsPerPage);
-    
-  }, [currentPage]); //  ONLY currentPage dependency
+  }, [currentPage, fetchQuestions, currentView, filters, questionsPerPage]);
 
-  //  Effect 3: Load static data on mount
+  // Effect 3: Load static data on mount
   useEffect(() => {
     loadStaticData();
   }, [loadStaticData]);
 
-  //  Effect 4: Course changes - load categories and counts
+  // Effect 4: Course changes - load categories and counts
   useEffect(() => {
     if (filters.courseId && filters.courseId !== 'All') {
-      console.log('🏢 Course changed, fetching categories and counts...');
-      
-      // Use refs to avoid function dependency issues
-      fetchQuestionCategoriesRef.current(filters.courseId)
-        .then(() => {
-          return fetchCategoryCountsRef.current();
-        })
-        .catch(error => {
-          console.error(' Failed to fetch categories/counts:', error);
-        });
+      console.log(' Course changed, fetching categories and counts...');
+      fetchQuestionCategoriesForCourse(filters.courseId);
     } else {
+      console.log(' No course selected, clearing categories');
       setQuestionCategories([]);
       setCategoryCountMap({});
     }
-  }, [filters.courseId]); //  ONLY courseId dependency
+  }, [filters.courseId, fetchQuestionCategoriesForCourse]);
 
-  //  Calculate category question count with useMemo instead of useEffect
+  // Calculate category question count with useMemo instead of useEffect
   const categoryQuestionCount = useMemo(() => {
     if (!questions || questions.length === 0) {
       return 0;
@@ -819,7 +840,7 @@ const QuestionBank = () => {
               />
             )}
 
-            {/* Filters Row with Tag Filtering */}
+            {/* FIXED: Filters Row with Tag Filtering */}
             <FiltersRow
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -999,7 +1020,9 @@ const QuestionBank = () => {
   // ============================================================================
 
   return (
-    <div className="max-w-full ">
+    <div className="max-w-full">
+      <Toaster position="top-right" />
+      
       {/* Performance indicator */}
       {loading && (
         <div className="fixed top-0 left-0 w-full h-1 bg-blue-200 z-50">

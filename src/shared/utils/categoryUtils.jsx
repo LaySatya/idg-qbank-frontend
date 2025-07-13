@@ -1,5 +1,5 @@
 // ============================================================================
-// src/shared/utils/categoryUtils.jsx - FIXED: Null Safety & Tree Building
+// src/shared/utils/categoryUtils.jsx - COMPLETELY FIXED VERSION
 // ============================================================================
 
 /**
@@ -66,7 +66,7 @@ export const buildGroupedCategoryTree = (categories = [], courses = []) => {
     grouped[contextid].push({ ...cat }); // Create shallow copy
   });
 
-  console.log(' Grouped by contextid:', Object.keys(grouped).map(id => `${id}: ${grouped[id].length}`));
+  console.log('Grouped by contextid:', Object.keys(grouped).map(id => `${id}: ${grouped[id].length}`));
 
   /**
    * Build hierarchical tree from flat category list
@@ -149,12 +149,13 @@ export const buildGroupedCategoryTree = (categories = [], courses = []) => {
     );
   };
 
-  // Build the final grouped result
+  // FIXED: Better context labeling and grouping
   const orderedGroups = [];
 
-  // Process non-system contexts first (contextid !== '1')
+  // Process non-system contexts first, sorted by contextid
   Object.entries(grouped)
     .filter(([contextid]) => contextid !== '1')
+    .sort(([a], [b]) => Number(a) - Number(b))
     .forEach(([contextid, cats]) => {
       if (!Array.isArray(cats) || cats.length === 0) return;
 
@@ -168,35 +169,47 @@ export const buildGroupedCategoryTree = (categories = [], courses = []) => {
       // Build tree for this context
       const tree = buildTree(sorted);
 
-      // Determine label for this group
+      // FIXED: Better label generation with fallbacks
       let label = `Context ${contextid}`;
 
       // Try to find a course name
       const courseName = getCourseNameByContextId(Number(contextid));
       if (courseName) {
-        label = `Course: ${courseName}`;
+        label = courseName;
       } else {
-        // Look for "Top" category to get course context
-        const topCategory = sorted.find(cat => 
-          cat.name && cat.name.toLowerCase().trim() === 'top'
+        // Look for "Default for X" category to get context name
+        const defaultCategory = sorted.find(cat => 
+          cat.name && cat.name.toLowerCase().startsWith('default for ')
         );
         
-        if (topCategory) {
-          const topCourseName = getCourseNameByContextId(topCategory.id);
-          if (topCourseName) {
-            label = `Course: ${topCourseName}`;
+        if (defaultCategory) {
+          const contextName = defaultCategory.name.replace(/^default for /i, '').trim();
+          if (contextName && contextName !== 'context' && contextName !== contextid) {
+            label = contextName;
           }
-        } else if (sorted.length > 0 && sorted[0].name) {
-          // Use first category name as fallback
-          label = `Category: ${sorted[0].name}`;
+        } else {
+          // Look for meaningful category names (not "top")
+          const meaningfulCategory = sorted.find(cat => 
+            cat.name && cat.name.toLowerCase().trim() !== 'top'
+          );
+          
+          if (meaningfulCategory) {
+            label = `${meaningfulCategory.name} Context`;
+          }
         }
       }
+
+      // Calculate total questions in this context
+      const totalQuestionCount = cats.reduce((sum, cat) => 
+        sum + (cat.questioncount || cat.totalQuestionCount || 0), 0
+      );
 
       orderedGroups.push({
         contextid: Number(contextid),
         label,
         tree,
-        categoryCount: cats.length
+        categoryCount: cats.length,
+        totalQuestionCount
       });
     });
 
@@ -209,17 +222,21 @@ export const buildGroupedCategoryTree = (categories = [], courses = []) => {
     });
 
     const tree = buildTree(sorted);
+    const totalQuestionCount = grouped['1'].reduce((sum, cat) => 
+      sum + (cat.questioncount || cat.totalQuestionCount || 0), 0
+    );
 
     orderedGroups.push({
       contextid: 1,
       label: 'System',
       tree,
-      categoryCount: grouped['1'].length
+      categoryCount: grouped['1'].length,
+      totalQuestionCount
     });
   }
 
-  console.log(' Final grouped tree:', orderedGroups.map(g => 
-    `${g.label} (${g.categoryCount} categories, ${g.tree.length} root nodes)`
+  console.log('📁 Final grouped tree:', orderedGroups.map(g => 
+    `${g.label} (${g.categoryCount} categories, ${g.tree.length} root nodes, ${g.totalQuestionCount} questions)`
   ));
 
   return orderedGroups;
@@ -452,37 +469,30 @@ export const validateCategoryTree = (tree) => {
 };
 
 /**
- * Annotate a category tree with question counts for each category
+ * FIXED: Annotate a category tree with question counts for each category
  * @param {Array} tree - Category tree (array of nodes)
  * @param {Array} questions - Flat array of questions (each with categoryid)
+ * @param {Object} categoryCountMap - Map of category IDs to question counts from API
  * @returns {Array} The same tree, with .questionCount on each node
  */
-export function addQuestionCountToCategoryTree(tree, questions, categoryCountMap = {}) {
-  // First apply API counts from categoryCountMap
-  function applyApiCounts(nodes) {
-    if (!Array.isArray(nodes)) return;
-    
-    nodes.forEach(node => {
-      if (node && node.id) {
-        // Prioritize counts from categoryCountMap (from separate API call)
-        if (categoryCountMap && categoryCountMap[node.id]) {
-          node.questioncount = categoryCountMap[node.id];
-          node.totalQuestionCount = categoryCountMap[node.id];
-        }
-        
-        if (node.children) applyApiCounts(node.children);
-      }
-    });
+export function addQuestionCountToCategoryTree(tree, questions = [], categoryCountMap = {}) {
+  console.log('[QCOUNT] addQuestionCountToCategoryTree called with:', {
+    treeLength: Array.isArray(tree) ? tree.length : 0,
+    questionsLength: Array.isArray(questions) ? questions.length : 0,
+    categoryCountMapKeys: Object.keys(categoryCountMap)
+  });
+
+  if (!Array.isArray(tree)) {
+    console.warn('[QCOUNT] Tree is not an array:', typeof tree);
+    return [];
   }
-  
-  applyApiCounts(tree);
-  
-  // Calculate counts for currently visible questions (if needed)
+
+  // Calculate current page question counts (visible questions)
   const currentCountMap = {};
   
   if (Array.isArray(questions) && questions.length > 0) {
     questions.forEach(q => {
-      const catId = String(q.categoryid || q.categoryId || q.category).trim();
+      const catId = String(q.categoryid || q.categoryId || q.category || '').trim();
       if (!catId || catId === 'undefined' || catId === 'null') return;
       currentCountMap[catId] = (currentCountMap[catId] || 0) + 1;
     });
@@ -491,30 +501,47 @@ export function addQuestionCountToCategoryTree(tree, questions, categoryCountMap
   console.log('[QCOUNT] Current page question counts:', currentCountMap);
   console.log('[QCOUNT] API category counts:', categoryCountMap);
   
-  // Add visible count to each node
-  function traverse(nodes) {
-    if (!Array.isArray(nodes)) return;
-    nodes.forEach(node => {
-      const nodeId = String(node.id).trim();
+  // Recursively apply counts to tree nodes
+  function applyCountsToTree(nodes) {
+    if (!Array.isArray(nodes)) return nodes;
+    
+    return nodes.map(node => {
+      if (!node || !node.id) return node;
       
-      // Add visible count (for current page)
-      node.questionCount = currentCountMap[nodeId] || 0;
+      const nodeId = String(node.id);
       
-      // Ensure totalQuestionCount is set from API data
-      if (!node.totalQuestionCount) {
-        node.totalQuestionCount = categoryCountMap[nodeId] || node.questioncount || 0;
+      // Get counts from different sources
+      const visibleCount = currentCountMap[nodeId] || 0;
+      const apiCount = categoryCountMap[nodeId] || 0;
+      const existingCount = node.questioncount || node.totalQuestionCount || 0;
+      
+      // Use API count as the primary source of truth for total count
+      const totalCount = apiCount || existingCount || 0;
+      
+      console.log(`[QCOUNT] Category ${nodeId} (${node.name}): visible=${visibleCount}, api=${apiCount}, existing=${existingCount}, final=${totalCount}`);
+      
+      const updatedNode = {
+        ...node,
+        questionCount: visibleCount,           // Current page questions
+        totalQuestionCount: totalCount,        // Total questions from API
+        questioncount: totalCount              // Legacy field for compatibility
+      };
+      
+      // Recursively apply to children
+      if (node.children && Array.isArray(node.children)) {
+        updatedNode.children = applyCountsToTree(node.children);
       }
       
-      console.log('[QCOUNT] Category node:', nodeId, 'name:', node.name, 
-                  'visibleCount:', node.questionCount,
-                  'totalCount:', node.totalQuestionCount);
-                  
-      if (node.children) traverse(node.children);
+      return updatedNode;
     });
   }
 
-  traverse(tree);
-  return tree;
+  const result = applyCountsToTree(tree);
+  
+  console.log('[QCOUNT] Tree processing complete. Total nodes processed:', 
+    getAllCategoryIds(result).length);
+  
+  return result;
 }
 
 // Export all utilities

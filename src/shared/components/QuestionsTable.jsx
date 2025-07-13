@@ -246,7 +246,7 @@ const QuestionsTable = ({
   const [editModalName, setEditModalName] = useState('');
   const [editModalText, setEditModalText] = useState('');
   
-
+const [dropdownDirection, setDropdownDirection] = useState({});
  //preview  direct to real moodle
  const [showMoodlePreview, setShowMoodlePreview] = useState(false);
 const [moodlePreviewUrl, setMoodlePreviewUrl] = useState('');
@@ -550,10 +550,10 @@ const handlePreviewMoodle = async (question) => {
     const data = await res.json();
     if (data.status && data.previewurl) {
       //  Option 1: New tab (best for user experience)
-      // window.open(data.previewurl, '_blank');
+      window.open(data.previewurl, "_blank", "width=800,height=600");
 
       // OR
-      window.open(data.previewurl, '_blank', 'noopener,noreferrer');
+      // window.open(data.previewurl, '_blank', 'noopener,noreferrer');
       //  Option 2: Same tab (replaces your app)
       //  window.location.href = data.previewurl;
     } else {
@@ -563,6 +563,135 @@ const handlePreviewMoodle = async (question) => {
     toast.error('Failed to fetch Moodle preview');
   }
 };
+const handleEditMoodle = async (question) => {
+  const token = localStorage.getItem('token');
+  
+  let courseId = localStorage.getItem('CourseID') || 
+                 localStorage.getItem('courseid') || 
+                 localStorage.getItem('courseId');
+  
+  if (courseId) {
+    courseId = parseInt(courseId, 10);
+  }
+
+  console.log(' Token:', token);
+  console.log(' Course ID:', courseId);
+  console.log('Question:', question);
+
+  if (!token) {
+    toast.error('Missing authentication token');
+    return;
+  }
+  
+  if (!courseId || isNaN(courseId)) {
+    toast.error('Missing or invalid course ID. Please select a course first.');
+    return;
+  }
+  
+  if (!question?.id) {
+    toast.error('Missing question ID');
+    return;
+  }
+
+  try {
+    const returnUrl = encodeURIComponent('/');
+    const url = `${API_BASE_URL}/questions/full_edit_moodle_form?questionid=${question.id}&courseid=${courseId}&returnurl=${returnUrl}`;
+    
+    console.log(' Edit form URL:', url);
+    
+    const res = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    const data = await res.json();
+    console.log(' Edit form response:', data);
+    
+    if (data.edit_form_url) {
+      // FIXED: Open in new tab instead of iframe
+      window.open(data.edit_form_url, '_blank', 'noopener,noreferrer');
+      toast.success('Opening Moodle edit form in new tab...');
+    } else {
+      toast.error(data.message || 'Failed to get edit form URL');
+      console.error('API Error:', data);
+    }
+  } catch (error) {
+    toast.error('Failed to fetch Moodle edit form');
+    console.error('Fetch error:', error);
+  }
+};
+
+// ALTERNATIVE: If you want to also check the current filters
+// const handleEditMoodleWithFilters = async (question) => {
+//   const token = localStorage.getItem('token');
+  
+//   // Try to get course ID from multiple sources
+//   let courseId = localStorage.getItem('CourseID') || 
+//                  localStorage.getItem('courseid') || 
+//                  localStorage.getItem('courseId') ||
+//                  filters?.courseId; // From your current filters state
+  
+//   if (courseId) {
+//     courseId = parseInt(courseId, 10);
+//   }
+
+//   console.log('🧪 Token:', token);
+//   console.log('🧪 Course ID:', courseId);
+//   console.log('🧪 Question:', question);
+//   console.log('🧪 Filters courseId:', filters?.courseId);
+
+//   if (!token) {
+//     toast.error('Missing authentication token');
+//     return;
+//   }
+  
+//   if (!courseId || isNaN(courseId)) {
+//     toast.error('Please select a course first before editing questions.');
+//     return;
+//   }
+  
+//   if (!question?.id) {
+//     toast.error('Missing question ID');
+//     return;
+//   }
+
+//   try {
+//     const returnUrl = encodeURIComponent('/');
+//     const url = `${API_BASE_URL}/questions/full_edit_moodle_form?questionid=${question.id}&courseid=${courseId}&returnurl=${returnUrl}`;
+    
+//     console.log('🌐 Edit form URL:', url);
+    
+//     const res = await fetch(url, {
+//       headers: {
+//         'Authorization': `Bearer ${token}`,
+//         'Accept': 'application/json'
+//       }
+//     });
+
+//     if (!res.ok) {
+//       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+//     }
+
+//     const data = await res.json();
+//     console.log('📝 Edit form response:', data);
+    
+//     if (data.edit_form_url) {
+//       setMoodlePreviewUrl(data.edit_form_url);
+//       setShowMoodlePreview(true);
+//       toast.success('Opening Moodle edit form...');
+//     } else {
+//       toast.error(data.message || 'Failed to get edit form URL');
+//       console.error('API Error:', data);
+//     }
+//   } catch (error) {
+//     toast.error(`Failed to fetch Moodle edit form: ${error.message}`);
+//     console.error('Fetch error:', error);
+//   }
+// };
+
+
 
   // Open modal when clicking question name
   const openEditModal = (question) => {
@@ -750,54 +879,43 @@ const handleHistory = (question) => {
 
   return (
     <>
-        <ReactModal
-      isOpen={showMoodlePreview}
-      onRequestClose={() => {
-        setShowMoodlePreview(false);
-        setMoodlePreviewUrl('');
-      }}
-      contentLabel="Preview in Real Moodle"
-      style={{
-        overlay: { zIndex: 1000 },
-        content: {
-          maxWidth: 1200,
-          minHeight: 600,
-          margin: 'auto',
-          top: '10%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          padding: '0',
-          borderRadius: '16px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-          overflow: 'hidden'
-        }
-      }}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ padding: 16, borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 className="text-lg font-bold">Preview in Real Moodle</h3>
-          <button onClick={() => setShowMoodlePreview(false)} className="text-gray-500 hover:text-gray-800 text-xl">&times;</button>
-        </div>
-        <div style={{ flex: 1, minHeight: 500, background: '#f9f9f9' }}>
-          {loadingMoodlePreview ? (
-            <div className="flex items-center justify-center h-full">
-              <span>Loading preview...</span>
-            </div>
-          ) : moodlePreviewUrl ? (
-            <iframe
-              src={moodlePreviewUrl}
-              title="Moodle Preview"
-              style={{ width: '100%', height: '100%', border: 'none' }}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <span className="text-red-500">Failed to load preview.</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </ReactModal>
+  <ReactModal
+  isOpen={showMoodlePreview}
+  onRequestClose={() => {
+    setShowMoodlePreview(false);
+    setMoodlePreviewUrl('');
+  }}
+  contentLabel="Edit in Real Moodle"
+  style={{
+    overlay: { zIndex: 1000 },
+    content: {
+      maxWidth: '90%',
+      height: '90%',
+      margin: 'auto',
+      padding: 0,
+      overflow: 'hidden',
+      borderRadius: '12px'
+    }
+  }}
+>
+  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="flex items-center justify-between p-4 border-b">
+      <h3 className="text-lg font-semibold">
+        {moodlePreviewUrl.includes('editquestion') ? 'Edit in Real Moodle' : 'Preview in Real Moodle'}
+      </h3>
+      <button onClick={() => setShowMoodlePreview(false)}>&times;</button>
+    </div>
+
+    <iframe
+      src={moodlePreviewUrl}
+      style={{ flexGrow: 1, border: 'none' }}
+      width="100%"
+      height="100%"
+      title="Moodle Edit Form"
+    />
+  </div>
+</ReactModal>
+
       <div
         // className="overflow-x-auto"
         // style={{ minHeight: '300px', height: 'unset', maxHeight: 'unset', overflowY: 'auto' }}
@@ -1009,15 +1127,25 @@ const handleHistory = (question) => {
                       <div className="flex">
                         <div className="relative" ref={el => dropdownRefs.current[question.id] = el}>
                           <div>
-                            <a 
-                              href="#" 
-                              className="text-blue-600 hover:text-blue-900 focus:outline-none" 
-                              aria-label="Edit" 
-                              role="button" 
-                              aria-haspopup="true" 
+                                                       <a
+                              href="#"
+                              className="text-blue-600 hover:text-blue-900 focus:outline-none"
+                              aria-label="Edit"
+                              role="button"
+                              aria-haspopup="true"
                               aria-expanded={openActionDropdown === question.id}
                               onClick={(e) => {
                                 e.preventDefault();
+                                const el = dropdownRefs.current[question.id];
+                                if (el) {
+                                  const rect = el.getBoundingClientRect();
+                                  const dropdownHeight = 350; // Approximate height of your dropdown
+                                  const spaceBelow = window.innerHeight - rect.bottom;
+                                  setDropdownDirection(prev => ({
+                                    ...prev,
+                                    [question.id]: spaceBelow < dropdownHeight ? 'up' : 'down'
+                                  }));
+                                }
                                 setOpenActionDropdown(openActionDropdown === question.id ? null : question.id);
                               }}
                             >
@@ -1025,8 +1153,16 @@ const handleHistory = (question) => {
                               <i className="fa fa-chevron-down ml-1"></i>
                             </a>
                             {openActionDropdown === question.id && (
-                              <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
-                                                                <a
+                            <div
+                              className={`absolute right-0 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1
+                                ${dropdownDirection[question.id] === 'up' ? 'bottom-full mb-2' : 'mt-2'}`}
+                              style={{
+                                maxHeight: 350,
+                                overflowY: 'auto',
+                                ...(dropdownDirection[question.id] === 'up' ? { bottom: '100%' } : { top: '100%' })
+                              }}
+                            >
+                              <a
                                   href="#"
                                   className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors"
                                   role="menuitem"
@@ -1040,8 +1176,21 @@ const handleHistory = (question) => {
                                   <i className="fa fa-eye w-4 text-center mr-2 text-blue-500"></i>
                                   <span>Preview Moodle</span>
                                 </a>
-                                
                                 <a
+                                  href="#"
+                                  className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors"
+                                  role="menuitem"
+                                  tabIndex="-1"
+                                  onClick={async (e) => {
+                                    e.preventDefault();
+                                    await handleEditMoodle(question);  // This will load Moodle's edit form into the modal iframe
+                                    setOpenActionDropdown(null);       // Close the dropdown menu
+                                  }}
+                                >
+                                  <i className="fa fa-edit w-4 text-center mr-2 text-blue-500"></i>
+                                  <span>Edit in Moodle</span>
+                                </a>
+                                                                <a
                                   href="#"
                                   className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
                                   role="menuitem"
