@@ -556,7 +556,7 @@ const QuestionBank = () => {
         localStorage.setItem('CourseName', newFilters.courseName);
       }
     } else {
-      localStorage.removeItem('CourseID');
+      // localStorage.removeItem('CourseID');
       localStorage.removeItem('CourseName');
     }
     

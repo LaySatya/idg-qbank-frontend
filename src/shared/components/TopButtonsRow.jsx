@@ -293,7 +293,7 @@ const TopButtonsRow = ({
             <button
               type="button"
               onClick={() => setShowCategoriesModal(true)}
-              className="inline-flex  items-center gap-2 rounded-md bg-sky-400 text-gray-800 px-4 py-2 font-semibold shadow hover:bg-sky-500 transition"
+              className="inline-flex  items-center gap-2 rounded-md bg-gray-200 text-gray-800 px-4 py-2 font-semibold shadow hover:bg-gray-300 transition"
             >
              
               Open Categories

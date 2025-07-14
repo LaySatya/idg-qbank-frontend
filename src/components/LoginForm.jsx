@@ -8,6 +8,43 @@ const LoginForm = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const autoLogin = `${import.meta.env.VITE_AUTO_LOGIN}`;   
+
+// Place this anywhere in your component to trigger the background request
+// const openUrlSilently = async (url, e) => {
+//   const a = document.createElement('a');
+//   a.href = url;
+//   a.target = '_blank'; // Open in new tab
+//   a.rel = 'noopener noreferrer';
+//   a.style.display = 'none';
+//   document.body.appendChild(a);
+//   a.click();
+//   e.preventDefault(); // Prevent default link behavior
+//   document.body.removeChild(a);
+// };
+
+const silentMoodleLogin = (url) => {
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.src = url;
+  document.body.appendChild(iframe);
+
+  // Remove iframe after it's loaded to clean up DOM
+  iframe.onload = () => {
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 3000); // Give Moodle time to store session
+  };
+};
+const openMoodleAutoLoginTab = (token) => {
+  const url = `${import.meta.env.VITE_MOODLE_BASE_URL}/${autoLogin}?token=${token}`;
+  window.open(url, '_blank');
+};
+// Usage in your login logic:
+// openUrlWithATag(`${import.meta.env.VITE_MOODLE_BASE_URL}/${autoLogin}?token=${response.token}`);
+
+// Usage
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -24,22 +61,29 @@ const LoginForm = ({ onLogin }) => {
       const response = await loginUser(username.trim(), password.trim());
       
       // Debug log to verify response
-      console.log(' Enhanced login response:', response);
+      // console.log(' Enhanced login response:', response);
+
+      // openUrlSilently(`${import.meta.env.VITE_MOODLE_BASE_URL}/${autoLogin}?token=${response.token}`);
+      // silentMoodleLogin(`${import.meta.env.VITE_MOODLE_BASE_URL}/${autoLogin}?token=${response.token}`);
+      silentMoodleLogin(`${import.meta.env.VITE_MOODLE_BASE_URL}/${autoLogin}?token=${response.token}`);
 
       // Make sure we have all required data before proceeding
       if (!response.token) {
         throw new Error('No authentication token received');
       }
 
+
+      openMoodleAutoLoginTab(response.token);
+
       // The enhanced loginUser function already stores all data in localStorage
       // But we can verify it's stored correctly
-      console.log(' Verifying stored user data:', {
-        token: localStorage.getItem('token'),
-        username: localStorage.getItem('username'),
-        userid: localStorage.getItem('userid'),
-        profileImage: localStorage.getItem('profileimageurl'),
-        currentUser: localStorage.getItem('currentUser')
-      });
+      // console.log(' Verifying stored user data:', {
+      //   token: localStorage.getItem('token'),
+      //   username: localStorage.getItem('username'),
+      //   userid: localStorage.getItem('userid'),
+      //   profileImage: localStorage.getItem('profileimageurl'),
+      //   currentUser: localStorage.getItem('currentUser')
+      // });
 
       // Call the onLogin handler with all data
       if (onLogin) {

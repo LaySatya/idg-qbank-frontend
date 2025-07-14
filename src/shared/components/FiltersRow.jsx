@@ -48,7 +48,7 @@ const ClearTagFilterButton = ({ tagFilter, setTagFilter }) => {
   const handleClearTags = () => {
     setTagFilter([]);
     localStorage.removeItem('questionTagFilter');
-    console.log('🗑️ Tag filter cleared');
+    console.log(' Tag filter cleared');
   };
 
   // return (
@@ -435,7 +435,7 @@ const FiltersRow = ({
 
   // Debug effect
   useEffect(() => {
-    console.log('🔍 FiltersRow Debug:', {
+    console.log(' FiltersRow Debug:', {
       totalQuestionsAllCategories,
       categoryGroups: categoryGroups.map(g => ({
         label: g.label,

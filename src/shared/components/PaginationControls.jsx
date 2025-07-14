@@ -1,8 +1,8 @@
 // /Users/piseytep/Desktop/ReactJs/moodleQB/moodle/src/shared/components/PaginationControls.jsx
 
 import React from 'react';
-import ReactPaginate from 'react-paginate';
 
+  import Pagination from '@mui/material/Pagination';
 //  FIXED: Simple SVG icons instead of @heroicons/react
 const ChevronLeftIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -152,28 +152,39 @@ const PaginationControls = ({
         </div>
       </div>
       {/* Pagination Controls - Right Side */}
+        
+      
+    
+      
       <div className="flex items-center gap-2">
-        <ReactPaginate
-          previousLabel={<ChevronLeftIcon />}
-          nextLabel={<ChevronRightIcon />}
-          breakLabel={"..."}
-          pageCount={safeTotalPages}
-          forcePage={safeCurrentPage - 1}
-          marginPagesDisplayed={1}
-          pageRangeDisplayed={3}
-          onPageChange={handleReactPaginate}
-          containerClassName={"pagination flex items-center gap-1"}
-          pageClassName={"page-item"}
-          pageLinkClassName={"page-link px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"}
-          previousClassName={"page-item"}
-          previousLinkClassName={"page-link px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"}
-          nextClassName={"page-item"}
-          nextLinkClassName={"page-link px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"}
-          breakClassName={"page-item"}
-          breakLinkClassName={"page-link px-3 py-2 text-sm font-medium text-gray-500"}
-          activeClassName={"active"}
-          disabledClassName={"disabled opacity-50 cursor-not-allowed"}
-          renderOnZeroPageCount={null}
+        <Pagination
+          count={safeTotalPages}
+          page={safeCurrentPage}
+          onChange={(e, page) => handlePageChange(page)}
+          variant="outlined"
+          shape="rounded"
+          color="primary"
+          sx={{
+            '& .MuiPaginationItem-root': {
+              borderRadius: '8px',
+              fontWeight: 500,
+              fontSize: '1rem',
+              minWidth: 36,
+              height: 36,
+              color: '#334155',
+              borderColor: '#e5e7eb',
+              backgroundColor: '#fff',
+              '&.Mui-selected': {
+                backgroundColor: '#2563eb',
+                color: '#fff',
+                borderColor: '#2563eb',
+              },
+              '&:hover': {
+                backgroundColor: '#f3f4f6',
+              },
+            },
+          }}
+          disabled={isLoading}
         />
       </div>
       <style>{`

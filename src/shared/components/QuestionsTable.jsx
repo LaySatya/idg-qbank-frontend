@@ -572,7 +572,7 @@ const handleEditMoodle = async (question) => {
   
   if (courseId) {
     courseId = parseInt(courseId, 10);
-  }
+  } 
 
   console.log(' Token:', token);
   console.log(' Course ID:', courseId);

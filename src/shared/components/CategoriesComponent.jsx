@@ -138,10 +138,10 @@ const CategoriesComponent = ({
             const rootIds = new Set(categoryTree.map(cat => cat.id));
             setExpandedCategories(rootIds);
             
-            setSuccess({ 
-              type: 'success', 
-              message: `Loaded ${courseCategoriesData.length} course categories` 
-            });
+            // setSuccess({ 
+            //   type: 'success', 
+            //   message: `Loaded ${courseCategoriesData.length} course categories` 
+            // });
 
             // NEW: Auto-select default category if available
             if (defaultCategory) {
@@ -295,18 +295,18 @@ const CategoriesComponent = ({
       // Save user preference
       localStorage.setItem('CourseCategoryId', categoryId.toString());
       
-      setSuccess({ 
-        type: 'success', 
-        message: `Selected: ${categoryName} - Loading courses...` 
-      });
+      // setSuccess({ 
+      //   type: 'success', 
+      //   message: `Selected: ${categoryName} - Loading courses...` 
+      // });
 
       // NEW: Lazy load courses for this category
       const courses = await loadCoursesForCategory(categoryId);
       
-      setSuccess({ 
-        type: 'success', 
-        message: `Selected: ${categoryName} (${courses.length} courses loaded)` 
-      });
+      // setSuccess({ 
+      //   type: 'success', 
+      //   message: `Selected: ${categoryName} (${courses.length} courses loaded)` 
+      // });
     }
   };
 
@@ -407,7 +407,7 @@ const CategoriesComponent = ({
     const coursesInCategory = getCoursesForCategory(category.id);
     const isLoadingCourses = loadingStates.courses.has(category.id);
     const hasLoadedCourses = coursesMap.has(category.id);
-    
+    const inden =level * 2 ; // Moodle-style indentation level   
     // Moodle-style indentation
     const indentWidth = level * 24;
 
@@ -429,8 +429,9 @@ const CategoriesComponent = ({
       
     };
     const expandBtnStyle = {
-      padding: 4,
-      borderRadius: 6,
+  
+      // padding: 12,
+      // borderRadius: 12,
       background: 'none',
       border: 'none',
       cursor: 'pointer',
@@ -442,7 +443,8 @@ const CategoriesComponent = ({
     };
     const badgeStyle = (bg, color) => ({
       fontSize: 12,
-      padding: '2px 8px',
+      
+      padding: '2px 6px',
       borderRadius: 12,
       background: bg,
       color: color,
@@ -451,7 +453,7 @@ const CategoriesComponent = ({
     });
     const idBadgeStyle = badgeStyle(isSelected ? '#e0f2fe' : '#f3f4f6', isSelected ? '#0369a1' : '#6b7280');
     const courseCountBadgeStyle = badgeStyle(isSelected ? '#bae6fd' : '#f3f4f6', isSelected ? '#0369a1' : '#6b7280');
-    const levelBadgeStyle = badgeStyle(level === 0 ? '#e0f2fe' : '#fef9c3', level === 0 ? '#0369a1' : '#b45309');
+    const levelBadgeStyle = badgeStyle(level === 0 ? '#e0f2fe' : '#f3f4f6', level === 0 ? '#0369a1' : '#64748b');
     const nameStyle = {
       fontWeight: 600,
       fontSize: level === 0 ? 16 : 14,
@@ -497,7 +499,7 @@ const CategoriesComponent = ({
           {/* Category Icon */}
           <div style={{ flexShrink: 0 }}>
             {level === 0 ? (
-              <Building2 size={18} color={isSelected ? '#2563eb' : '#52525b'} />
+              <Folder size={18} color={isSelected ? '#2563eb' : '#52525b'} />
             ) : hasChildren ? (
               <FolderOpen size={16} color={isSelected ? '#0ea5e9' : '#64748b'} />
             ) : (
@@ -509,17 +511,17 @@ const CategoriesComponent = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={nameStyle}>{category.name}</span>
               {/* Course Count Badge */}
-              <span style={courseCountBadgeStyle}>
+              {/* <span style={courseCountBadgeStyle}>
                 {isLoadingCourses ? '...' : 
                  hasLoadedCourses ? `${coursesInCategory.length} course${coursesInCategory.length !== 1 ? 's' : ''}` :
                  'Click to load courses'}
-              </span>
+              </span> */}
               {/* Loading indicator */}
               {isLoadingCourses && (
                 <Loader size={14} style={{ color: '#2563eb', animation: 'spin 1s linear infinite' }} />
               )}
               {/* ID Badge */}
-              <span style={idBadgeStyle}>ID: {category.id}</span>
+              {/* <span style={idBadgeStyle}>ID: {category.id}</span> */}
             </div>
             {/* ID Number */}
             {category.idnumber && (
@@ -528,7 +530,7 @@ const CategoriesComponent = ({
           </div>
           {/* Level Indicator */}
           <div style={{ flexShrink: 0 }}>
-            <span style={levelBadgeStyle}>L{level + 1}</span>
+            {/* <span style={levelBadgeStyle}>L{level + 1}</span> */}
           </div>
         </div>
         {/* Children */}
@@ -606,7 +608,7 @@ const CategoriesComponent = ({
         </div>
         {/* Category Breadcrumb */}
         <div style={breadcrumbStyle}>
-          <Home size={12} />
+          <GraduationCap size={12} />
           <span>{course.categoryName}</span>
         </div>
         {/* Summary */}
@@ -622,10 +624,10 @@ const CategoriesComponent = ({
               <Users size={14} />
               <span>{course.enrolledusers || 0}</span>
             </div> */}
-            <div style={statItemStyle}>
+            {/* <div style={statItemStyle}>
               <GraduationCap size={14} />
               <span style={{ color: '#2563eb', fontWeight: 500 }}>ID: {course.id}</span>
-            </div>
+            </div> */}
           </div>
           {/* <ArrowRight size={16} style={arrowStyle} /> */}
         </div>
@@ -691,26 +693,113 @@ if (!isOpen) return null;
 const overlayStyle = {
   position: 'fixed',
   inset: 0,
-  background: 'rgba(30,41,59,0.40)',
+  background: 'rgba(30,41,59,0.25)',
   zIndex: 1000,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: 16,
+  padding: 8,
 };
+
 const modalStyle = {
   background: '#fff',
-  borderRadius: 18,
-  boxShadow: '0 8px 32px 0 rgba(30,41,59,0.18)',
-  width: 900, // Fixed width
-  height: 600, // Fixed height
+  borderRadius: 14,
+  boxShadow: '0 4px 24px 0 rgba(30,41,59,0.10)',
+  width: '100%',
+  maxWidth: 1070,
+  minWidth: 320,
+  height: '90vh',
+  maxHeight: '90vh',
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
   outline: 'none',
 };
 
-// Modal content
+const headerStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '16px 20px',
+  borderBottom: '1px solid #e5e7eb',
+  background: '#f8fafc',
+};
+
+const sectionStyle = {
+  flex: 1,
+  overflow: 'hidden',
+  padding: 16,
+  display: 'flex',
+  gap: 16,
+  flexDirection: 'row',
+};
+
+const leftColStyle = {
+  width: '45%',
+  borderRight: '1px solid #e5e7eb',
+  paddingRight: 12,
+  display: 'flex',
+  flexDirection: 'column',
+  minWidth: 0,
+};
+
+const rightColStyle = {
+  width: '55%',
+  paddingLeft: 12,
+  display: 'flex',
+  flexDirection: 'column',
+  minWidth: 0,
+};
+
+const footerStyle = {
+  borderTop: '1px solid #e5e7eb',
+  padding: 12,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  background: '#f8fafc',
+};
+
+const neutralBadgeStyle = {
+  fontSize: 12,
+  padding: '2px 8px',
+  borderRadius: 12,
+  background: '#f3f4f6',
+  color: '#64748b',
+  fontWeight: 500,
+  marginLeft: 4,
+};
+
+const neutralButtonStyle = {
+  padding: '8px 20px',
+  background: '#e5e7eb',
+  color: '#334155',
+  borderRadius: 8,
+  border: 'none',
+  fontWeight: 500,
+  fontSize: 15,
+  cursor: 'pointer',
+  transition: 'background 0.2s',
+};
+
+
+const proceedButtonStyle = {
+  ...neutralButtonStyle,
+  background: '#64748b',
+  color: '#fff',
+  fontWeight: 600,
+};
+
+const clearButtonStyle = {
+  ...neutralButtonStyle,
+  background: '#fff',
+  color: '#ef4444',
+  border: '1px solid #ef4444',
+};
+
+
+
+
 const modalContent = (
   <div style={overlayStyle} onClick={onClose}>
     <div
@@ -722,78 +811,53 @@ const modalContent = (
       aria-modal="true"
     >
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 24, borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ padding: 8, background: '#e0f2fe', borderRadius: 12 }}>
-            <Home size={24} color="#0ea5e9" />
-          </div>
-          <div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', margin: 0 }}>Course Categories & Courses</h2>
-          </div>
+      <div style={headerStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Home size={22} color="#64748b" />
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#334155', margin: 0 }}>Course Categories & Courses</h2>
         </div>
         <button
           onClick={onClose}
-          style={{ padding: 8, color: '#64748b', background: 'none', border: 'none', borderRadius: 8, cursor: 'pointer', transition: 'background 0.2s' }}
-          onMouseOver={e => (e.currentTarget.style.background = '#f1f5f9')}
-          onMouseOut={e => (e.currentTarget.style.background = 'none')}
+          style={{ ...neutralButtonStyle, padding: 6, background: 'none', color: '#64748b' }}
           aria-label="Close"
         >
-          <X size={20} />
+          <X size={18} />
         </button>
       </div>
       {/* Status Messages */}
       {error && (
-        <div style={{ margin: '24px 24px 0 24px', background: '#fef2f2', borderLeft: '4px solid #f87171', padding: 12, borderRadius: 8 }}>
+        <div style={{ margin: '16px 16px 0 16px', background: '#fef2f2', borderLeft: '4px solid #f87171', padding: 8, borderRadius: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <AlertCircle size={16} color="#f87171" style={{ marginRight: 8 }} />
-            <span style={{ color: '#b91c1c', fontSize: 14 }}>{error}</span>
+            <AlertCircle size={14} color="#f87171" style={{ marginRight: 8 }} />
+            <span style={{ color: '#b91c1c', fontSize: 13 }}>{error}</span>
             <button onClick={clearError} style={{ marginLeft: 'auto', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}>
-              <X size={14} />
+              <X size={12} />
             </button>
           </div>
         </div>
       )}
       {success && (
-        <div style={{ margin: '24px 24px 0 24px', background: success.type === 'error' ? '#fef2f2' : success.type === 'info' ? '#eff6ff' : '#f0f9ff', borderLeft: `4px solid ${success.type === 'error' ? '#f87171' : success.type === 'info' ? '#60a5fa' : '#38bdf8'}`, padding: 12, borderRadius: 8 }}>
+        <div style={{ margin: '16px 16px 0 16px', background: '#f3f4f6', borderLeft: '4px solid #2563eb', padding: 8, borderRadius: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <Check size={16} color={success.type === 'error' ? '#f87171' : success.type === 'info' ? '#60a5fa' : '#38bdf8'} style={{ marginRight: 8 }} />
-            <span style={{ color: success.type === 'error' ? '#b91c1c' : success.type === 'info' ? '#2563eb' : '#0ea5e9', fontSize: 14 }}>{success.message}</span>
+            <Check size={14} color="#2563eb" style={{ marginRight: 8 }} />
+            <span style={{ color: '#2563eb', fontSize: 13 }}>{success.message}</span>
             <button onClick={() => setSuccess(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-              <X size={14} />
+              <X size={12} />
             </button>
           </div>
         </div>
       )}
       {/* Content */}
-      <div style={{ flex: 1, overflow: 'hidden', padding: 24, display: 'flex', gap: 24 }}>
+      <div style={sectionStyle}>
         {/* Left: Categories */}
-        <div style={{ width: '50%', borderRight: '1px solid #e5e7eb', paddingRight: 24, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h3 style={{ fontSize: 18, fontWeight: 600, color: '#0f172a', margin: 0 }}>Course Categories</h3>
+        <div style={leftColStyle}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: '#334155', margin: 0 }}>Course Categories</h3>
             <div style={{ display: 'flex', gap: 8 }}>
               {selectedCategory && (
-                   <button
+                <button
                   onClick={handleClearSelection}
-                  style={{
-                    background: '#ffffff', // subtle white background
-                    color: '#ef4444',       // red text
-                    padding: '6px 16px',
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 500,
-                    border: '1px solid #ef4444', // red border
-                    cursor: 'pointer',
-                    transition: 'background 0.2s, color 0.2s',
-                    boxShadow: '0 1px 2px 0 rgba(0,0,0,0.03)',
-                  }}
-                  onMouseOver={e => {
-                    e.currentTarget.style.background = '#fee2e2'; // light red on hover
-                    e.currentTarget.style.color = '#b91c1c';
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.background = '#f3f4f6';
-                    e.currentTarget.style.color = '#ef4444';
-                  }}
+                  style={clearButtonStyle}
                 >
                   Clear Selection
                 </button>
@@ -802,15 +866,15 @@ const modalContent = (
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {loadingStates.categories ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0' }}>
-                <Loader className="animate-spin" size={24} color="#0ea5e9" style={{ marginRight: 8 }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
+                <Loader className="animate-spin" size={20} color="#64748b" style={{ marginRight: 8 }} />
                 <span style={{ color: '#64748b' }}>Loading categories...</span>
               </div>
             ) : categories.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '48px 0', color: '#64748b' }}>
-                <Building2 size={48} color="#cbd5e1" style={{ margin: '0 auto 16px' }} />
-                <p style={{ fontSize: 18, fontWeight: 500, color: '#334155', marginBottom: 8 }}>No categories found</p>
-                <p style={{ fontSize: 14 }}>Check your API connection.</p>
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#64748b' }}>
+                <Building2 size={36} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
+                <p style={{ fontSize: 15, fontWeight: 500, color: '#334155', marginBottom: 6 }}>No categories found</p>
+                <p style={{ fontSize: 13 }}>Check your API connection.</p>
               </div>
             ) : (
               <div>
@@ -820,18 +884,18 @@ const modalContent = (
           </div>
         </div>
         {/* Right: Courses */}
-        <div style={{ width: '50%', paddingLeft: 24, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: '#0f172a', margin: 0 }}>Courses</h3>
+        <div style={rightColStyle}>
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 600, color: '#334155', margin: 0 }}>Courses</h3>
               {selectedCategory && (
-                <span style={{ fontSize: 14, color: '#2563eb', background: '#e0f2fe', padding: '2px 10px', borderRadius: 8 }}>
+                <span style={neutralBadgeStyle}>
                   {loadingStates.courses.has(selectedCategory) ? 'Loading...' : `${filteredCourses.length} courses`}
                 </span>
               )}
             </div>
             <div style={{ position: 'relative' }}>
-              <Search size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <Search size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 type="text"
                 placeholder="Search courses..."
@@ -839,10 +903,10 @@ const modalContent = (
                 onChange={e => setSearchTerm(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '8px 16px 8px 40px',
+                  padding: '6px 12px 6px 32px',
                   border: '1px solid #cbd5e1',
-                  borderRadius: 8,
-                  fontSize: 15,
+                  borderRadius: 6,
+                  fontSize: 14,
                   outline: 'none',
                   transition: 'border 0.2s',
                   marginBottom: 0,
@@ -852,24 +916,24 @@ const modalContent = (
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {!selectedCategory ? (
-              <div style={{ textAlign: 'center', padding: '48px 0', color: '#64748b' }}>
-                <BookOpen size={48} color="#cbd5e1" style={{ margin: '0 auto 16px' }} />
-                <p style={{ fontSize: 18, fontWeight: 500, color: '#334155', marginBottom: 8 }}>Select a category</p>
-                <p style={{ fontSize: 14 }}>Choose a category to view its courses.</p>
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#64748b' }}>
+                <BookOpen size={36} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
+                <p style={{ fontSize: 15, fontWeight: 500, color: '#334155', marginBottom: 6 }}>Select a category</p>
+                <p style={{ fontSize: 13 }}>Choose a category to view its courses.</p>
               </div>
             ) : loadingStates.courses.has(selectedCategory) ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0' }}>
-                <Loader className="animate-spin" size={24} color="#2563eb" style={{ marginRight: 8 }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
+                <Loader className="animate-spin" size={20} color="#64748b" style={{ marginRight: 8 }} />
                 <span style={{ color: '#64748b' }}>Loading courses...</span>
               </div>
             ) : filteredCourses.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '48px 0', color: '#64748b' }}>
-                <BookOpen size={48} color="#cbd5e1" style={{ margin: '0 auto 16px' }} />
-                <p style={{ fontSize: 18, fontWeight: 500, color: '#334155', marginBottom: 8 }}>No courses found</p>
-                <p style={{ fontSize: 14 }}>No courses available in the selected category.</p>
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#64748b' }}>
+                <BookOpen size={36} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
+                <p style={{ fontSize: 15, fontWeight: 500, color: '#334155', marginBottom: 6 }}>No courses found</p>
+                <p style={{ fontSize: 13 }}>No courses available in the selected category.</p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
                 {filteredCourses.map(course => renderCourse(course))}
               </div>
             )}
@@ -877,8 +941,8 @@ const modalContent = (
         </div>
       </div>
       {/* Footer */}
-      <div style={{ borderTop: '1px solid #e5e7eb', padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 14, color: '#64748b' }}>
+      <div style={footerStyle}>
+        <div style={{ fontSize: 13, color: '#64748b' }}>
           {selectedCategory 
             ? loadingStates.courses.has(selectedCategory)
               ? 'Loading courses...'
@@ -886,21 +950,17 @@ const modalContent = (
             : 'Select a category to view courses'
           }
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button
             onClick={onClose}
-            style={{ padding: '8px 24px', background: '#64748b', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 500, fontSize: 15, cursor: 'pointer', transition: 'background 0.2s' }}
-            onMouseOver={e => (e.currentTarget.style.background = '#334155')}
-            onMouseOut={e => (e.currentTarget.style.background = '#64748b')}
+            style={neutralButtonStyle}
           >
             Close
           </button>
           {selectedCourse && (
             <button
               onClick={confirmCourseSelection}
-              style={{ padding: '8px 24px', background: '#2563eb', color: '#fff', borderRadius: 8, border: 'none', fontWeight: 600, fontSize: 15, cursor: 'pointer', transition: 'background 0.2s' }}
-              onMouseOver={e => (e.currentTarget.style.background = '#1d4ed8')}
-              onMouseOut={e => (e.currentTarget.style.background = '#2563eb')}
+              style={proceedButtonStyle}
             >
               Proceed to Questions
             </button>
@@ -911,8 +971,11 @@ const modalContent = (
   </div>
 );
 
-// Render modal in portal
+
+
 return ReactDOM.createPortal(modalContent, document.body);
+
+
 };
 
 export default CategoriesComponent;

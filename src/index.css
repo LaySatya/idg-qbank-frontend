@@ -1,1 +1,4 @@
 @import "tailwindcss";
+body, html, #root {
+  font-family: 'Noto Sans Khmer', Arial, sans-serif;
+}

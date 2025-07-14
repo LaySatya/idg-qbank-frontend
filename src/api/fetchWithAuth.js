@@ -13,14 +13,16 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
     }
   });
 
-  //  Token expired — force logout
-  if (response.status === 401) {
-    console.warn('Unauthorized — token expired. Logging out...');
-    localStorage.clear();
-    alert('Your session has expired. Redirecting to login...');
-    window.location.href = '/login';
-    return;
-  }
+
+
+
+if (response.status === 401) {
+  console.warn('Unauthorized — token expired. Logging out...');
+  handleSessionExpired();
+  return;
+}
+
+
 
   return response;
 };

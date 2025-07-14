@@ -40,16 +40,10 @@ const getAuthHeaders = () => {
 // Helper: Handle API responses with better error handling
 const handleAPIResponse = async (response) => {
   if (!response.ok) {
-    if (response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('usernameoremail');
-      
-      // Show user-friendly message before redirect
-      if (window.confirm('Your session has expired. Click OK to log in again.')) {
-        window.location.href = '/login';
-      }
-      throw new Error('Authentication expired - redirecting to login');
-    }
+ if (response.status === 401) {
+  handleSessionExpired();
+  throw new Error('Authentication expired');
+}
     
     let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
     
