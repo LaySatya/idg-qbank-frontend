@@ -1,5 +1,5 @@
 // ============================================================================
-// src/features/questions/pages/QuestionBank.jsx - COMPLETELY FIXED VERSION
+// src/features/questions/pages/QuestionBank.jsx - FIXED SCROLLING VERSION
 // ============================================================================
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
@@ -23,7 +23,7 @@ import { Toaster, toast } from 'react-hot-toast';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // ============================================================================
-// UTILITY HOOKS
+// UTILITY HOOKS (unchanged)
 // ============================================================================
 
 // Debounce hook
@@ -133,7 +133,7 @@ const QuestionBank = () => {
     const savedCourseName = localStorage.getItem('CourseName');
     const savedCategoryId = localStorage.getItem('questionCategoryId');
     const savedCategoryName = localStorage.getItem('questionCategoryName');
-    
+
     return {
       category: savedCategoryId || 'All',
       categoryName: savedCategoryName || '',
@@ -146,7 +146,7 @@ const QuestionBank = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debugInfo, setDebugInfo] = useState({});
-  
+
   // Debounced search for better performance
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
@@ -168,7 +168,7 @@ const QuestionBank = () => {
   const [availableCategories, setAvailableCategories] = useState([]);
 
   const { allTags, loadingTags, tagFilter, setTagFilter } = useTagFiltering();
-  
+
   // FIXED: Add debounced tag filter to prevent rapid API calls
   const debouncedTagFilter = useDebounce(tagFilter, 500);
 
@@ -188,7 +188,7 @@ const QuestionBank = () => {
   // Memoized filtered questions for better performance
   const filteredQuestions = useMemo(() => {
     if (!debouncedSearchQuery.trim()) return questions;
-    
+
     const query = debouncedSearchQuery.toLowerCase();
     return questions.filter(q =>
       q.title?.toLowerCase().includes(query) ||
@@ -210,7 +210,7 @@ const QuestionBank = () => {
     try {
       setLoadingQuestionCategories(true);
       console.log(' Fetching question categories for course:', courseId);
-      
+
       const categoriesUrl = `${API_BASE_URL}/questions/question_categories?courseid=${courseId}`;
       const response = await fetch(categoriesUrl, {
         method: 'GET',
@@ -227,7 +227,7 @@ const QuestionBank = () => {
 
       const categoriesData = await response.json();
       console.log(' Question categories response:', categoriesData);
-      
+
       let categories = [];
       if (Array.isArray(categoriesData)) {
         categories = categoriesData;
@@ -250,7 +250,7 @@ const QuestionBank = () => {
 
       setQuestionCategories(normalizedCategories);
       console.log(' Question categories loaded:', normalizedCategories.length);
-      
+
       // Extract category counts and update categoryCountMap
       const newCategoryCountMap = {};
       categories.forEach(cat => {
@@ -258,10 +258,10 @@ const QuestionBank = () => {
           newCategoryCountMap[cat.id] = cat.questioncount;
         }
       });
-      
+
       console.log(' Category counts from categories API:', newCategoryCountMap);
       setCategoryCountMap(newCategoryCountMap);
-      
+
     } catch (error) {
       console.error(' Error fetching question categories:', error);
       setQuestionCategories([]);
@@ -282,10 +282,10 @@ const QuestionBank = () => {
         console.log(' No course selected, skipping category counts fetch');
         return;
       }
-      
+
       console.log(' Fetching category counts from API...');
       const url = `${API_BASE_URL}/questions/question_categories?courseid=${courseId}`;
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -301,12 +301,12 @@ const QuestionBank = () => {
 
       const data = await response.json();
       const categories = data.categories || data;
-      
+
       if (!Array.isArray(categories)) {
         console.error(' Invalid categories response format:', data);
         return;
       }
-      
+
       // Create a map of category IDs to question counts
       const newCategoryCountMap = {};
       categories.forEach(cat => {
@@ -314,23 +314,23 @@ const QuestionBank = () => {
           newCategoryCountMap[cat.id] = cat.questioncount;
         }
       });
-      
+
       console.log(' Category counts loaded:', newCategoryCountMap);
-      
+
       // FIXED: Only update if different to prevent unnecessary re-renders
       setCategoryCountMap(prev => {
         const prevJson = JSON.stringify(prev);
         const newJson = JSON.stringify(newCategoryCountMap);
-        
+
         if (prevJson === newJson) {
           console.log(' Category counts unchanged, skipping update');
           return prev;
         }
-        
+
         console.log(' Category counts updated');
         return newCategoryCountMap;
       });
-      
+
     } catch (error) {
       console.error(' Error fetching category counts:', error);
     }
@@ -339,7 +339,7 @@ const QuestionBank = () => {
   // ============================================================================
   // FIXED FETCH FUNCTION WITH PROPER DEPENDENCIES
   // ============================================================================
-  
+
   const fetchQuestions = useCallback(async (
     currentFilters = filters,
     page = currentPage,
@@ -432,7 +432,7 @@ const QuestionBank = () => {
       }
 
       const result = await response.json();
-      console.log('📦 API Response:', {
+      console.log(' API Response:', {
         total: result.total,
         questions: result.questions?.length,
         current_page: result.current_page
@@ -468,7 +468,7 @@ const QuestionBank = () => {
         tags: q.tags || [],
         usage: (q.usages || []).length,
         lastUsed: q.usages && q.usages.length > 0 ? 'Recently' : 'Never',
-        comments: 0,
+        comments: q.total_comments || 0,
         stamp: q.stamp,
         versionid: q.versionid,
         questionbankentryid: q.questionbankentryid,
@@ -493,7 +493,7 @@ const QuestionBank = () => {
     } finally {
       setLoading(false);
       fetchInProgressRef.current = false;
-      
+
       // Clear request key after delay to allow new requests
       setTimeout(() => {
         if (lastFetchParamsRef.current === requestKey) {
@@ -548,7 +548,7 @@ const QuestionBank = () => {
 
     console.log('Filters updated:', { old: filters, new: newFilters });
     setFilters(newFilters);
-    
+
     // Persist course selection
     if (newFilters.courseId) {
       localStorage.setItem('CourseID', newFilters.courseId.toString());
@@ -559,7 +559,7 @@ const QuestionBank = () => {
       // localStorage.removeItem('CourseID');
       localStorage.removeItem('CourseName');
     }
-    
+
     // Persist category selection
     if (newFilters.category && newFilters.category !== 'All') {
       localStorage.setItem('questionCategoryId', newFilters.category);
@@ -575,20 +575,20 @@ const QuestionBank = () => {
   // Enhanced course selection handler
   const handleCourseSelect = useCallback(async (course) => {
     console.log(' Course selected:', course);
-  
+
     const courseId = course.id || course.courseId;
     const courseName = course.name || course.fullname || `Course ${courseId}`;
-  
+
     if (!courseId) {
       toast.error('Invalid course selection');
       return;
     }
-  
+
     setSelectedCourse({ id: courseId, name: courseName });
-  
+
     // 1. Fetch categories for this course (this also updates categoryCountMap)
     await fetchQuestionCategoriesForCourse(courseId);
-  
+
     // 2. Set filters
     setFiltersWithLogging({
       category: 'All',
@@ -598,18 +598,18 @@ const QuestionBank = () => {
       courseId: courseId,
       courseName: courseName
     });
-  
+
     setSearchQuery('');
     setTagFilter([]);
     setCurrentPage(1);
-  
+
     toast.success(`Filtering questions for: ${courseName}`);
   }, [setFiltersWithLogging, setTagFilter, fetchQuestionCategoriesForCourse]);
 
   // Status change handlers
   const handleStatusChange = useCallback(async (questionId, newStatus) => {
     const prevQuestions = [...questions];
-    
+
     try {
       setQuestions(prev =>
         prev.map(q =>
@@ -618,7 +618,7 @@ const QuestionBank = () => {
       );
 
       const result = await questionAPI.updateQuestionStatus(questionId, newStatus);
-      
+
       if (result && result.success === false) {
         throw new Error(result.message || 'Status update failed');
       }
@@ -691,21 +691,21 @@ const QuestionBank = () => {
   // ============================================================================
   // FIXED EFFECTS - SPLIT INTO SEPARATE CONCERNS
   // ============================================================================
-  
+
   // Effect 1: Filter changes (NOT including pagination)
   useEffect(() => {
     if (currentView !== 'questions') return;
-    
+
     console.log('Filters changed, fetching questions...');
-    
+
     // Always reset to page 1 when filters change
     setCurrentPage(1);
     fetchQuestions(filters, 1, questionsPerPage);
-    
+
   }, [
     filters.courseId,
-    filters.category, 
-    filters.status, 
+    filters.category,
+    filters.status,
     filters.type,
     debouncedSearchQuery,
     debouncedTagFilter,
@@ -718,10 +718,10 @@ const QuestionBank = () => {
   useEffect(() => {
     if (currentView !== 'questions') return;
     if (currentPage === 1) return; // Skip page 1 (handled by filter effect)
-    
+
     console.log(' Page changed, fetching questions...');
     fetchQuestions(filters, currentPage, questionsPerPage);
-    
+
   }, [currentPage, fetchQuestions, currentView, filters, questionsPerPage]);
 
   // Effect 3: Load static data on mount
@@ -756,7 +756,7 @@ const QuestionBank = () => {
       const selectedCategoryId = String(filters.category || '');
       return questionCategoryId === selectedCategoryId;
     }).length;
-    
+
     return count === 0 && totalQuestions > 0 ? totalQuestions : count;
   }, [questions, filters.category, totalQuestions]);
 
@@ -806,7 +806,7 @@ const QuestionBank = () => {
     switch (currentView) {
       case 'categories':
         return (
-          <CategoriesComponent 
+          <CategoriesComponent
             isOpen={true}
             onClose={() => setCurrentView('questions')}
             onNavigateToQuestions={() => setCurrentView('questions')}
@@ -814,82 +814,90 @@ const QuestionBank = () => {
             setFilters={setFiltersWithLogging}
           />
         );
-        
+
       case 'questions':
       default:
         return (
-          <>
+          <div className="flex flex-col h-full">
             {/* Bulk actions */}
             {selectedQuestions.length > 0 && (
-              <BulkActionsRow
-                selectedQuestions={selectedQuestions}
-                setSelectedQuestions={setSelectedQuestions}
-                setShowBulkEditModal={setShowBulkEditModal}
-                onBulkDelete={() => {
-                  if (window.confirm(`Delete ${selectedQuestions.length} questions?`)) {
-                    setQuestions(prev => prev.filter(q => !selectedQuestions.includes(q.id)));
-                    setSelectedQuestions([]);
+              <div className="flex-shrink-0">
+                <BulkActionsRow
+                  selectedQuestions={selectedQuestions}
+                  setSelectedQuestions={setSelectedQuestions}
+                  setShowBulkEditModal={setShowBulkEditModal}
+                  onBulkDelete={() => {
+                    if (window.confirm(`Delete ${selectedQuestions.length} questions?`)) {
+                      setQuestions(prev => prev.filter(q => !selectedQuestions.includes(q.id)));
+                      setSelectedQuestions([]);
+                    }
+                  }}
+                  onBulkStatusChange={handleBulkStatusChange}
+                  onReloadQuestions={() =>
+                    fetchQuestions(filters, currentPage, questionsPerPage)
                   }
-                }}
-                onBulkStatusChange={handleBulkStatusChange}
-                onReloadQuestions={() =>
-                  fetchQuestions(filters, currentPage, questionsPerPage)
-                }
-                questions={questions}
-                setQuestions={setQuestions}
-              />
+                  questions={questions}
+                  setQuestions={setQuestions}
+                />
+              </div>
             )}
 
             {/* FIXED: Filters Row with Tag Filtering */}
-            <FiltersRow
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              filters={filters}
-              setFilters={setFiltersWithLogging}
-              tagFilter={tagFilter}
-              setTagFilter={setTagFilter}
-              allTags={allTags}
-              availableQuestionTypes={availableQuestionTypes}
-              availableCategories={memoizedAvailableCategories}
-              availableCourses={[]}
-              loadingQuestionTypes={loading}
-              loadingQuestionTags={loadingTags}
-              loadingCategories={loadingQuestionCategories}
-              questions={questions}
-              allQuestions={questions}
-              categoryQuestionCount={categoryQuestionCount}
-              categoryCountMap={categoryCountMap} 
-            />
+            <div className="flex-shrink-0">
+              <FiltersRow
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                filters={filters}
+                setFilters={setFiltersWithLogging}
+                tagFilter={tagFilter}
+                setTagFilter={setTagFilter}
+                allTags={allTags}
+                availableQuestionTypes={availableQuestionTypes}
+                availableCategories={memoizedAvailableCategories}
+                availableCourses={[]}
+                loadingQuestionTypes={loading}
+                loadingQuestionTags={loadingTags}
+                loadingCategories={loadingQuestionCategories}
+                questions={questions}
+                allQuestions={questions}
+                categoryQuestionCount={categoryQuestionCount}
+                categoryCountMap={categoryCountMap}
+              />
+            </div>
 
             {/* Course Selection Guard */}
             {!filters.courseId || filters.courseId === 'All' ? (
-              <div className="text-center py-8 text-gray-500">
-                <p>Please select a course to view questions.</p>
-                <button
-                  onClick={() => setCurrentView('categories')}
-                  className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  Select Course
-                </button>
+              <div className="flex-1 flex items-center justify-center text-gray-500">
+                <div className="text-center">
+                  <p>Please select a course to view questions.</p>
+                  <button
+                    onClick={() => setCurrentView('categories')}
+                    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Select Course
+                  </button>
+                </div>
               </div>
             ) : (
-              <>
+              <div className="flex-1 flex flex-col min-h-0">
                 {/* Loading State */}
                 {loading && (
-                  <div className="text-center py-8">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    <p className="mt-2 text-gray-600">Loading questions...</p>
-                    {Array.isArray(debouncedTagFilter) && debouncedTagFilter.length > 0 && (
-                      <p className="mt-1 text-sm text-blue-600">
-                        Filtering by {debouncedTagFilter.length} tag{debouncedTagFilter.length !== 1 ? 's' : ''}
-                      </p>
-                    )}
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      <p className="mt-2 text-gray-600">Loading questions...</p>
+                      {Array.isArray(debouncedTagFilter) && debouncedTagFilter.length > 0 && (
+                        <p className="mt-1 text-sm text-blue-600">
+                          Filtering by {debouncedTagFilter.length} tag{debouncedTagFilter.length !== 1 ? 's' : ''}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
 
                 {/* Error State */}
                 {error && (
-                  <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                  <div className="flex-shrink-0 mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
                     <div className="flex justify-between items-center">
                       <span><strong>Error:</strong> {error}</span>
                       <div className="flex gap-2">
@@ -915,102 +923,111 @@ const QuestionBank = () => {
 
                 {/* Empty State */}
                 {!loading && !error && questions.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No questions found with current filters.</p>
-                    {(searchQuery || tagFilter.length > 0 || filters.status !== 'All' || filters.type !== 'All') && (
-                      <button
-                        onClick={() => {
-                          setSearchQuery('');
-                          setTagFilter([]);
-                          setFiltersWithLogging({ 
-                            ...filters,
-                            status: 'All', 
-                            type: 'All',
-                            category: 'All'
-                          });
-                        }}
-                        className="mt-2 text-blue-600 underline"
-                      >
-                        Clear all filters
-                      </button>
-                    )}
+                  <div className="flex-1 flex items-center justify-center text-gray-500">
+                    <div className="text-center">
+                      <p>No questions found with current filters.</p>
+                      {(searchQuery || tagFilter.length > 0 || filters.status !== 'All' || filters.type !== 'All') && (
+                        <button
+                          onClick={() => {
+                            setSearchQuery('');
+                            setTagFilter([]);
+                            setFiltersWithLogging({
+                              ...filters,
+                              status: 'All',
+                              type: 'All',
+                              category: 'All'
+                            });
+                          }}
+                          className="mt-2 text-blue-600 underline"
+                        >
+                          Clear all filters
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
 
                 {/* Questions Table */}
                 {!loading && !error && questions.length > 0 && (
-                  <>
+                  <div className="flex-1 flex flex-col min-h-0">
                     {/* Pagination above table */}
-                    <PaginationControls
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      totalItems={totalQuestions}
-                      itemsPerPage={questionsPerPage}
-                      onPageChange={(page) => {
-                        if (fetchInProgressRef.current) return;
-                        setCurrentPage(page);
-                      }}
-                      onItemsPerPageChange={(newPerPage) => {
-                        if (fetchInProgressRef.current) return;
-                        setQuestionsPerPage(newPerPage);
-                        setCurrentPage(1);
-                      }}
-                      isLoading={loading}
-                      className="border-t bg-gray-50"
-                    />
+                    <div className="flex-shrink-0">
+                      <PaginationControls
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalItems={totalQuestions}
+                        itemsPerPage={questionsPerPage}
+                        onPageChange={(page) => {
+                          if (fetchInProgressRef.current) return;
+                          setCurrentPage(page);
+                        }}
+                        onItemsPerPageChange={(newPerPage) => {
+                          if (fetchInProgressRef.current) return;
+                          setQuestionsPerPage(newPerPage);
+                          setCurrentPage(1);
+                        }}
+                        isLoading={loading}
+                        className="border-t bg-gray-50"
+                      />
+                    </div>
 
-                    <QuestionsTable
-                      questions={filteredQuestions}
-                      allQuestions={questions}
-                      filteredQuestions={filteredQuestions}
-                      selectedQuestions={selectedQuestions}
-                      setSelectedQuestions={setSelectedQuestions}
-                      showQuestionText={showQuestionText}
-                      editingQuestion={editingQuestion}
-                      setEditingQuestion={setEditingQuestion}
-                      newQuestionTitle={newQuestionTitle}
-                      setNewQuestionTitle={setNewQuestionTitle}
-                      setShowSaveConfirm={setShowSaveConfirm}
-                      openActionDropdown={openActionDropdown}
-                      setOpenActionDropdown={setOpenActionDropdown}
-                      openStatusDropdown={openStatusDropdown}
-                      setOpenStatusDropdown={setOpenStatusDropdown}
-                      dropdownRefs={dropdownRefs}
-                      onPreview={setPreviewQuestion}
-                      onEdit={(question) => {
-                        setEditingQuestionData(question);
-                      }}
-                      onDuplicate={handleDuplicateQuestion}
-                      onHistory={setHistoryModal}
-                      onDelete={handleDeleteQuestion}
-                      onStatusChange={handleStatusChange}
-                      username={username}
-                      setQuestions={setQuestions}
-                    />
+                    {/* FIXED: Questions Table Container - Single scroll area */}
+                    <div className="flex-1 min-h-0">
+                      <QuestionsTable
+                        questions={filteredQuestions}
+                        allQuestions={questions}
+                        filteredQuestions={filteredQuestions}
+                        selectedQuestions={selectedQuestions}
+                        setSelectedQuestions={setSelectedQuestions}
+                        showQuestionText={showQuestionText}
+                        editingQuestion={editingQuestion}
+                        setEditingQuestion={setEditingQuestion}
+                        newQuestionTitle={newQuestionTitle}
+                        setNewQuestionTitle={setNewQuestionTitle}
+                        setShowSaveConfirm={setShowSaveConfirm}
+                        openActionDropdown={openActionDropdown}
+                        setOpenActionDropdown={setOpenActionDropdown}
+                        openStatusDropdown={openStatusDropdown}
+                        setOpenStatusDropdown={setOpenStatusDropdown}
+                        dropdownRefs={dropdownRefs}
+                        onPreview={setPreviewQuestion}
+                        onEdit={(question) => {
+                          setEditingQuestionData(question);
+                        }}
+                        onDuplicate={handleDuplicateQuestion}
+                        onHistory={setHistoryModal}
+                        onDelete={handleDeleteQuestion}
+                        onStatusChange={handleStatusChange}
+                        username={username}
+                        setQuestions={setQuestions}
+                      />
+                    </div>
 
                     {/* Pagination below table */}
-                    <PaginationControls
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      totalItems={totalQuestions}
-                      itemsPerPage={questionsPerPage}
-                      onPageChange={(page) => {
-                        if (fetchInProgressRef.current) return;
-                        setCurrentPage(page);
-                      }}
-                      onItemsPerPageChange={(newPerPage) => {
-                        if (fetchInProgressRef.current) return;
-                        setQuestionsPerPage(newPerPage);
-                        setCurrentPage(1);
-                      }}
-                      isLoading={loading}
-                      className="border-t bg-gray-50"
-                    />
-                  </>
+                    <div className="flex-shrink-0">
+                      <PaginationControls
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalItems={totalQuestions}
+                        itemsPerPage={questionsPerPage}
+                        onPageChange={(page) => {
+                          if (fetchInProgressRef.current) return;
+                          setCurrentPage(page);
+                        }}
+                        onItemsPerPageChange={(newPerPage) => {
+                          if (fetchInProgressRef.current) return;
+                          setQuestionsPerPage(newPerPage);
+                          setCurrentPage(1);
+                        }}
+                        isLoading={loading}
+                        className="border-t bg-gray-50"
+                      />
+                    </div>
+                  </div>
                 )}
-              </>
+              </div>
             )}
-          </>
+          </div>
         );
     }
   };
@@ -1020,9 +1037,9 @@ const QuestionBank = () => {
   // ============================================================================
 
   return (
-    <div className="max-w-full">
+    <div className="w-full min-h-full flex flex-col">
       <Toaster position="top-right" />
-      
+
       {/* Performance indicator */}
       {loading && (
         <div className="fixed top-0 left-0 w-full h-1 bg-blue-200 z-50">
@@ -1031,25 +1048,27 @@ const QuestionBank = () => {
       )}
 
       {/* Top Navigation Bar */}
-      <TopButtonsRow
-        showQuestionsDropdown={showQuestionsDropdown}
-        setShowQuestionsDropdown={setShowQuestionsDropdown}
-        questionsDropdownRef={questionsDropdownRef}
-        handleFileUpload={handleFileUpload}
-        setShowCreateModal={setShowCreateModal}
-        showQuestionText={showQuestionText}
-        setShowQuestionText={setShowQuestionText}
-        questions={questions}
-        setCurrentPage={setCurrentPage}
-        questionsPerPage={questionsPerPage}
-        setQuestions={setQuestions}
-        totalQuestions={totalQuestions}
-        setTotalQuestions={setTotalQuestions}
-        setShowCategoriesModal={setShowCategoriesModal}
-        currentView={currentView}
-        setCurrentView={setCurrentView}
-        onNavigate={handleNavigation}
-      />
+      <div className="flex-shrink-0">
+        <TopButtonsRow
+          showQuestionsDropdown={showQuestionsDropdown}
+          setShowQuestionsDropdown={setShowQuestionsDropdown}
+          questionsDropdownRef={questionsDropdownRef}
+          handleFileUpload={handleFileUpload}
+          setShowCreateModal={setShowCreateModal}
+          showQuestionText={showQuestionText}
+          setShowQuestionText={setShowQuestionText}
+          questions={questions}
+          setCurrentPage={setCurrentPage}
+          questionsPerPage={questionsPerPage}
+          setQuestions={setQuestions}
+          totalQuestions={totalQuestions}
+          setTotalQuestions={setTotalQuestions}
+          setShowCategoriesModal={setShowCategoriesModal}
+          currentView={currentView}
+          setCurrentView={setCurrentView}
+          onNavigate={handleNavigation}
+        />
+      </div>
 
       {/* Categories modal */}
       <CategoriesComponent
@@ -1060,7 +1079,7 @@ const QuestionBank = () => {
         setFilters={setFiltersWithLogging}
       />
 
-      {/* Main Content Area */}
+      {/* FIXED: Main Content Area - Allow natural height expansion */}
       <main className="flex-1">
         {renderCurrentView()}
       </main>

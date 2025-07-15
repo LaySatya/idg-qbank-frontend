@@ -13,6 +13,11 @@ import {
   Paper,
   Stack,
   Checkbox,
+  Chip,
+  TextField,
+  InputAdornment,
+  Autocomplete,
+  CircularProgress,
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import EditIcon from '@mui/icons-material/Edit';
@@ -26,6 +31,8 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
 import GroupIcon from '@mui/icons-material/Group';
+import SearchIcon from '@mui/icons-material/Search';
+import AddIcon from '@mui/icons-material/Add';
 import { toast } from 'react-hot-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -56,12 +63,28 @@ const BulkActionsRow = ({
   const [allTags, setAllTags] = useState([]);
   const [commonTags, setCommonTags] = useState([]);
   const [loadingTags, setLoadingTags] = useState(false);
+  const [creatingTag, setCreatingTag] = useState(false);
+  const [selectedTagsToAdd, setSelectedTagsToAdd] = useState([]);
+
+  // Debounce search term
+  const useDebounce = (value, delay) => {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+    useEffect(() => {
+      const handler = setTimeout(() => setDebouncedValue(value), delay);
+      return () => clearTimeout(handler);
+    }, [value, delay]);
+    return debouncedValue;
+  };
+
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   // Fetch all tags and common tags when tag modal opens
   useEffect(() => {
     if (showTagModal) {
       fetchAllTags();
       fetchCommonTags();
+      setSelectedTagsToAdd([]); // Clear selected tags when opening modal
+      setSearchTerm('');
     }
   }, [showTagModal, selectedQuestions]);
 
@@ -113,27 +136,61 @@ const BulkActionsRow = ({
     }
   };
 
-  const handleCreateTag = async () => {
-    if (!newTagName.trim()) return;
+  const handleCreateTag = async (tagName) => {
+    if (!tagName || !tagName.trim()) {
+      toast.error('Please enter a tag name');
+      return null;
+    }
+
+    setCreatingTag(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/questions/tags`, {
+      const trimmedName = tagName.trim();
+      
+      // Use the new manage_tags endpoint
+      const res = await fetch(`${API_BASE_URL}/questions/manage_tags?name=${encodeURIComponent(trimmedName)}&rawname=${encodeURIComponent(trimmedName)}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
           'Accept': 'application/json'
-        },
-        body: JSON.stringify({ name: newTagName })
+        }
       });
+
       const data = await res.json();
-      if (data.success) {
-        setAllTags([...allTags, data.tag]);
-        setNewTagName('');
-        toast.success('Tag created!');
+      
+      // Check if the response contains an error even if status is 200
+      if (!res.ok || data.exception || data.errorcode || data.error) {
+        // Handle specific error cases
+        if (data.errorcode === 'invalidrecord' || data.exception === 'dml_missing_record_exception') {
+          throw new Error('Tag creation service is not available. Please contact your administrator.');
+        }
+        throw new Error(data.message || data.error || `HTTP ${res.status}: ${res.statusText}`);
       }
+
+      // Check if we have a valid response with required fields
+      if (!data.id || !data.name) {
+        throw new Error('Invalid response from server - missing required fields');
+      }
+
+      console.log('✅ Tag created successfully:', data);
+      
+      // Add the new tag to the local state
+      const newTag = {
+        id: data.id,
+        name: data.name,
+        rawname: data.rawname || data.name
+      };
+      
+      setAllTags(prev => [...prev, newTag]);
+      setSearchTerm('');
+      toast.success(`Tag "${data.name}" created successfully!`);
+      
+      return newTag;
     } catch (error) {
-      console.error('Error creating tag:', error);
-      toast.error('Failed to create tag');
+      console.error('❌ Error creating tag:', error);
+      toast.error(`Failed to create tag: ${error.message}`);
+      return null;
+    } finally {
+      setCreatingTag(false);
     }
   };
 
@@ -281,13 +338,99 @@ const handleRemoveTag = async (tagId) => {
 };
 
 
-  // Tag search/filter logic
-  const filteredTags = allTags.filter(tag =>
-    tag.name.toLowerCase().includes(searchTerm.toLowerCase())
+  // Enhanced tag search/filter logic with options for autocomplete
+  const tagOptions = allTags.map(tag => ({
+    label: tag.name || '',
+    value: tag.id,
+    rawname: tag.rawname || ''
+  }));
+
+  const availableTagOptions = tagOptions.filter(option =>
+    !commonTags.some(commonTag => commonTag.id === option.value)
   );
-  const availableTags = filteredTags.filter(tag =>
-    !commonTags.some(commonTag => commonTag.id === tag.id)
+
+  const filteredAvailableOptions = availableTagOptions.filter(option =>
+    option.label && option.label.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
   );
+
+  // Handle tag selection with autocomplete (simplified - no new tag creation)
+  const handleTagAutocompleteChange = async (event, newValue, reason) => {
+    if (reason === 'clear') {
+      setSelectedTagsToAdd([]);
+      return;
+    }
+
+    if (Array.isArray(newValue)) {
+      // Only handle existing tags (no string values for new tags)
+      const validTags = newValue.filter(value => typeof value === 'object' && value.value);
+      setSelectedTagsToAdd(validTags);
+    }
+  };
+
+  // Handle adding selected tags to questions
+  const handleAddSelectedTags = async () => {
+    if (selectedTagsToAdd.length === 0) {
+      toast.error('Please select tags to add');
+      return;
+    }
+
+    const tagIds = selectedTagsToAdd.map(tag => tag.value);
+    const tagNames = selectedTagsToAdd.map(tag => tag.label).join(', ');
+    
+    try {
+      const validQuestionIds = selectedQuestions
+        .map(id => parseInt(id))
+        .filter(id => !isNaN(id) && id > 0);
+      
+      if (validQuestionIds.length === 0) {
+        toast.error('No valid question IDs selected');
+        return;
+      }
+      
+      const res = await fetch(`${API_BASE_URL}/questions/bulk-tags`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          questionids: validQuestionIds,
+          tagids: tagIds.map(id => parseInt(id))
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        // Update frontend state
+        setQuestions(prevQuestions =>
+          prevQuestions.map(q => {
+            if (!validQuestionIds.includes(q.id)) return q;
+            let newTags = Array.isArray(q.tags) ? [...q.tags] : [];
+            
+            selectedTagsToAdd.forEach(tagOption => {
+              const existingTag = allTags.find(t => t.id === tagOption.value);
+              if (existingTag && !newTags.some(t => t.id === tagOption.value)) {
+                newTags.push(existingTag);
+              }
+            });
+            
+            return { ...q, tags: newTags };
+          })
+        );
+        
+        toast.success(`Added tags "${tagNames}" to ${validQuestionIds.length} question${validQuestionIds.length !== 1 ? 's' : ''}`);
+        fetchCommonTags();
+        setSelectedTagsToAdd([]);
+      } else {
+        toast.error(data.message || data.error || 'Failed to add tags');
+      }
+    } catch (error) {
+      console.error('Error adding tags:', error);
+      toast.error(`Error adding tags: ${error.message}`);
+    }
+  };
 
   // Menu and modal handlers
   const handleMenuClick = (event) => setAnchorEl(event.currentTarget);
@@ -415,52 +558,191 @@ const handleRemoveTag = async (tagId) => {
         </DialogActions>
       </Dialog>
 
-      {/* Tag Management Modal */}
-      <Dialog open={showTagModal} onClose={() => setShowTagModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Manage Tags</DialogTitle>
+      {/* Tag Management Modal - Enhanced with MUI styling */}
+      <Dialog open={showTagModal} onClose={() => setShowTagModal(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TagIcon color="primary" />
+            <Typography variant="h6">Manage Tags</Typography>
+          </Box>
+        </DialogTitle>
         <DialogContent>
-          <Typography>
-            Add or remove tags for {selectedQuestions.length} selected question{selectedQuestions.length !== 1 ? 's' : ''}
+          <Typography variant="body1" sx={{ mb: 3 }}>
+            Add or remove tags for <strong>{selectedQuestions.length}</strong> selected question{selectedQuestions.length !== 1 ? 's' : ''}
           </Typography>
-          <Box mt={2}>
-            <Typography color="text.secondary" mb={1}>Common tags for all selected questions:</Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" mb={2}>
-              {commonTags.map(tag => (
-                <Box key={tag.id} sx={{ bgcolor: '#e0e7ff', px: 1.5, py: 0.5, borderRadius: 2, display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="body2">{tag.name}</Typography>
-                  <Button size="small" color="error" sx={{ ml: 1 }} onClick={() => handleRemoveTag(tag.id)}>Remove</Button>
-                </Box>
-              ))}
-              {commonTags.length === 0 && (
-                <Typography variant="body2" color="text.secondary">No common tags.</Typography>
+          
+          {/* Common Tags Section */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
+              Common tags for all selected questions:
+            </Typography>
+            {commonTags.length > 0 ? (
+              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                {commonTags.map(tag => (
+                  <Chip
+                    key={tag.id}
+                    label={tag.name}
+                    color="primary"
+                    variant="filled"
+                    onDelete={() => handleRemoveTag(tag.id)}
+                    deleteIcon={<DeleteIcon />}
+                    sx={{
+                      backgroundColor: '#e3f2fd',
+                      color: '#1976d2',
+                      '& .MuiChip-deleteIcon': {
+                        color: '#d32f2f',
+                        '&:hover': {
+                          color: '#b71c1c'
+                        }
+                      }
+                    }}
+                  />
+                ))}
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                No common tags found for all selected questions.
+              </Typography>
+            )}
+          </Box>
+          
+          {/* Add Tags Section */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
+              Add tags to all selected questions:
+            </Typography>
+            
+            <Autocomplete
+              multiple
+              // freeSolo - Remove this to disable new tag creation
+              options={filteredAvailableOptions}
+              value={selectedTagsToAdd}
+              onChange={handleTagAutocompleteChange}
+              getOptionLabel={(option) => {
+                if (typeof option === 'string') {
+                  return option;
+                }
+                return option.label || '';
+              }}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => {
+                  const { key, ...tagProps } = getTagProps({ index });
+                  return (
+                    <Chip
+                      key={typeof option === 'string' ? option : option.value}
+                      label={typeof option === 'string' ? option : option.label}
+                      {...tagProps}
+                      color="secondary"
+                      variant="outlined"
+                      size="small"
+                    />
+                  );
+                })
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Search and select existing tags..."
+                  variant="outlined"
+                  size="small"
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon color="action" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <>
+                        {creatingTag && <CircularProgress size={20} />}
+                        {params.InputProps.endAdornment}
+                      </>
+                    )
+                  }}
+                />
               )}
-            </Stack>
-            <Typography color="text.secondary" mb={1}>Add tag to all selected:</Typography>
-            <Box display="flex" gap={1} mb={2}>
-              <input
-                type="text"
-                placeholder="Search or create tag"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                style={{ flex: 1, padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
-              />
-              <Button variant="contained" onClick={handleCreateTag} disabled={!newTagName.trim()}>Create</Button>
-            </Box>
-            <Box display="flex" gap={1} flexWrap="wrap">
-              {availableTags.map(tag => (
-                <Button key={tag.id} size="small" variant="outlined" onClick={() => handleAddTag(tag.id)}>
-                  {tag.name}
-                </Button>
-              ))}
-              {availableTags.length === 0 && (
-                <Typography variant="body2" color="text.secondary">No tags found.</Typography>
-              )}
-            </Box>
+              renderOption={(props, option) => {
+                const { key, ...otherProps } = props;
+                return (
+                  <li key={key} {...otherProps}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <TagIcon fontSize="small" color="action" />
+                      <Typography variant="body2">{option.label}</Typography>
+                    </Box>
+                  </li>
+                );
+              }}
+              loading={loadingTags}
+              loadingText="Loading tags..."
+              noOptionsText="No tags found matching your search."
+              sx={{ mb: 2 }}
+            />
+            
+            {selectedTagsToAdd.length > 0 && (
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                onClick={handleAddSelectedTags}
+                fullWidth
+                sx={{ mb: 2 }}
+              >
+                Add {selectedTagsToAdd.length} Tag{selectedTagsToAdd.length !== 1 ? 's' : ''} to Questions
+              </Button>
+            )}
+          </Box>
+          
+          {/* Available Tags Section */}
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
+              Available tags:
+            </Typography>
+            {filteredAvailableOptions.length > 0 ? (
+              <Box sx={{ 
+                maxHeight: 200, 
+                overflowY: 'auto',
+                border: '1px solid #e0e0e0',
+                borderRadius: 1,
+                p: 1
+              }}>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  {filteredAvailableOptions.map(option => (
+                    <Chip
+                      key={option.value}
+                      label={option.label}
+                      variant="outlined"
+                      size="small"
+                      onClick={() => {
+                        setSelectedTagsToAdd(prev => [...prev, option]);
+                      }}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: '#f5f5f5'
+                        }
+                      }}
+                    />
+                  ))}
+                </Stack>
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                No available tags found.
+              </Typography>
+            )}
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowTagModal(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setShowTagModal(false)}>Save Changes</Button>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setShowTagModal(false)} color="inherit">
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={() => setShowTagModal(false)}
+            color="primary"
+          >
+            Done
+          </Button>
         </DialogActions>
       </Dialog>
 

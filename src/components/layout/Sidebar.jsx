@@ -25,7 +25,7 @@ const Sidebar = ({ collapsed }) => {
 
   return (
     <aside 
-      className={`bg-white text-black font-semibold transition-all duration-200 ease-in-out overflow-hidden ${
+      className={`bg-white text-black font-semibold transition-all duration-200 ease-in-out ${
         collapsed ? 'w-16' : 'w-64'
       } relative shadow-lg border-r border-gray-200`}
     >
@@ -54,7 +54,7 @@ const Sidebar = ({ collapsed }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="  py-4">
+      <nav className="py-4">
         <ul>
           {navItems.map((item, index) => (
             <li key={index} className="mb-1">
@@ -91,15 +91,15 @@ const Sidebar = ({ collapsed }) => {
       </nav>
 
       {/* Sidebar footer - only show when expanded */}
-      {!collapsed && (
+      {/* {!collapsed && (
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-gray-50">
           <div className="text-xs text-gray-500 text-center">
             <p className="font-medium">IDG Question Bank</p>
             <p>v1.0.0</p>
           </div>
         </div>
-      )}
-
+      )} */}
+{/*  */}
       {/* Collapse indicator */}
       {/* <div className={`absolute top-1/2 -right-3 transform -translate-y-1/2 ${collapsed ? 'rotate-180' : ''} transition-transform duration-200`}>
         <div className="w-6 h-6 bg-white border border-gray-300 rounded-full flex items-center justify-center shadow-sm">

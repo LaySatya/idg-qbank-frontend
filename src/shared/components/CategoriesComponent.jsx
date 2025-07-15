@@ -407,16 +407,12 @@ const CategoriesComponent = ({
     const coursesInCategory = getCoursesForCategory(category.id);
     const isLoadingCourses = loadingStates.courses.has(category.id);
     const hasLoadedCourses = coursesMap.has(category.id);
-    const inden =level * 2 ; // Moodle-style indentation level   
-    // Moodle-style indentation
-    const indentWidth = level * 24;
-
     // Inline styles
     const categoryRowStyle = {
       display: 'flex',
       alignItems: 'center',
       gap: 8,
-      padding: 12,
+      padding: 12, // Consistent padding for all levels
       borderRadius: 12,
       border: '1px solid',
       borderColor: isSelected ? '#0ea5e9' : '#e5e7eb',
@@ -424,14 +420,11 @@ const CategoriesComponent = ({
       boxShadow: isSelected ? '0 1px 4px 0 rgba(14,165,233,0.08)' : 'none',
       transition: 'all 0.2s',
       cursor: 'pointer',
-      marginLeft: indentWidth,
+      marginLeft: 0, // Remove indentation for consistent sizing
       marginBottom: 4,
-      
+      minHeight: 44, // Consistent minimum height
     };
     const expandBtnStyle = {
-  
-      // padding: 12,
-      // borderRadius: 12,
       background: 'none',
       border: 'none',
       cursor: 'pointer',
@@ -440,6 +433,9 @@ const CategoriesComponent = ({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
+      width: 20, // Fixed width for consistency
+      height: 20, // Fixed height for consistency
+      padding: 0,
     };
     const badgeStyle = (bg, color) => ({
       fontSize: 12,
@@ -456,8 +452,8 @@ const CategoriesComponent = ({
     const levelBadgeStyle = badgeStyle(level === 0 ? '#e0f2fe' : '#f3f4f6', level === 0 ? '#0369a1' : '#64748b');
     const nameStyle = {
       fontWeight: 600,
-      fontSize: level === 0 ? 16 : 14,
-      color: isSelected ? (level === 0 ? '#0c4a6e' : '#075985') : (level === 0 ? '#111827' : '#334155'),
+      fontSize: 14, // Consistent size for all levels
+      color: isSelected ? '#0c4a6e' : '#111827', // Consistent color for all levels
       whiteSpace: 'nowrap',
       overflow: 'hidden',
       textOverflow: 'ellipsis',
@@ -476,7 +472,7 @@ const CategoriesComponent = ({
           onClick={() => handleCategorySelect(category.id)}
         >
           {/* Expand/Collapse Button */}
-          {hasChildren && (
+          {hasChildren ? (
             <button
               onClick={e => { e.stopPropagation(); toggleExpanded(category.id); }}
               style={expandBtnStyle}
@@ -487,9 +483,11 @@ const CategoriesComponent = ({
                 <Plus size={14} color="#52525b" />
               }
             </button>
+          ) : (
+            <div style={{ width: 20, height: 20 }} /> // Placeholder to maintain consistent spacing
           )}
           {/* Selection Radio */}
-          <div style={{ flexShrink: 0 }}>
+          <div style={{ flexShrink: 0, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {isSelected ? (
               <CheckCircle size={16} color="#2563eb" />
             ) : (
@@ -497,14 +495,8 @@ const CategoriesComponent = ({
             )}
           </div>
           {/* Category Icon */}
-          <div style={{ flexShrink: 0 }}>
-            {level === 0 ? (
-              <Folder size={18} color={isSelected ? '#2563eb' : '#52525b'} />
-            ) : hasChildren ? (
-              <FolderOpen size={16} color={isSelected ? '#0ea5e9' : '#64748b'} />
-            ) : (
-              <Folder size={16} color={isSelected ? '#2563eb' : '#64748b'} />
-            )}
+          <div style={{ flexShrink: 0, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Folder size={16} color={isSelected ? '#2563eb' : '#64748b'} />
           </div>
           {/* Category Name */}
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -602,7 +594,7 @@ const CategoriesComponent = ({
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <span style={visibleBadgeStyle}>{course.visible ? 'Visible' : 'Hidden'}</span>
+            {/* <span style={visibleBadgeStyle}>{course.visible ? 'Visible' : 'Hidden'}</span> */}
             {isSelected && <CheckCircle size={20} color="#2563eb" />}
           </div>
         </div>

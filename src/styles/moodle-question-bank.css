@@ -1,4 +1,13 @@
-/* Additional CSS to fix layout issues - Add this to your moodle-question-bank.css file */
+/* Updated CSS to fix layout issues - moodle-question-bank.css */
+
+/* Base layout - Allow natural content flow */
+html, body {
+  min-height: 100%;
+}
+
+#root {
+  min-height: 100%;
+}
 
 /* Question Bank Container */
 .questionbank-container {
@@ -7,22 +16,29 @@
   margin: 0;
   padding: 0;
   background: #fff;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Page wrapper to match Moodle structure */
 #page-wrapper {
   width: 100%;
   background: #fff;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Main content area */
+/* Main content area - Allow natural height expansion */
 #region-main {
-  width: 100%;
   padding: 20px;
   background: #fff;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Question bank window container */
+/* Question bank window container - Allow natural height */
 .questionbankwindow {
   width: 100%;
   margin: 0 auto;
@@ -30,6 +46,8 @@
   border: 1px solid #dee2e6;
   border-radius: 4px;
   padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .questionbankwindow h2 {
@@ -40,28 +58,30 @@
   font-size: 18px;
   font-weight: 600;
   color: #495057;
+  flex-shrink: 0;
 }
 
-/* Questions container */
+/* Questions container - FIXED: Allow natural height expansion */
 .categoryquestionscontainer {
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  overflow-x: auto;
 }
 
-/* Table container */
+/* Table container - FIXED: Allow full content display */
 .table-responsive {
   width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: visible; /* Changed from auto to visible */
 }
 
-/* Fix table layout */
+/* Fix table layout - Allow natural height */
 #categoryquestions {
   width: 100%;
   min-width: 800px; /* Minimum width to prevent cramping */
   border-collapse: collapse;
   margin: 0;
   background: #fff;
+  /* Remove height constraints */
 }
 
 /* Header row styling */
@@ -74,6 +94,9 @@
   font-size: 13px;
   color: #495057;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 /* Table body styling */
@@ -194,6 +217,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 /* Pagination */
@@ -202,6 +226,7 @@
   text-align: center;
   border-top: 1px solid #dee2e6;
   background: #f8f9fa;
+  flex-shrink: 0;
 }
 
 /* Button styling */
@@ -251,6 +276,36 @@
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
+/* CRITICAL: Fix React app layout for natural content expansion */
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: row;
+}
+
+.App main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Fix table container in React components - Allow natural height */
+.react-table-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.react-table-container .table-wrapper {
+  width: 100%;
+  overflow: visible; /* Changed from auto to visible */
+}
+
+.react-table-container table {
+  width: 100%;
+  min-width: 800px;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .questionbank-container {
@@ -296,4 +351,54 @@
   border: 1px solid #f5c6cb;
   border-radius: 4px;
   margin: 16px 0;
+}
+
+/* ADDITIONAL: Fix for sticky headers and smooth scrolling */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #f8f9fa;
+}
+
+/* Ensure dropdowns appear above table content */
+.dropdown-menu {
+  z-index: 1050 !important;
+}
+
+/* Fix for table responsiveness without double scrollbars */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.table-container table {
+  min-width: 100%;
+  margin-bottom: 0;
+}
+
+/* Fix specific to question bank tables */
+.questions-table-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.questions-table-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Prevent content from expanding beyond viewport - UPDATED for natural height */
+.main-content {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-area {
+  display: flex;
+  flex-direction: column;
 }
