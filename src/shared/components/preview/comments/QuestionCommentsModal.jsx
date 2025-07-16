@@ -27,6 +27,9 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Get current user info
   useEffect(() => {
@@ -34,7 +37,9 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
     const userid = localStorage.getItem('userid');
     const firstname = localStorage.getItem('firstname') || '';
     const lastname = localStorage.getItem('lastname') || '';
-    const profileimageurl = localStorage.getItem('profileimageurl'); 
+    const profileimageurl = localStorage.getItem('profileimageurl');
+    
+    console.log('📱 Setting current user:', { username, userid, firstname, lastname, profileimageurl });
     
     setCurrentUser({
       id: userid,
@@ -42,10 +47,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
       fullname: `${firstname} ${lastname}`.trim() || username || 'Current User',
       firstname,
       lastname,
-      profileimageurl 
-      
-      
-
+      profileimageurl: profileimageurl || undefined // Ensure it's undefined if null/empty
     });
   }, []);
 
@@ -106,6 +108,8 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
     }
 
     setSubmitting(true);
+    let apiCallSucceeded = false;
+    
     try {
       console.log(` Adding comment for question ${question.id}:`, newComment);
       
@@ -148,15 +152,53 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
         console.log(' Comment added successfully:', data);
       }
 
-      // Clear input and refresh comments
-      setNewComment('');
-      await fetchComments();
-      toast.success(' Comment added successfully!');
+      // Mark API call as successful
+      apiCallSucceeded = true;
       
     } catch (error) {
       console.error(' Failed to add comment:', error);
+      apiCallSucceeded = false;
+    }
+
+    // Handle success or failure outside of try-catch to prevent duplicate toasts
+    if (apiCallSucceeded) {
+      // API succeeded - use optimistic update and show success toast
+      const newOptimisticComment = {
+        id: Date.now(),
+        content: newComment.trim(),
+        author: currentUser?.fullname || currentUser?.username || 'Current User',
+        username: currentUser?.username || 'Current User',
+        timecreated: Math.floor(Date.now() / 1000),
+        userid: currentUser?.id || 1,
+        user: {
+          id: currentUser?.id || 1,
+          firstname: currentUser?.firstname || '',
+          lastname: currentUser?.lastname || '',
+          email: currentUser?.username || '',
+          profileimageurl: currentUser?.profileimageurl || undefined
+        }
+      };
       
-      // Optimistic update as fallback
+      setComments(prev => [newOptimisticComment, ...prev]);
+      setNewComment('');
+      
+      // Update the questions data to reflect the new comment count
+      if (setQuestions) {
+        setQuestions(prev => {
+          if (!Array.isArray(prev)) return prev;
+          
+          return prev.map(q => 
+            q.id === question.id 
+              ? { ...q, comments: (q.comments || 0) + 1 }
+              : q
+          );
+        });
+      }
+      
+      toast.success('Comment added successfully!');
+      
+    } else {
+      // API failed - use optimistic update and show fallback toast
       const optimisticComment = {
         id: Date.now(),
         content: newComment.trim(),
@@ -168,32 +210,53 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
           id: currentUser?.id || 1,
           firstname: currentUser?.firstname || '',
           lastname: currentUser?.lastname || '',
-          email: currentUser?.username || ''
+          email: currentUser?.username || '',
+          profileimageurl: currentUser?.profileimageurl || undefined
         }
       };
       
       setComments(prev => [optimisticComment, ...prev]);
       setNewComment('');
-      toast.success(' Comment added locally (API unavailable)');
       
-    } finally {
-      setSubmitting(false);
+      // Update the questions data to reflect the new comment count (optimistic)
+      if (setQuestions) {
+        setQuestions(prev => {
+          if (!Array.isArray(prev)) return prev;
+          
+          return prev.map(q => 
+            q.id === question.id 
+              ? { ...q, comments: (q.comments || 0) + 1 }
+              : q
+          );
+        });
+      }
+      
+      toast.success('Comment added locally (API unavailable)');
     }
+    
+    setSubmitting(false);
   };
 
   const handleDeleteComment = async (commentId) => {
-    if (!window.confirm(' Are you sure you want to delete this comment?')) return;
+    setCommentToDelete(commentId);
+    setShowDeleteConfirm(true);
+  };
 
+  const confirmDeleteComment = async () => {
+    if (!commentToDelete) return;
+
+    setDeleting(true);
+    
     // Store original comments for rollback
     const originalComments = [...comments];
     
     // Optimistically remove comment immediately for better UX
-    setComments(prev => prev.filter(c => c.id !== commentId));
+    setComments(prev => prev.filter(c => c.id !== commentToDelete));
 
     try {
-      console.log(` Deleting comment ${commentId} for question ${question.id}...`);
+      console.log(` Deleting comment ${commentToDelete} for question ${question.id}...`);
       
-      const url = `${API_BASE_URL}/questions/comments?questionid=${question.id}&commentid=${commentId}`;
+      const url = `${API_BASE_URL}/questions/comments?questionid=${question.id}&commentid=${commentToDelete}`;
       const res = await fetch(url, {
         method: 'DELETE',
         headers: {
@@ -214,7 +277,21 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
 
       if (data.success !== false) {
         // Success! Comment already removed optimistically
-        toast.success(' Comment deleted successfully!');
+        
+        // Update the questions data to reflect the decreased comment count
+        if (setQuestions) {
+          setQuestions(prev => {
+            if (!Array.isArray(prev)) return prev;
+            
+            return prev.map(q => 
+              q.id === question.id 
+                ? { ...q, comments: Math.max((q.comments || 0) - 1, 0) }
+                : q
+            );
+          });
+        }
+        
+        toast.success('Comment deleted successfully!');
       } else {
         // API returned success: false
         console.warn(' API returned success: false', data);
@@ -229,14 +306,18 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
       
       // Show specific error message
       if (error.message.includes('401')) {
-        toast.error(' Unauthorized: Please log in again');
+        toast.error('Unauthorized: Please log in again');
       } else if (error.message.includes('404')) {
-        toast.error(' Comment not found or already deleted');
+        toast.error('Comment not found or already deleted');
       } else if (error.message.includes('403')) {
-        toast.error(' You don\'t have permission to delete this comment');
+        toast.error('You don\'t have permission to delete this comment');
       } else {
-        toast.error(` Failed to delete comment: ${error.message}`);
+        toast.error(`Failed to delete comment: ${error.message}`);
       }
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+      setCommentToDelete(null);
     }
   };
 
@@ -285,6 +366,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
   };
 
    return (
+    <>
 <Dialog 
   open={isOpen} 
   onClose={onRequestClose} 
@@ -292,7 +374,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
   PaperProps={{
     sx: {
       borderRadius: 3,
-      boxShadow: '0 10px 40px rgba(0,0,0,0.10)',
+      boxShadow: '0 4px 24px 0 rgba(30,41,59,0.10)',
       width: 520,
       minWidth: 520,
       maxWidth: 520,
@@ -313,68 +395,61 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
     }
   }}
 >
-  <DialogTitle 
-    sx={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 2,
-      py: 2,
-      px: 3,
-      borderBottom: '1px solid #e9ecef',
-      background: '#f7f8fa'
-    }}
-  >
-    <CommentIcon sx={{ fontSize: 24 }} />
-    <Box>
-      <Typography variant="h6" fontWeight="600">
+  {/* Header */}
+  <Box sx={{ 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    p: 2,
+    borderBottom: '1px solid #e5e7eb',
+    bgcolor: '#f8fafc'
+  }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+      <CommentIcon sx={{ color: '#64748b', fontSize: 22 }} />
+      <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 700, color: '#334155', margin: 0 }}>
         Comments for Question #{question?.id}
       </Typography>
-      {/* <Typography variant="body2" sx={{ opacity: 0.8, mt: 0.5 }}>
-        {question?.name || 'Untitled Question'}
-      </Typography> */}
     </Box>
-  </DialogTitle>
-
-  <DialogContent
-    sx={{
-      p: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      flex: 1,
-      minHeight: 0 // allow flex children to shrink
-    }}
-  >
-    {/* Info Header */}
-    <Box sx={{ p: 2, backgroundColor: '#f7f8fa', borderBottom: '1px solid #e9ecef' }}>
-      <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-        {/* <Chip
-          icon={<PersonIcon />}
-          label={`Created by: ${question?.createdBy?.name || 'Unknown'}`}
-          variant="outlined"
-          size="small"
-          sx={{ backgroundColor: 'white' }}
-        />
-        <Chip
-          icon={<AccessTimeIcon />}
-          label={`Modified by: ${question?.modifiedBy?.name || 'Unknown'}`}
-          variant="outlined"
-          size="small"
-          sx={{ backgroundColor: 'white' }}
-        /> */}
-        <Chip
-          label={`${comments.length} Comment${comments.length !== 1 ? 's' : ''}`}
-          color="primary"
-          size="small"
-        />
-      </Box>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Chip
+        label={`${comments.length} Comment${comments.length !== 1 ? 's' : ''}`}
+        sx={{
+          fontSize: 12,
+          padding: '2px 8px',
+          borderRadius: 12,
+          background: '#f3f4f6',
+          color: '#64748b',
+          fontWeight: 500,
+          height: 24
+        }}
+      />
+      <IconButton
+        onClick={onRequestClose}
+        sx={{ 
+          p: 0.5,
+          color: '#64748b',
+          '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
+        }}
+      >
+        <span style={{ fontSize: 18 }}>×</span>
+      </IconButton>
     </Box>
+  </Box>
 
-    {/* Comments List - take all available space, scroll if needed */}
+  {/* Content */}
+  <Box sx={{
+    flex: 1,
+    minHeight: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden'
+  }}>
+    {/* Comments List - scrollable content */}
     <Box sx={{
       flex: 1,
       minHeight: 0,
       overflowY: 'auto',
-      p: 2,
+      p: 3,
       background: '#fff'
     }}>
       {loading ? (
@@ -405,12 +480,15 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
                   borderColor: '#d1ecf1'
                 }
               }}>
-                {comment.user?.profileimageurl ? (
+                {comment.user?.profileimageurl && comment.user.profileimageurl !== 'null' ? (
                   <Avatar 
                     src={comment.user.profileimageurl}
                     alt={getAuthorName(comment)}
                     sx={{ width: 32, height: 32 }}
-                    onError={(e) => { e.target.src = ''; }}
+                    onError={(e) => { 
+                      console.log('❌ Comment avatar failed to load:', comment.user.profileimageurl);
+                      e.target.src = ''; 
+                    }}
                   />
                 ) : (
                   <Avatar sx={{ 
@@ -463,12 +541,17 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
       )}
     </Box>
 
-    {/* Add Comment Section - stays at bottom, never scrolls */}
-    <Box sx={{ p: 2, borderTop: '1px solid #e9ecef', backgroundColor: '#f7f8fa' }}>
+    {/* Add Comment Section - stays at bottom */}
+    <Box sx={{ 
+      p: 2, 
+      borderTop: '1px solid #e5e7eb', 
+      backgroundColor: '#f8fafc',
+      borderBottom: '1px solid #e5e7eb'
+    }}>
       {currentUser && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
           <Avatar
-            src={currentUser.profileimageurl || undefined}
+            src={currentUser.profileimageurl && currentUser.profileimageurl !== 'null' ? currentUser.profileimageurl : undefined}
             alt={currentUser.fullname}
             sx={{
               bgcolor: 'secondary.main',
@@ -476,8 +559,12 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
               height: 28,
               fontSize: '12px'
             }}
+            onError={(e) => {
+              console.log('❌ Profile image failed to load:', currentUser.profileimageurl);
+              e.target.src = '';
+            }}
           >
-            {!currentUser.profileimageurl && getInitials(currentUser.fullname)}
+            {(!currentUser.profileimageurl || currentUser.profileimageurl === 'null') && getInitials(currentUser.fullname)}
           </Avatar>
           <Typography variant="body2" color="text.secondary">
             Commenting as: <strong>{currentUser.fullname}</strong>
@@ -494,11 +581,12 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
           onKeyPress={handleKeyPress}
           placeholder="Add your comment here... (Press Enter to submit)"
           variant="outlined"
+          size="small"
           sx={{
             width: '100%',
             '& .MuiOutlinedInput-root': {
               backgroundColor: 'white',
-              borderRadius: 2
+              borderRadius: 1.5
             }
           }}
           disabled={submitting}
@@ -510,9 +598,15 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
           startIcon={submitting ? <CircularProgress size={14} /> : <SendIcon />}
           sx={{
             minWidth: 90,
-            borderRadius: 2,
+            borderRadius: 1.5,
             textTransform: 'none',
-            fontWeight: '600'
+            fontWeight: '600',
+            px: 2.5,
+            py: 1,
+            bgcolor: '#64748b',
+            color: '#fff',
+            '&:hover': { bgcolor: '#475569' },
+            '&:disabled': { bgcolor: '#cbd5e1', color: '#94a3b8' }
           }}
         >
           {submitting ? 'Sending...' : 'Send'}
@@ -523,22 +617,148 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
          Tip: Press Enter to submit, Shift+Enter for new line
       </Typography>
     </Box>
-  </DialogContent>
+  </Box>
 
-  <DialogActions sx={{ p: 2, backgroundColor: '#f7f8fa' }}>
+  {/* Footer */}
+  <Box sx={{ 
+    borderTop: '1px solid #e5e7eb',
+    p: 1.5,
+    bgcolor: '#f8fafc',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  }}>
+    <Typography variant="body2" color="text.secondary" sx={{ fontSize: 13 }}>
+      {question?.name && question.name.length > 50 
+        ? `${question.name.substring(0, 50)}...` 
+        : question?.name || 'Question Comments'}
+    </Typography>
     <Button 
       onClick={onRequestClose}
-      variant="outlined"
-      sx={{ 
-        borderRadius: 2,
+      sx={{
+        px: 2.5,
+        py: 1,
+        bgcolor: '#e5e7eb',
+        color: '#334155',
+        borderRadius: 1,
+        fontWeight: 500,
+        fontSize: 15,
         textTransform: 'none',
-        fontWeight: '600'
+        '&:hover': { bgcolor: '#d1d5db' }
       }}
     >
       Close
     </Button>
-  </DialogActions>
+  </Box>
 </Dialog>
+
+{/* Delete Confirmation Modal */}
+<Dialog 
+  open={showDeleteConfirm} 
+  onClose={() => setShowDeleteConfirm(false)}
+  maxWidth="xs"
+  fullWidth
+  PaperProps={{
+    sx: {
+      borderRadius: 3,
+      boxShadow: '0 4px 24px 0 rgba(30,41,59,0.10)',
+      overflow: 'hidden',
+    }
+  }}
+>
+  {/* Header */}
+  <Box sx={{ 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    p: 2,
+    borderBottom: '1px solid #e5e7eb',
+    bgcolor: '#f8fafc'
+  }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+      <DeleteIcon sx={{ color: '#ef4444', fontSize: 22 }} />
+      <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 700, color: '#334155', margin: 0 }}>
+        Delete Comment
+      </Typography>
+    </Box>
+    <IconButton
+      onClick={() => setShowDeleteConfirm(false)}
+      sx={{ 
+        p: 0.5,
+        color: '#64748b',
+        '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
+      }}
+    >
+      <span style={{ fontSize: 18 }}>×</span>
+    </IconButton>
+  </Box>
+
+  {/* Content */}
+  <Box sx={{ p: 3 }}>
+    <Typography variant="body1" sx={{ mb: 2, color: '#374151' }}>
+      Are you sure you want to delete this comment? This action cannot be undone.
+    </Typography>
+    <Box sx={{ 
+      p: 2, 
+      bgcolor: '#fef2f2', 
+      borderLeft: '4px solid #f87171', 
+      borderRadius: 1.5,
+      mb: 2
+    }}>
+      <Typography variant="body2" sx={{ color: '#b91c1c', fontSize: 13 }}>
+        <strong>Warning:</strong> This will permanently remove the comment from the question.
+      </Typography>
+    </Box>
+  </Box>
+
+  {/* Footer */}
+  <Box sx={{ 
+    borderTop: '1px solid #e5e7eb',
+    p: 1.5,
+    bgcolor: '#f8fafc',
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: 1.5
+  }}>
+    <Button 
+      onClick={() => setShowDeleteConfirm(false)}
+      disabled={deleting}
+      sx={{
+        px: 2.5,
+        py: 1,
+        bgcolor: '#e5e7eb',
+        color: '#334155',
+        borderRadius: 1,
+        fontWeight: 500,
+        fontSize: 15,
+        textTransform: 'none',
+        '&:hover': { bgcolor: '#d1d5db' }
+      }}
+    >
+      Cancel
+    </Button>
+    <Button 
+      onClick={confirmDeleteComment}
+      disabled={deleting}
+      startIcon={deleting ? <CircularProgress size={20} /> : <DeleteIcon />}
+      sx={{
+        px: 2.5,
+        py: 1,
+        bgcolor: '#ef4444',
+        color: '#fff',
+        borderRadius: 1,
+        fontWeight: 600,
+        fontSize: 15,
+        textTransform: 'none',
+        '&:hover': { bgcolor: '#dc2626' },
+        '&:disabled': { bgcolor: '#fca5a5', color: '#fef2f2' }
+      }}
+    >
+      {deleting ? 'Deleting...' : 'Delete Comment'}
+    </Button>
+  </Box>
+</Dialog>
+    </>
   );
 };
 

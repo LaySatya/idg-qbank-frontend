@@ -614,7 +614,7 @@ const FiltersRow = ({
         </Grid>
 
         {/* Tags */}
-        <Grid item sx={{ width: 250 }}>
+        <Grid item sx={{ width: 200 }}>
           <Autocomplete
             id="tags-autocomplete"
             multiple
@@ -649,8 +649,8 @@ const FiltersRow = ({
               '& .MuiAutocomplete-inputRoot': {
                 minHeight: 40,
                 maxHeight: 40,
-                minWidth: 100,
-                maxWidth: 300,
+                minWidth: 200,
+                maxWidth: 200,
                 overflowX: 'auto',
                 flexWrap: 'nowrap',
                 alignItems: 'center'

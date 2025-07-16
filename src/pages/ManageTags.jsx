@@ -91,47 +91,100 @@ const ManageTags = () => {
       const trimmedName = newTagName.trim();
       const trimmedRawName = newTagRawName.trim() || trimmedName;
       
-      const res = await fetch(`${API_BASE_URL}/questions/manage_tags?name=${encodeURIComponent(trimmedName)}&rawname=${encodeURIComponent(trimmedRawName)}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Accept': 'application/json'
+      if (editingTag) {
+        // Update existing tag
+        const res = await fetch(`${API_BASE_URL}/questions/manage_tags?id=${editingTag.id}&name=${encodeURIComponent(trimmedName)}&rawname=${encodeURIComponent(trimmedRawName)}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Accept': 'application/json'
+          }
+        });
+
+        const data = await res.json();
+        console.log('PUT response:', data);
+        
+        // Check for actual errors (not warnings)
+        if (!res.ok) {
+          throw new Error(data.message || data.error || `HTTP ${res.status}: ${res.statusText}`);
         }
-      });
+        
+        // Handle warnings separately (they don't prevent success)
+        if (data.warnings && data.warnings.length > 0) {
+          const warning = data.warnings[0];
+          if (warning.warningcode === 'tagnotfound') {
+            throw new Error('Tag not found. It may have been deleted by another user.');
+          }
+          // For other warnings, just log them but continue
+          console.warn('API Warning:', warning.message);
+        }
+        
+        // Check for exception/errorcode which indicate real errors
+        if (data.exception || data.errorcode || data.error) {
+          throw new Error(data.message || data.error || 'Failed to update tag');
+        }
 
-      const data = await res.json();
-      
-      if (!res.ok || data.exception || data.errorcode || data.error) {
-        throw new Error(data.message || data.error || `HTTP ${res.status}: ${res.statusText}`);
+        console.log('Tag updated successfully:', data);
+        
+        // Update the tag in local state
+        // The PUT endpoint might return the updated tag data or just success confirmation
+        const updatedTag = {
+          id: editingTag.id,
+          name: data.name || trimmedName,
+          rawname: data.rawname || trimmedRawName
+        };
+        
+        setTags(prev => prev.map(tag => 
+          tag.id === editingTag.id ? updatedTag : tag
+        ));
+        
+        toast.success(`Tag "${updatedTag.name}" updated successfully!`);
+        
+      } else {
+        // Create new tag
+        const res = await fetch(`${API_BASE_URL}/questions/manage_tags?name=${encodeURIComponent(trimmedName)}&rawname=${encodeURIComponent(trimmedRawName)}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Accept': 'application/json'
+          }
+        });
+
+        const data = await res.json();
+        
+        if (!res.ok || data.exception || data.errorcode || data.error) {
+          throw new Error(data.message || data.error || `HTTP ${res.status}: ${res.statusText}`);
+        }
+
+        if (!data.id || !data.name) {
+          throw new Error('Invalid response from server - missing required fields');
+        }
+
+        console.log(' Tag created successfully:', data);
+        
+        // Add the new tag to the beginning of the local state so it appears on first page
+        const newTag = {
+          id: data.id,
+          name: data.name,
+          rawname: data.rawname || data.name
+        };
+        
+        setTags(prev => [newTag, ...prev]);
+        toast.success(`Tag "${data.name}" created successfully!`);
+        
+        // Stay on first page to show the new tag at the top
+        setCurrentPage(1);
       }
-
-      if (!data.id || !data.name) {
-        throw new Error('Invalid response from server - missing required fields');
-      }
-
-      console.log('Tag created successfully:', data);
-      
-      // Add the new tag to the beginning of the local state so it appears on first page
-      const newTag = {
-        id: data.id,
-        name: data.name,
-        rawname: data.rawname || data.name
-      };
-      
-      setTags(prev => [newTag, ...prev]);
-      toast.success(`Tag "${data.name}" created successfully!`);
       
       // Reset form
       setNewTagName('');
       setNewTagRawName('');
       setShowCreateModal(false);
-      
-      // Stay on first page to show the new tag at the top
-      setCurrentPage(1);
+      setEditingTag(null);
       
     } catch (error) {
-      console.error('Error creating tag:', error);
-      toast.error(`Failed to create tag: ${error.message}`);
+      console.error('Error saving tag:', error);
+      toast.error(`Failed to ${editingTag ? 'update' : 'create'} tag: ${error.message}`);
     } finally {
       setCreating(false);
     }
@@ -475,17 +528,54 @@ const ManageTags = () => {
       </Paper>
 
       {/* Create/Edit Tag Modal */}
-      <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <TagIcon color="primary" />
-            <Typography variant="h6">
+      <Dialog 
+        open={showCreateModal} 
+        onClose={() => setShowCreateModal(false)} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: '0 4px 24px 0 rgba(30,41,59,0.10)',
+            overflow: 'hidden',
+          }
+        }}
+      >
+        {/* Header */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          p: 2,
+          borderBottom: '1px solid #e5e7eb',
+          bgcolor: '#f8fafc'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <TagIcon sx={{ color: '#64748b', fontSize: 22 }} />
+            <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 700, color: '#334155', margin: 0 }}>
               {editingTag ? 'Edit Tag' : 'Create New Tag'}
             </Typography>
           </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={3} sx={{ mt: 1 }}>
+          <IconButton
+            onClick={() => {
+              setShowCreateModal(false);
+              setEditingTag(null);
+              setNewTagName('');
+              setNewTagRawName('');
+            }}
+            sx={{ 
+              p: 0.5,
+              color: '#64748b',
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
+            }}
+          >
+            <span style={{ fontSize: 18 }}>×</span>
+          </IconButton>
+        </Box>
+
+        {/* Content */}
+        <Box sx={{ p: 3 }}>
+          <Stack spacing={3}>
             <TextField
               label="Tag Name"
               value={newTagName}
@@ -493,6 +583,12 @@ const ManageTags = () => {
               fullWidth
               required
               placeholder="Enter tag name"
+              size="small"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
             />
             <TextField
               label="Raw Name"
@@ -501,10 +597,25 @@ const ManageTags = () => {
               fullWidth
               placeholder="Enter raw name (optional)"
               helperText="If empty, will use the same value as Tag Name"
+              size="small"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
             />
           </Stack>
-        </DialogContent>
-        <DialogActions>
+        </Box>
+
+        {/* Footer */}
+        <Box sx={{ 
+          borderTop: '1px solid #e5e7eb',
+          p: 1.5,
+          bgcolor: '#f8fafc',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: 1.5
+        }}>
           <Button 
             onClick={() => {
               setShowCreateModal(false);
@@ -512,36 +623,101 @@ const ManageTags = () => {
               setNewTagName('');
               setNewTagRawName('');
             }}
-            color="inherit"
+            sx={{
+              px: 2.5,
+              py: 1,
+              bgcolor: '#e5e7eb',
+              color: '#334155',
+              borderRadius: 1,
+              fontWeight: 500,
+              fontSize: 15,
+              textTransform: 'none',
+              '&:hover': { bgcolor: '#d1d5db' }
+            }}
           >
             Cancel
           </Button>
           <Button 
             onClick={handleCreateTag}
-            variant="contained"
             disabled={creating || !newTagName.trim()}
-            startIcon={creating ? <CircularProgress size={20} /> : <AddIcon />}
+            startIcon={creating ? <CircularProgress size={20} /> : (editingTag ? <EditIcon /> : <AddIcon />)}
+            sx={{
+              px: 2.5,
+              py: 1,
+              bgcolor: '#64748b',
+              color: '#fff',
+              borderRadius: 1,
+              fontWeight: 600,
+              fontSize: 15,
+              textTransform: 'none',
+              '&:hover': { bgcolor: '#475569' },
+              '&:disabled': { bgcolor: '#cbd5e1', color: '#94a3b8' }
+            }}
           >
-            {creating ? 'Creating...' : (editingTag ? 'Update Tag' : 'Create Tag')}
+            {creating ? (editingTag ? 'Updating...' : 'Creating...') : (editingTag ? 'Update Tag' : 'Create Tag')}
           </Button>
-        </DialogActions>
+        </Box>
       </Dialog>
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <DeleteIcon color="error" />
-            <Typography variant="h6">Confirm Delete</Typography>
+      <Dialog 
+        open={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: '0 4px 24px 0 rgba(30,41,59,0.10)',
+            overflow: 'hidden',
+          }
+        }}
+      >
+        {/* Header */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          p: 2,
+          borderBottom: '1px solid #e5e7eb',
+          bgcolor: '#f8fafc'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <DeleteIcon sx={{ color: '#ef4444', fontSize: 22 }} />
+            <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 700, color: '#334155', margin: 0 }}>
+              Confirm Delete
+            </Typography>
           </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            <Typography variant="body2">
+          <IconButton
+            onClick={() => setShowDeleteModal(false)}
+            sx={{ 
+              p: 0.5,
+              color: '#64748b',
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
+            }}
+          >
+            <span style={{ fontSize: 18 }}>×</span>
+          </IconButton>
+        </Box>
+
+        {/* Content */}
+        <Box sx={{ p: 3 }}>
+          <Alert 
+            severity="warning" 
+            sx={{ 
+              mb: 2,
+              bgcolor: '#fef2f2',
+              borderLeft: '4px solid #f87171',
+              border: 'none',
+              borderRadius: 1.5,
+              '& .MuiAlert-icon': { color: '#f87171' }
+            }}
+          >
+            <Typography variant="body2" sx={{ color: '#b91c1c' }}>
               This action cannot be undone. Deleted tags will be removed from all questions.
             </Typography>
           </Alert>
-          <Typography variant="body1">
+          <Typography variant="body1" sx={{ mb: 2, color: '#374151' }}>
             Are you sure you want to delete <strong>{selectedTags.length}</strong> tag{selectedTags.length !== 1 ? 's' : ''}?
           </Typography>
           {selectedTags.length > 0 && (
@@ -556,8 +732,14 @@ const ManageTags = () => {
                     <Chip 
                       key={tagId} 
                       label={tag.name} 
-                      color="error" 
-                      variant="outlined" 
+                      sx={{
+                        bgcolor: '#fef2f2',
+                        color: '#dc2626',
+                        border: '1px solid #f87171',
+                        borderRadius: 1.5,
+                        fontSize: 12,
+                        height: 24
+                      }}
                       size="small"
                     />
                   ) : null;
@@ -565,24 +747,53 @@ const ManageTags = () => {
               </Stack>
             </Box>
           )}
-        </DialogContent>
-        <DialogActions>
+        </Box>
+
+        {/* Footer */}
+        <Box sx={{ 
+          borderTop: '1px solid #e5e7eb',
+          p: 1.5,
+          bgcolor: '#f8fafc',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: 1.5
+        }}>
           <Button 
             onClick={() => setShowDeleteModal(false)}
-            color="inherit"
+            sx={{
+              px: 2.5,
+              py: 1,
+              bgcolor: '#e5e7eb',
+              color: '#334155',
+              borderRadius: 1,
+              fontWeight: 500,
+              fontSize: 15,
+              textTransform: 'none',
+              '&:hover': { bgcolor: '#d1d5db' }
+            }}
           >
             Cancel
           </Button>
           <Button 
             onClick={handleDeleteTags}
-            variant="contained"
-            color="error"
             disabled={deleting}
             startIcon={deleting ? <CircularProgress size={20} /> : <DeleteIcon />}
+            sx={{
+              px: 2.5,
+              py: 1,
+              bgcolor: '#ef4444',
+              color: '#fff',
+              borderRadius: 1,
+              fontWeight: 600,
+              fontSize: 15,
+              textTransform: 'none',
+              '&:hover': { bgcolor: '#dc2626' },
+              '&:disabled': { bgcolor: '#fca5a5', color: '#fef2f2' }
+            }}
           >
             {deleting ? 'Deleting...' : 'Delete Tags'}
           </Button>
-        </DialogActions>
+        </Box>
       </Dialog>
     </Box>
   );

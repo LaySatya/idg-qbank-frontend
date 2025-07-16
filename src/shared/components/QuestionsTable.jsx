@@ -348,6 +348,94 @@ const QuestionsTable = ({
     );
   };
 
+  // Fetch comment counts for questions
+  const fetchCommentCounts = async (questionIds) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const batchSize = 10; // Process 10 questions at a time
+      const commentCounts = {};
+
+      for (let i = 0; i < questionIds.length; i += batchSize) {
+        const batch = questionIds.slice(i, i + batchSize);
+        
+        const batchPromises = batch.map(async (questionId) => {
+          try {
+            const response = await fetch(`${API_BASE_URL}/questions/comments?questionid=${questionId}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
+              }
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              let commentsList = [];
+              if (Array.isArray(data)) {
+                commentsList = data;
+              } else if (data.comments && Array.isArray(data.comments)) {
+                commentsList = data.comments;
+              } else if (data.data && Array.isArray(data.data)) {
+                commentsList = data.data;
+              }
+              
+              return { questionId, count: commentsList.length };
+            } else {
+              return { questionId, count: 0 };
+            }
+          } catch (error) {
+            console.warn(`Failed to fetch comments for question ${questionId}:`, error);
+            return { questionId, count: 0 };
+          }
+        });
+
+        const batchResults = await Promise.allSettled(batchPromises);
+        
+        batchResults.forEach((result) => {
+          if (result.status === 'fulfilled' && result.value) {
+            commentCounts[result.value.questionId] = result.value.count;
+          }
+        });
+
+        // Small delay between batches to avoid overwhelming the server
+        if (i + batchSize < questionIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      // Update questions with comment counts
+      if (setQuestions && Object.keys(commentCounts).length > 0) {
+        setQuestions(prev => {
+          if (!Array.isArray(prev)) return prev;
+          
+          return prev.map(q => ({
+            ...q,
+            comments: commentCounts[q.id] !== undefined ? commentCounts[q.id] : (q.comments || 0)
+          }));
+        });
+      }
+
+    } catch (error) {
+      console.error('Error fetching comment counts:', error);
+    }
+  };
+
+  // Fetch comment counts when questions change
+  useEffect(() => {
+    if (!Array.isArray(questions) || questions.length === 0) return;
+    
+    // Only fetch for questions that don't have comment counts
+    const questionsNeedingComments = questions.filter(q => 
+      q && q.id && (q.comments === undefined || q.comments === null)
+    );
+    
+    if (questionsNeedingComments.length > 0) {
+      const questionIds = questionsNeedingComments.map(q => q.id);
+      fetchCommentCounts(questionIds);
+    }
+  }, [questions?.length]);
+
   useEffect(() => {
     if (!Array.isArray(questions) || questions.length === 0 || isFetchingRef.current) return;
 
@@ -1471,7 +1559,10 @@ const QuestionsTable = ({
       {commentsModalOpen && commentsQuestion && (
         <QuestionCommentsModal
           isOpen={commentsModalOpen}
-          onRequestClose={() => setCommentsModalOpen(false)}
+          onRequestClose={() => {
+            setCommentsModalOpen(false);
+            setCommentsQuestion(null);
+          }}
           question={commentsQuestion}
           setQuestions={setQuestions}
         />
