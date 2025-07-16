@@ -519,6 +519,8 @@ const QuestionsTable = ({
       return;
     }
 
+    setLoadingMoodlePreview(true);
+    
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -526,10 +528,13 @@ const QuestionsTable = ({
         return;
       }
 
-      const res = await fetch(`${API_BASE_URL}/questions/preview_moodle_question?questionid=${question.id}`, {
+      // Add timestamp to prevent caching issues
+      const timestamp = new Date().getTime();
+      const res = await fetch(`${API_BASE_URL}/questions/preview_moodle_question?questionid=${question.id}&_t=${timestamp}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache' // Prevent caching
         }
       });
 
@@ -539,13 +544,26 @@ const QuestionsTable = ({
 
       const data = await res.json();
       if (data.status && data.previewurl) {
-        window.open(data.previewurl, "_blank", "width=800,height=600");
+        // Open in new window with proper dimensions
+        const previewWindow = window.open(
+          data.previewurl, 
+          "moodle_preview", 
+          "width=1000,height=700,scrollbars=yes,resizable=yes,toolbar=no,menubar=no"
+        );
+        
+        if (!previewWindow) {
+          toast.error('Please allow popups for this site to view the preview');
+        } else {
+          toast.success('Opening Moodle preview in new window...');
+        }
       } else {
         toast.error(data.message || 'Failed to get preview URL');
       }
     } catch (error) {
       console.error('Preview error:', error);
-      toast.error('Failed to fetch Moodle preview');
+      toast.error('Failed to fetch Moodle preview. Please try again.');
+    } finally {
+      setLoadingMoodlePreview(false);
     }
   };
 
@@ -576,7 +594,40 @@ const QuestionsTable = ({
     }
 
     try {
-      const returnUrl = encodeURIComponent('/');
+      // Get the preview URL to construct the correct return URL
+      const previewRes = await fetch(`${API_BASE_URL}/questions/preview_moodle_question?questionid=${question.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      let returnUrl = encodeURIComponent(window.location.href); // fallback
+
+      if (previewRes.ok) {
+        const previewData = await previewRes.json();
+        if (previewData.status && previewData.previewurl) {
+          // Extract the base URL and construct the preview URL in the format Moodle expects
+          const previewUrl = previewData.previewurl;
+          
+          // Check if the preview URL contains the question ID
+          const questionIdMatch = previewUrl.match(/[?&]id=(\d+)/);
+          if (questionIdMatch) {
+            const questionId = questionIdMatch[1];
+            // Construct the preview URL in the correct format
+            const baseUrl = previewUrl.split('/question/')[0];
+            const correctPreviewUrl = `${baseUrl}/question/bank/previewquestion/preview.php?id=${questionId}`;
+            returnUrl = encodeURIComponent(correctPreviewUrl);
+          } else {
+            // Use the original preview URL if we can't extract the ID
+            returnUrl = encodeURIComponent(previewUrl);
+          }
+        }
+      }
+
+      console.log('Return URL:', decodeURIComponent(returnUrl)); // Debug log
+
+      // Get the edit form URL with the correct preview URL as return URL
       const url = `${API_BASE_URL}/questions/full_edit_moodle_form?questionid=${question.id}&courseid=${courseId}&returnurl=${returnUrl}`;
 
       const res = await fetch(url, {
@@ -593,14 +644,39 @@ const QuestionsTable = ({
       const data = await res.json();
 
       if (data.edit_form_url) {
-        window.open(data.edit_form_url, '_blank', 'noopener,noreferrer');
-        toast.success('Opening Moodle edit form in new tab...');
+        console.log('Edit form URL:', data.edit_form_url); // Debug log
+        
+        // Open in new window/tab
+        const editWindow = window.open(
+          data.edit_form_url, 
+          'moodle_edit', 
+          'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=yes,menubar=yes'
+        );
+        
+        if (!editWindow) {
+          toast.error('Please allow popups for this site to edit in Moodle');
+        } else {
+          toast.success('Opening Moodle edit form. After saving, you will be redirected to preview automatically!');
+          
+          // Add a listener to refresh data when the window closes
+          const checkClosed = setInterval(() => {
+            if (editWindow.closed) {
+              clearInterval(checkClosed);
+              toast.info('Moodle edit completed. Question data refreshed.');
+              
+              // Refresh the question data after editing
+              if (typeof window.refreshQuestionData === 'function') {
+                window.refreshQuestionData();
+              }
+            }
+          }, 1000);
+        }
       } else {
         toast.error(data.message || 'Failed to get edit form URL');
       }
     } catch (error) {
       console.error('Edit form error:', error);
-      toast.error('Failed to fetch Moodle edit form');
+      toast.error('Failed to fetch Moodle edit form. Please try again.');
     }
   };
 
@@ -1108,17 +1184,19 @@ const QuestionsTable = ({
                                 >
                                   <a
                                     href="#"
-                                    className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors"
+                                    className={`flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors ${loadingMoodlePreview ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     role="menuitem"
                                     tabIndex="-1"
                                     onClick={async (e) => {
                                       e.preventDefault();
-                                      await handlePreviewMoodle(question);
-                                      setOpenActionDropdown(null);
+                                      if (!loadingMoodlePreview) {
+                                        await handlePreviewMoodle(question);
+                                        setOpenActionDropdown(null);
+                                      }
                                     }}
                                   >
-                                    <i className="fa fa-eye w-4 text-center mr-2 text-blue-500"></i>
-                                    <span>Preview Moodle</span>
+                                    <i className={`fa ${loadingMoodlePreview ? 'fa-spinner fa-spin' : 'fa-eye'} w-4 text-center mr-2 text-blue-500`}></i>
+                                    <span>{loadingMoodlePreview ? 'Loading...' : 'Preview Moodle'}</span>
                                   </a>
                                   <a
                                     href="#"

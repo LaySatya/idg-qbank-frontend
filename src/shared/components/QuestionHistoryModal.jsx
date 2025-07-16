@@ -1,14 +1,36 @@
 // ============================================================================
-// src/shared/components/QuestionHistoryView.jsx
+// src/shared/components/QuestionHistoryModal.jsx
 // ============================================================================
 import React, { useState, useEffect } from 'react';
+import { 
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  DialogActions, 
+  Button, 
+  Box, 
+  Typography, 
+  CircularProgress, 
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  IconButton
+} from '@mui/material';
+import { Close as CloseIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { toast } from 'react-hot-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const QuestionHistoryView = ({ 
+const QuestionHistoryModal = ({ 
+  open,
+  onClose,
   question,
-  onBack,
   onPreview,
   onRevert 
 }) => {
@@ -16,12 +38,12 @@ const QuestionHistoryView = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Load question history when component mounts
+  // Load question history when component mounts or question changes
   useEffect(() => {
-    if (question) {
+    if (open && question) {
       loadQuestionHistory();
     }
-  }, [question]);
+  }, [open, question]);
 const loadQuestionHistory = async () => {
   const qbankId = question?.questionbankentryid;
 
@@ -110,256 +132,373 @@ const loadQuestionHistory = async () => {
       }
     }
   };
-const latestVersionNumber = historyData?.versions?.length > 0 
-  ? Math.max(...historyData.versions.map(v => v.version)) 
-  : null;
+  // Add this helper function to calculate the latest version
+  const latestVersionNumber = historyData?.versions?.length > 0 
+    ? Math.max(...historyData.versions.map(v => v.version)) 
+    : null;
 
   return (
-    <div className="space-y-4">
-      {/* Header with Back Button */}
-      <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <div>
-          <button
-            onClick={onBack}
-            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-black bg-sky-100 hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="xl" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          minHeight: '80vh',
+          maxHeight: '90vh',
+          borderRadius: 2,
+        }
+      }}
+    >
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        backgroundColor: '#f8fafc',
+        borderBottom: '1px solid #e2e8f0',
+        py: 2
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <IconButton 
+            onClick={onClose}
+            sx={{ 
+              backgroundColor: '#dbeafe',
+              color: '#1e40af',
+              '&:hover': { backgroundColor: '#bfdbfe' }
+            }}
           >
-            <i className="fa fa-arrow-left mr-2"></i>
-            Back to Questions
-          </button>
-        </div>
-        <div className="text-right">
-          <h3 className="text-lg font-semibold text-gray-900">Question History</h3>
-          <p className="text-sm text-blue-700">
-            {question.name || question.title} (ID: {question.id})
-          </p>
-        </div>
-      </div>
+            <ArrowBackIcon />
+          </IconButton>
+          <Box>
+            <Typography variant="h6" component="h3" sx={{ fontWeight: 600 }}>
+              Question History
+            </Typography>
+            <Typography variant="body2" color="primary.main">
+              {question?.name || question?.title} (ID: {question?.id})
+            </Typography>
+          </Box>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: 'text.secondary' }}>
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
 
-      {/* Loading State */}
-      {loading && (
-        <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-2 text-gray-600">Loading history...</span>
-        </div>
-      )}
+      <DialogContent sx={{ p: 0 }}>
+        {/* Loading State */}
+        {loading && (
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            py: 8,
+            flexDirection: 'column',
+            gap: 2
+          }}>
+            <CircularProgress />
+            <Typography variant="body2" color="text.secondary">
+              Loading history...
+            </Typography>
+          </Box>
+        )}
 
-      {/* Error State */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <div className="text-red-600">
-              <i className="fa fa-exclamation-circle mr-2"></i>
-              Error loading history: {error}
-            </div>
-          </div>
-        </div>
-      )}
+        {/* Error State */}
+        {error && (
+          <Box sx={{ p: 3 }}>
+            <Alert severity="error" sx={{ borderRadius: 2 }}>
+              <Typography variant="body2">
+                Error loading history: {error}
+              </Typography>
+            </Alert>
+          </Box>
+        )}
 
-      {/* History Table - Exact same as questions table */}
-      {historyData && historyData.versions && (
-        <div className="overflow-x-auto" style={{ minHeight: '300px', height: 'unset', maxHeight: 'unset', overflowY: 'auto' }}>
-          <table id="categoryquestions" className="min-w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">
-                  Version
-                </th>
-                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">
-                  <div className="font-semibold">Question</div>
-                  <div className="mt-1 space-x-1">
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Question name ascending">Question name</a>
-                    <span className="text-gray-400">/</span>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by ID number ascending">ID number</a>
-                  </div>
-                </th>
-                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Status</th>
-                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Comments</th>
-                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Version</th>
-                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Usage</th>
-                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Last used</th>
-                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">
-                  <div className="font-semibold">Created by</div>
-                  <div className="mt-1 space-x-1">
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by First name ascending">First name</a>
-                    <span className="text-gray-400">/</span>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Last name ascending">Last name</a>
-                    <span className="text-gray-400">/</span>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Date ascending">Date</a>
-                  </div>
-                </th>
-                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">
-                  <div className="font-semibold">Modified by</div>
-                  <div className="mt-1 space-x-1">
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by First name ascending">First name</a>
-                    <span className="text-gray-400">/</span>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Last name ascending">Last name</a>
-                    <span className="text-gray-400">/</span>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Date ascending">Date</a>
-                  </div>
-                </th>
-                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">
-                  <div>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Question type descending">
-                      T<i className="fa fa-sort-asc fa-fw ml-1 text-gray-500" title="Ascending" role="img" aria-label="Ascending"></i>
-                    </a>
-                  </div>
-                </th>
-                <th className="border-b border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {historyData.versions.map((version, index) => (
-                <tr key={version.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100 transition-colors`}>
-                  {/* Version Badge */}
-                  <td className="px-3 py-4 whitespace-nowrap">
-                    <div className="flex flex-col gap-1">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-blue-800">
-                        v{version.version}
-                      </span>
-
-                      {version.version === latestVersionNumber && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                          Current
-                        </span>
-                      )}
-
-                      {version.version === 1 && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          Original
-                        </span>
-                      )}
-                    </div>
-
-                  </td>
-                  
-                  {/* Question text and content */}
-                  <td className="px-3 py-4">
-                    <div className="flex flex-col items-start w-full">
-                      <div className="w-full mb-2">
-                        <span className="inline-flex items-center group">
-                          <span className="ml-2 text-black font-semibold">
+        {/* History Table */}
+        {historyData && historyData.versions && (
+          <TableContainer component={Paper} sx={{ boxShadow: 'none' }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', color: 'text.secondary' }}>
+                    Version
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', color: 'text.secondary', minWidth: 300 }}>
+                    <Box>
+                      <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>Question</Typography>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>Question name / ID number</Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', color: 'text.secondary', width: 96 }}>
+                    Status
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', color: 'text.secondary', width: 80 }}>
+                    Comments
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', color: 'text.secondary', width: 80 }}>
+                    Version
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', color: 'text.secondary', width: 80 }}>
+                    Usage
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', color: 'text.secondary', width: 96 }}>
+                    Last used
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', color: 'text.secondary', minWidth: 140 }}>
+                    <Box>
+                      <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>Created by</Typography>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>First name / Last name / Date</Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', color: 'text.secondary', minWidth: 140 }}>
+                    <Box>
+                      <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>Modified by</Typography>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>First name / Last name / Date</Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', color: 'text.secondary', width: 64 }}>
+                    Type
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', color: 'text.secondary', width: 80 }}>
+                    Actions
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {historyData.versions.map((version, index) => (
+                  <TableRow 
+                    key={version.id} 
+                    hover
+                    sx={{ 
+                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc',
+                      '&:hover': { backgroundColor: '#f1f5f9' }
+                    }}
+                  >
+                    {/* Version Badge */}
+                    <TableCell>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                        <Chip 
+                          label={`v${version.version}`} 
+                          size="small" 
+                          sx={{ 
+                            backgroundColor: '#dbeafe',
+                            color: '#1e40af',
+                            fontSize: '0.75rem',
+                            fontWeight: 500
+                          }}
+                        />
+                        {version.version === latestVersionNumber && (
+                          <Chip 
+                            label="Current" 
+                            size="small" 
+                            sx={{ 
+                              backgroundColor: '#dcfce7',
+                              color: '#15803d',
+                              fontSize: '0.75rem',
+                              fontWeight: 600
+                            }}
+                          />
+                        )}
+                        {version.version === 1 && (
+                          <Chip 
+                            label="Original" 
+                            size="small" 
+                            sx={{ 
+                              backgroundColor: '#f1f5f9',
+                              color: '#475569',
+                              fontSize: '0.75rem',
+                              fontWeight: 500
+                            }}
+                          />
+                        )}
+                      </Box>
+                    </TableCell>
+                    
+                    {/* Question text and content */}
+                    <TableCell>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                        <Box sx={{ mb: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
                             {version.name || '(No title)'}
-                          </span>
-                        </span>
-                        <span className="ml-1">
-                          <span className="sr-only">ID number</span>&nbsp;
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-small bg-grey-100 text-grey-800">ID {version.questionid}</span>
-                        </span>
-                      </div>
-                      {/* Render question text as HTML if present */}
-                      {version.questiontext && (
-                        <div className="text-xs text-gray-600 mt-1" dangerouslySetInnerHTML={{ __html: version.questiontext }} />
-                      )}
-                    </div>
-                  </td>
-                  
-                  {/* Status Column */}
-                  <td className="px-3 py-4 whitespace-nowrap w-32 min-w-[110px]">
-                    <div className="relative">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        version.status === 'ready' ? 'bg-gray-100 text-green-800' :
-                        version.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {version.status}
-                      </span>
-                    </div>
-                  </td>
-                  
-                  <td className="px-3 py-4 whitespace-nowrap">
-                    <a href="#" className="text-blue-600 hover:text-blue-900">
-                      0
-                    </a>
-                  </td>
-                  
-                  <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">v{version.version}</td>
-                  
-                  <td className="px-3 py-4 whitespace-nowrap">
-                    <a href="#" className="text-blue-600 hover:text-blue-900">
-                      0
-                    </a>
-                  </td>
-                  
-                  <td className="px-3 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900">Never</span>
-                  </td>
-                  
-                  <td className="px-3 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900">
-                      {version.createdbyuser ? 
-                        `${version.createdbyuser.firstname} ${version.createdbyuser.lastname}` : 
-                        `User ${version.createdby}`
-                      }
-                    </span>
-                    <br />
-                    <span className="text-xs text-gray-500">{formatDate(version.timecreated)}</span>
-                  </td>
-                  
-                  <td className="px-3 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900">
-                      {version.modifiedbyuser ? 
-                        `${version.modifiedbyuser.firstname} ${version.modifiedbyuser.lastname}` : 
-                        `User ${version.modifiedby}`
-                      }
-                    </span>
-                    <br />
-                    <span className="text-xs text-gray-500">{formatDate(version.timemodified)}</span>
-                  </td>
-                  
-                  <td className="px-3 py-4 whitespace-nowrap">
-                    {getQuestionTypeIcon(version.qtype)}
-                  </td>
-                  
-                  <td className="px-3 py-4 whitespace-nowrap">
-                    <div className="relative" data-enhance="moodle-core-actionmenu">
-                      <div className="flex">
-                        <div className="relative">
-                          <div>
-                            <a 
-                              href="#" 
-                              className="text-blue-600 hover:text-blue-900 focus:outline-none" 
-                              aria-label="Preview" 
-                              role="button" 
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handlePreviewVersion(version);
-                              }}
-                            >
-                              Preview
-                            </a>
-                            <span className="mx-1 text-gray-400">|</span>
-                            <a 
-                              href="#" 
-                              className="text-green-600 hover:text-green-900 focus:outline-none" 
-                              aria-label="Revert" 
-                              role="button" 
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleRevertToVersion(version);
-                              }}
-                            >
-                              Revert
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                          </Typography>
+                          <Chip 
+                            label={`ID ${version.questionid}`} 
+                            size="small" 
+                            variant="outlined"
+                            sx={{ 
+                              ml: 1,
+                              fontSize: '0.75rem',
+                              height: 20
+                            }}
+                          />
+                        </Box>
+                        {version.questiontext && (
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              color: 'text.secondary',
+                              mt: 0.5,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical'
+                            }}
+                            dangerouslySetInnerHTML={{ __html: version.questiontext }}
+                          />
+                        )}
+                      </Box>
+                    </TableCell>
+                    
+                    {/* Status Column */}
+                    <TableCell>
+                      <Chip 
+                        label={version.status}
+                        size="small"
+                        sx={{
+                          backgroundColor: version.status === 'ready' ? '#dcfce7' : 
+                                         version.status === 'draft' ? '#fef3c7' : '#f1f5f9',
+                          color: version.status === 'ready' ? '#15803d' : 
+                                version.status === 'draft' ? '#d97706' : '#475569',
+                          fontSize: '0.75rem',
+                          fontWeight: 500
+                        }}
+                      />
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Typography variant="body2" sx={{ color: 'primary.main', cursor: 'pointer' }}>
+                        0
+                      </Typography>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                        v{version.version}
+                      </Typography>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Typography variant="body2" sx={{ color: 'primary.main', cursor: 'pointer' }}>
+                        0
+                      </Typography>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                        Never
+                      </Typography>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Box>
+                        <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                          {version.createdbyuser ? 
+                            `${version.createdbyuser.firstname} ${version.createdbyuser.lastname}` : 
+                            `User ${version.createdby}`
+                          }
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          {formatDate(version.timecreated)}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Box>
+                        <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                          {version.modifiedbyuser ? 
+                            `${version.modifiedbyuser.firstname} ${version.modifiedbyuser.lastname}` : 
+                            `User ${version.modifiedby}`
+                          }
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          {formatDate(version.timemodified)}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                        {getQuestionTypeIcon(version.qtype)}
+                      </Box>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button 
+                          size="small" 
+                          variant="text" 
+                          sx={{ 
+                            color: 'primary.main',
+                            fontSize: '0.75rem',
+                            minWidth: 'auto',
+                            p: 0.5
+                          }}
+                          onClick={() => handlePreviewVersion(version)}
+                        >
+                          Preview
+                        </Button>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mx: 0.5 }}>
+                          |
+                        </Typography>
+                        <Button 
+                          size="small" 
+                          variant="text" 
+                          sx={{ 
+                            color: 'success.main',
+                            fontSize: '0.75rem',
+                            minWidth: 'auto',
+                            p: 0.5
+                          }}
+                          onClick={() => handleRevertToVersion(version)}
+                        >
+                          Revert
+                        </Button>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
 
-      {/* No History */}
-      {historyData && (!historyData.versions || historyData.versions.length === 0) && (
-        <div style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
-          No version history found.
-        </div>
-      )}
-    </div>
+        {/* No History */}
+        {historyData && (!historyData.versions || historyData.versions.length === 0) && (
+          <Box sx={{ 
+            minHeight: 300,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'text.secondary'
+          }}>
+            <Typography variant="body1">
+              No version history found.
+            </Typography>
+          </Box>
+        )}
+      </DialogContent>
+
+      <DialogActions sx={{ 
+        backgroundColor: '#f8fafc',
+        borderTop: '1px solid #e2e8f0',
+        px: 3,
+        py: 2
+      }}>
+        <Button 
+          onClick={onClose} 
+          variant="outlined"
+          sx={{ 
+            borderRadius: 2,
+            textTransform: 'none',
+            fontWeight: 500
+          }}
+        >
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
-export default QuestionHistoryView;
+export default QuestionHistoryModal;

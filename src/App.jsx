@@ -6,6 +6,7 @@ import Header from './components/layout/Header';
 import Dashboard from './pages/Dashboard';
 import QuestionBank from './features/questions/pages/QuestionBank';
 import ManageUsers from './pages/ManageUsers';
+import ManageTags from './pages/ManageTags';
 import LoginPage from './pages/LoginPage';
 import { logoutUser } from './api/userapi';
 import './styles/moodle-question-bank.css';
@@ -177,6 +178,16 @@ const handleLogin = (token, username, userid, profileimageurl) => {
               element={
                 isAuthenticated ? 
                 <QuestionBank /> : 
+                <Navigate to="/login" replace />
+              }
+            />
+            
+            {/* Manage Tags Route */}
+            <Route
+              path="/manage-tags"
+              element={
+                isAuthenticated ? 
+                <ManageTags /> : 
                 <Navigate to="/login" replace />
               }
             />

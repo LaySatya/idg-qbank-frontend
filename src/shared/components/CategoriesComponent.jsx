@@ -3,8 +3,22 @@ import ReactDOM from 'react-dom';
 import { 
   X, FolderOpen, Folder, BookOpen, Users, Search, Filter, ChevronRight, ChevronDown, 
   Check, Loader, AlertCircle, Eye, ArrowRight, Radio, CheckCircle, Circle, Home, Building2,
-   GraduationCap, FileText, Plus, Minus, RefreshCw
+   GraduationCap, FileText, Plus, Minus, RefreshCw ,ListOrdered
+
 } from 'lucide-react';
+import LoopIcon from '@mui/icons-material/Loop';
+import ImportContactsIcon from '@mui/icons-material/ImportContacts';
+import CheckIcon from '@mui/icons-material/Check';
+import SchoolIcon from '@mui/icons-material/School';
+import HomeIcon from '@mui/icons-material/Home';
+import SearchIcon from '@mui/icons-material/Search';
+import RemoveIcon from '@mui/icons-material/Remove';
+import AddIcon from '@mui/icons-material/Add';
+import ClearIcon from '@mui/icons-material/Clear';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import FolderIcon from '@mui/icons-material/Folder';
+import CategoryIcon from '@mui/icons-material/Category';
 import { useCategoriesAPI } from '../../api/categoriesAPI';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const CategoriesComponent = ({ 
@@ -100,6 +114,20 @@ const CategoriesComponent = ({
     const savedCourseId = localStorage.getItem('CourseId');
     if (savedCategoryId) setDefaultCategory(parseInt(savedCategoryId));
     if (savedCourseId) setDefaultCourse(parseInt(savedCourseId));
+  }, [isOpen]);
+  
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
   }, [isOpen]);
   // Load categories from API (only once on mount)
   useEffect(() => {
@@ -407,22 +435,25 @@ const CategoriesComponent = ({
     const coursesInCategory = getCoursesForCategory(category.id);
     const isLoadingCourses = loadingStates.courses.has(category.id);
     const hasLoadedCourses = coursesMap.has(category.id);
-    // Inline styles
+    
+    // Inline styles with consistent sizing
     const categoryRowStyle = {
       display: 'flex',
       alignItems: 'center',
       gap: 8,
-      padding: 12, // Consistent padding for all levels
+      padding: 12,
       borderRadius: 12,
       border: '1px solid',
-      borderColor: isSelected ? '#0ea5e9' : '#e5e7eb',
-      background: isSelected ? '#f0f9ff' : '#fff',
+      borderColor: isSelected ? '#0ea5e9' : (level === 0 ? '#d1d5db' : '#e5e7eb'),
+      background: isSelected ? '#f0f9ff' : (level === 0 ? '#f8fafc' : '#fff'),
       boxShadow: isSelected ? '0 1px 4px 0 rgba(14,165,233,0.08)' : 'none',
       transition: 'all 0.2s',
       cursor: 'pointer',
-      marginLeft: 0, // Remove indentation for consistent sizing
+      marginLeft: 0, // Remove indentation to maintain consistent width
       marginBottom: 4,
-      minHeight: 44, // Consistent minimum height
+      minHeight: 70,
+      height: 70, // Fixed height for all levels
+      position: 'relative',
     };
     const expandBtnStyle = {
       background: 'none',
@@ -433,13 +464,14 @@ const CategoriesComponent = ({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      width: 20, // Fixed width for consistency
-      height: 20, // Fixed height for consistency
+      width: 20,
+      height: 20,
       padding: 0,
+      borderRadius: 4,
     };
+    
     const badgeStyle = (bg, color) => ({
-      fontSize: 12,
-      
+      fontSize: 11,
       padding: '2px 6px',
       borderRadius: 12,
       background: bg,
@@ -447,30 +479,49 @@ const CategoriesComponent = ({
       fontWeight: 500,
       marginLeft: 4,
     });
+    
     const idBadgeStyle = badgeStyle(isSelected ? '#e0f2fe' : '#f3f4f6', isSelected ? '#0369a1' : '#6b7280');
     const courseCountBadgeStyle = badgeStyle(isSelected ? '#bae6fd' : '#f3f4f6', isSelected ? '#0369a1' : '#6b7280');
-    const levelBadgeStyle = badgeStyle(level === 0 ? '#e0f2fe' : '#f3f4f6', level === 0 ? '#0369a1' : '#64748b');
+    const levelBadgeStyle = badgeStyle(
+      level === 0 ? '#dbeafe' : '#f1f5f9', 
+      level === 0 ? '#1e40af' : '#475569'
+    );
+    
     const nameStyle = {
-      fontWeight: 600,
-      fontSize: 14, // Consistent size for all levels
-      color: isSelected ? '#0c4a6e' : '#111827', // Consistent color for all levels
+      fontWeight: level === 0 ? 700 : 500, // Bold for main categories
+      fontSize: 14, // Consistent font size for all levels
+      color: isSelected ? '#0c4a6e' : (level === 0 ? '#1e293b' : '#334155'),
       whiteSpace: 'nowrap',
       overflow: 'hidden',
       textOverflow: 'ellipsis',
       marginRight: 8,
     };
+    
     const idNumberStyle = {
       fontSize: 12,
       color: '#6b7280',
       marginTop: 2,
     };
+    
+    // Indentation indicator instead of margin
+    const indentationStyle = {
+      width: level * 16, // Visual indentation inside the card
+      height: 2,
+      background: level > 0 ? '#e2e8f0' : 'transparent',
+      borderRadius: 1,
+      flexShrink: 0,
+    };
+    
     return (
-      <div key={category.id} style={{ marginBottom: 4 }}>
+      <div key={category.id} style={{ marginBottom: 4, position: 'relative' }}>
         {/* Category Row */}
         <div 
           style={categoryRowStyle}
           onClick={() => handleCategorySelect(category.id)}
         >
+          {/* Visual indentation indicator */}
+          <div style={indentationStyle} />
+          
           {/* Expand/Collapse Button */}
           {hasChildren ? (
             <button
@@ -479,55 +530,66 @@ const CategoriesComponent = ({
               tabIndex={-1}
             >
               {isExpanded ? 
-                <Minus size={14} color="#52525b" /> : 
-                <Plus size={14} color="#52525b" />
+                <RemoveIcon size={14} color="#52525b" /> : 
+                <AddIcon size={14} color="#52525b" />
               }
             </button>
           ) : (
-            <div style={{ width: 20, height: 20 }} /> // Placeholder to maintain consistent spacing
+            <div style={{ width: 20, height: 20 }} />
           )}
+          
           {/* Selection Radio */}
           <div style={{ flexShrink: 0, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {isSelected ? (
-              <CheckCircle size={16} color="#2563eb" />
+              <CheckCircleOutlineIcon size={16} color="#2563eb" />
             ) : (
-              <Circle size={16} color="#9ca3af" />
+              <RadioButtonUncheckedIcon size={16} color="#9ca3af" />
             )}
           </div>
-          {/* Category Icon */}
+          
+          {/* Category Icon - Different for main vs sub */}
           <div style={{ flexShrink: 0, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Folder size={16} color={isSelected ? '#2563eb' : '#64748b'} />
+            {level === 0 ? (
+             
+              <CategoryIcon size={16} color={isSelected ? '#2563eb' : '#64748b'} />
+            ) : (
+              <FolderIcon size={16} color={isSelected ? '#2563eb' : '#94a3b8'} />
+            )}
           </div>
-          {/* Category Name */}
+          
+          {/* Category Name and Badges */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={nameStyle}>{category.name}</span>
-              {/* Course Count Badge */}
-              {/* <span style={courseCountBadgeStyle}>
-                {isLoadingCourses ? '...' : 
-                 hasLoadedCourses ? `${coursesInCategory.length} course${coursesInCategory.length !== 1 ? 's' : ''}` :
-                 'Click to load courses'}
+              
+              {/* Level Badge */}
+              {/* <span style={levelBadgeStyle}>
+                {level === 0 ? 'Main' : `Sub ${level}`}
               </span> */}
+              
+              {/* Course Count Badge */}
+              {/* {hasLoadedCourses && (
+                <span style={courseCountBadgeStyle}>
+                  {coursesInCategory.length}
+                </span>
+              )} */}
+              
               {/* Loading indicator */}
               {isLoadingCourses && (
-                <Loader size={14} style={{ color: '#2563eb', animation: 'spin 1s linear infinite' }} />
+                <LoopIcon size={12} style={{ color: '#2563eb', animation: 'spin 1s linear infinite' }} />
               )}
-              {/* ID Badge */}
-              {/* <span style={idBadgeStyle}>ID: {category.id}</span> */}
             </div>
+            
             {/* ID Number */}
             {category.idnumber && (
-              <div style={idNumberStyle}>{category.idnumber}</div>
+              <div style={idNumberStyle}>ID: {category.idnumber}</div>
             )}
           </div>
-          {/* Level Indicator */}
-          <div style={{ flexShrink: 0 }}>
-            {/* <span style={levelBadgeStyle}>L{level + 1}</span> */}
-          </div>
         </div>
-        {/* Children */}
+        
+        {/* Children with slight indentation */}
         {hasChildren && isExpanded && (
-          <div style={{ marginTop: 4 }}>
+          <div style={{ marginTop: 4, marginLeft: 8 }}>
             {category.children.map(child => renderCategory(child, level + 1))}
           </div>
         )}
@@ -540,45 +602,56 @@ const CategoriesComponent = ({
     const isSelected = selectedCourse?.id === course.id;
     const cardStyle = {
       background: isSelected ? '#f0f9ff' : '#fff',
-      border: '2px solid',
+      border: '1px solid', // Thinner border
       borderColor: isSelected ? '#0ea5e9' : '#e5e7eb',
-      borderRadius: 12,
-      padding: 16,
+      borderRadius: 8, // Smaller border radius
+      padding: 12, // Reduced padding
       cursor: 'pointer',
       transition: 'all 0.2s',
-      boxShadow: isSelected ? '0 2px 8px 0 rgba(14,165,233,0.10)' : 'none',
-      marginBottom: 8,
+      boxShadow: isSelected ? '0 1px 4px 0 rgba(14,165,233,0.08)' : 'none',
+      marginBottom: 6, // Reduced margin
+      minHeight: 'auto', // Remove fixed height
     };
-    const headerStyle = { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 };
+    const headerStyle = { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }; // Reduced margin
     const nameStyle = {
       fontWeight: 600,
-      fontSize: 16,
+      fontSize: 14, // Smaller font size
       color: isSelected ? '#0c4a6e' : '#111827',
       whiteSpace: 'nowrap',
       overflow: 'hidden',
       textOverflow: 'ellipsis',
-      marginBottom: 2,
+      marginBottom: 1, // Reduced margin
+      lineHeight: 1.4, // Tighter line height
     };
-    const shortnameStyle = { fontSize: 14, color: '#2563eb', fontWeight: 500 };
+    const shortnameStyle = { fontSize: 12, color: '#2563eb', fontWeight: 500 }; // Smaller font size
     const badgeStyle = (bg, color) => ({
-      fontSize: 12,
-      padding: '2px 8px',
-      borderRadius: 12,
+      fontSize: 10, // Smaller badge font
+      padding: '1px 6px', // Smaller padding
+      borderRadius: 10,
       background: bg,
       color: color,
       fontWeight: 500,
       marginLeft: 4,
     });
     const visibleBadgeStyle = badgeStyle(course.visible ? '#e0f2fe' : '#f3f4f6', course.visible ? '#0369a1' : '#6b7280');
-    const statsStyle = { display: 'flex', alignItems: 'center', gap: 12, fontSize: 14 };
-    const statItemStyle = { display: 'flex', alignItems: 'center', gap: 4, color: '#64748b' };
+    const statsStyle = { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }; // Smaller gap and font
+    const statItemStyle = { display: 'flex', alignItems: 'center', gap: 3, color: '#64748b' }; // Smaller gap
     const arrowStyle = {
       transition: 'all 0.2s',
       color: isSelected ? '#2563eb' : '#9ca3af',
       transform: isSelected ? 'translateX(4px)' : 'none',
     };
-    const breadcrumbStyle = { display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12, fontSize: 12, color: '#64748b' };
-    const summaryStyle = { marginBottom: 12, fontSize: 14, color: '#64748b', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' };
+    const breadcrumbStyle = { display: 'flex', alignItems: 'center', gap: 3, marginBottom: 8, fontSize: 11, color: '#64748b' }; // Smaller font and gap
+    const summaryStyle = { 
+      marginBottom: 8, 
+      fontSize: 12, // Smaller font size
+      color: '#64748b', 
+      display: '-webkit-box', 
+      WebkitLineClamp: 2, 
+      WebkitBoxOrient: 'vertical', 
+      overflow: 'hidden',
+      lineHeight: 1.3 // Tighter line height
+    };
     return (
       <div 
         key={course.id}
@@ -593,14 +666,14 @@ const CategoriesComponent = ({
               <p style={shortnameStyle}>{course.shortname}</p>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
             {/* <span style={visibleBadgeStyle}>{course.visible ? 'Visible' : 'Hidden'}</span> */}
-            {isSelected && <CheckCircle size={20} color="#2563eb" />}
+            {isSelected && <CheckCircleOutlineIcon sx={{ fontSize: 18 }} color="primary" />}
           </div>
         </div>
         {/* Category Breadcrumb */}
         <div style={breadcrumbStyle}>
-          <GraduationCap size={12} />
+          <SchoolIcon size={10} />
           <span>{course.categoryName}</span>
         </div>
         {/* Summary */}
@@ -610,18 +683,18 @@ const CategoriesComponent = ({
           </div>
         )}
         {/* Stats */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
           <div style={statsStyle}>
             {/* <div style={statItemStyle}>
-              <Users size={14} />
+              <Users size={12} />
               <span>{course.enrolledusers || 0}</span>
             </div> */}
             {/* <div style={statItemStyle}>
-              <GraduationCap size={14} />
+              <GraduationCap size={12} />
               <span style={{ color: '#2563eb', fontWeight: 500 }}>ID: {course.id}</span>
             </div> */}
           </div>
-          {/* <ArrowRight size={16} style={arrowStyle} /> */}
+          {/* <ArrowRight size={14} style={arrowStyle} /> */}
         </div>
       </div>
     );
@@ -691,6 +764,7 @@ const overlayStyle = {
   alignItems: 'center',
   justifyContent: 'center',
   padding: 8,
+  overflow: 'hidden', // Prevent scroll on overlay
 };
 
 const modalStyle = {
@@ -706,6 +780,7 @@ const modalStyle = {
   flexDirection: 'column',
   overflow: 'hidden',
   outline: 'none',
+  position: 'relative', // Ensure proper positioning
 };
 
 const headerStyle = {
@@ -724,6 +799,7 @@ const sectionStyle = {
   display: 'flex',
   gap: 16,
   flexDirection: 'row',
+  minHeight: 0, // Ensure proper flex behavior
 };
 
 const leftColStyle = {
@@ -733,6 +809,8 @@ const leftColStyle = {
   display: 'flex',
   flexDirection: 'column',
   minWidth: 0,
+  minHeight: 0, // Ensure proper flex behavior
+  overflow: 'hidden', // Prevent overflow issues
 };
 
 const rightColStyle = {
@@ -741,6 +819,8 @@ const rightColStyle = {
   display: 'flex',
   flexDirection: 'column',
   minWidth: 0,
+  minHeight: 0, // Ensure proper flex behavior
+  overflow: 'hidden', // Prevent overflow issues
 };
 
 const footerStyle = {
@@ -805,7 +885,7 @@ const modalContent = (
       {/* Header */}
       <div style={headerStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Home size={22} color="#64748b" />
+          <HomeIcon size={22} color="#64748b" />
           <h2 style={{ fontSize: 18, fontWeight: 700, color: '#334155', margin: 0 }}>Course Categories & Courses</h2>
         </div>
         <button
@@ -813,7 +893,7 @@ const modalContent = (
           style={{ ...neutralButtonStyle, padding: 6, background: 'none', color: '#64748b' }}
           aria-label="Close"
         >
-          <X size={18} />
+          <ClearIcon size={18} />
         </button>
       </div>
       {/* Status Messages */}
@@ -823,7 +903,7 @@ const modalContent = (
             <AlertCircle size={14} color="#f87171" style={{ marginRight: 8 }} />
             <span style={{ color: '#b91c1c', fontSize: 13 }}>{error}</span>
             <button onClick={clearError} style={{ marginLeft: 'auto', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}>
-              <X size={12} />
+              <ClearIcon size={12} />
             </button>
           </div>
         </div>
@@ -831,10 +911,10 @@ const modalContent = (
       {success && (
         <div style={{ margin: '16px 16px 0 16px', background: '#f3f4f6', borderLeft: '4px solid #2563eb', padding: 8, borderRadius: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <Check size={14} color="#2563eb" style={{ marginRight: 8 }} />
+            <CheckIcon size={14} color="#2563eb" style={{ marginRight: 8 }} />
             <span style={{ color: '#2563eb', fontSize: 13 }}>{success.message}</span>
             <button onClick={() => setSuccess(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-              <X size={12} />
+              <ClearIcon size={12} />
             </button>
           </div>
         </div>
@@ -859,7 +939,7 @@ const modalContent = (
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {loadingStates.categories ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
-                <Loader className="animate-spin" size={20} color="#64748b" style={{ marginRight: 8 }} />
+                <LoopIcon className="animate-spin" size={20} color="#64748b" style={{ marginRight: 8 }} />
                 <span style={{ color: '#64748b' }}>Loading categories...</span>
               </div>
             ) : categories.length === 0 ? (
@@ -887,7 +967,7 @@ const modalContent = (
               )}
             </div>
             <div style={{ position: 'relative' }}>
-              <Search size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <SearchIcon size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 type="text"
                 placeholder="Search courses..."
@@ -909,23 +989,23 @@ const modalContent = (
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {!selectedCategory ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: '#64748b' }}>
-                <BookOpen size={36} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
+                <ImportContactsIcon size={36} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
                 <p style={{ fontSize: 15, fontWeight: 500, color: '#334155', marginBottom: 6 }}>Select a category</p>
                 <p style={{ fontSize: 13 }}>Choose a category to view its courses.</p>
               </div>
             ) : loadingStates.courses.has(selectedCategory) ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
-                <Loader className="animate-spin" size={20} color="#64748b" style={{ marginRight: 8 }} />
+                <LoopIcon className="animate-spin" size={20} color="#64748b" style={{ marginRight: 8 }} />
                 <span style={{ color: '#64748b' }}>Loading courses...</span>
               </div>
             ) : filteredCourses.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: '#64748b' }}>
-                <BookOpen size={36} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
+                <ImportContactsIcon size={36} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
                 <p style={{ fontSize: 15, fontWeight: 500, color: '#334155', marginBottom: 6 }}>No courses found</p>
                 <p style={{ fontSize: 13 }}>No courses available in the selected category.</p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 6 }}>
                 {filteredCourses.map(course => renderCourse(course))}
               </div>
             )}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, FileQuestion, User, BarChart3 } from 'lucide-react';
+import { Home, FileQuestion, User, BarChart3, Tags } from 'lucide-react';
 import Logo from '../../assets/CADT-IDG-Logos-Navy_CADT-IDG-Lockup-1-Khmer-English.png';
 
 const Sidebar = ({ collapsed }) => {
@@ -15,6 +15,11 @@ const Sidebar = ({ collapsed }) => {
       label: 'Question Bank', 
       icon: <FileQuestion size={20} />, 
       path: '/question-bank' 
+    },
+    { 
+      label: 'Manage Tags', 
+      icon: <Tags size={20} />, 
+      path: '/manage-tags' 
     },
     { 
       label: 'Manage Users', 
