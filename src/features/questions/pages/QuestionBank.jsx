@@ -1086,7 +1086,7 @@ const QuestionBank = () => {
   // ============================================================================
 
   return (
-    <div className="w-full min-h-full flex flex-col">
+    <div className="w-full h-full flex flex-col overflow-hidden">
       <Toaster position="top-right" />
 
       {/* Performance indicator */}
@@ -1129,7 +1129,7 @@ const QuestionBank = () => {
       />
 
       {/* FIXED: Main Content Area - Allow natural height expansion */}
-      <main className="flex-1">
+      <main className="flex-1 min-h-0 overflow-hidden">
         {renderCurrentView()}
       </main>
 

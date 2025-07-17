@@ -1,12 +1,13 @@
 /* Updated CSS to fix layout issues - moodle-question-bank.css */
 
-/* Base layout - Allow natural content flow */
+/* Base layout - Fixed height viewport */
 html, body {
-  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 #root {
-  min-height: 100%;
+  height: 100%;
 }
 
 /* Question Bank Container */
@@ -276,17 +277,20 @@ html, body {
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-/* CRITICAL: Fix React app layout for natural content expansion */
+/* CRITICAL: Fix React app layout for fixed sidebar/header with scrollable content */
 .App {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: row;
+  overflow: hidden;
 }
 
 .App main {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Fix table container in React components - Allow natural height */

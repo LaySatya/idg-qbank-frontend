@@ -1103,10 +1103,10 @@ const handleEditMoodle = async (question) => {
         </div>
       </ReactModal>
 
-      <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="w-full h-full bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col">
         {/* Back button header */}
         {onBack && (
-          <div className="flex items-center gap-3 p-4 border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center gap-3 p-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
             <button 
               onClick={onBack}
               className="flex items-center justify-center w-10 h-10 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
@@ -1121,14 +1121,14 @@ const handleEditMoodle = async (question) => {
         )}
         
         {questions.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-gray-500">
+          <div className="flex-1 flex items-center justify-center text-gray-500">
             <div className="text-center">
               <i className="fas fa-question-circle text-4xl mb-4 text-gray-300"></i>
               <p className="text-lg">No questions found.</p>
             </div>
           </div>
         ) : (
-          <div className="w-full">
+          <div className="flex-1 min-h-0 overflow-auto">
             <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
