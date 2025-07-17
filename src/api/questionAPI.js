@@ -918,6 +918,32 @@ processImageURLs(htmlContent) {
     }
   },
 
+  // Delete all versions of questions
+  async deleteAllVersions(questionIds) {
+    try {
+      console.log(' Deleting all versions of questions:', questionIds);
+      
+      // Build URL with questionid[] parameters as required by the API
+      const params = new URLSearchParams();
+      questionIds.forEach((id, index) => {
+        params.append(`questionid[${index}]`, id.toString());
+      });
+      
+      const response = await fetch(`${API_BASE_URL}/questions/delete_all_versions?${params.toString()}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(' Delete all versions successful:', data);
+      
+      return data;
+    } catch (error) {
+      console.error(' Failed to delete all versions:', error);
+      throw error;
+    }
+  },
+
   // Bulk delete questions
   // async bulkDeleteQuestions(questionIds) {
   //   try {

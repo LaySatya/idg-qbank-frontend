@@ -2,6 +2,19 @@
 // src/features/questions/pages/QuestionBank.jsx - FIXED SCROLLING VERSION
 // ============================================================================
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { 
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  DialogActions, 
+  Button, 
+  Typography, 
+  Box, 
+  IconButton,
+  CircularProgress,
+  Alert
+} from '@mui/material';
+import { Close as CloseIcon, Warning as WarningIcon, Delete as DeleteIcon } from '@mui/icons-material';
 
 // CORRECTED IMPORTS
 import { useQuestionBank } from '../../../shared/hooks/useQuestionBank';
@@ -649,18 +662,59 @@ const QuestionBank = () => {
   }, [filters, currentPage, questionsPerPage, fetchQuestions]);
 
   // Delete handlers
+  const [deleteConfirmation, setDeleteConfirmation] = useState({
+    open: false,
+    questionIds: [],
+    questionCount: 0,
+    isLoading: false
+  });
+
   const handleDeleteQuestion = useCallback(async (questionId) => {
-    if (!window.confirm('Are you sure you want to delete this question?')) {
-      return;
-    }
+    const questionToDelete = questions.find(q => q.id === questionId);
+    if (!questionToDelete) return;
+
+    setDeleteConfirmation({
+      open: true,
+      questionIds: [questionId],
+      questionCount: 1,
+      isLoading: false
+    });
+  }, [questions]);
+
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedQuestions.length === 0) return;
+
+    setDeleteConfirmation({
+      open: true,
+      questionIds: selectedQuestions,
+      questionCount: selectedQuestions.length,
+      isLoading: false
+    });
+  }, [selectedQuestions]);
+
+  const confirmDelete = useCallback(async () => {
+    const { questionIds, questionCount } = deleteConfirmation;
+    
+    setDeleteConfirmation(prev => ({ ...prev, isLoading: true }));
 
     try {
-      setQuestions(prev => prev.filter(q => q.id !== questionId));
-      setSelectedQuestions(prev => prev.filter(id => id !== questionId));
-      toast.success('Question deleted successfully');
+      // Use the new delete_all_versions API endpoint
+      await questionAPI.deleteAllVersions(questionIds);
+      
+      setQuestions(prev => prev.filter(q => !questionIds.includes(q.id)));
+      setSelectedQuestions(prev => prev.filter(id => !questionIds.includes(id)));
+      
+      setDeleteConfirmation({ open: false, questionIds: [], questionCount: 0, isLoading: false });
+      toast.success(`Successfully deleted ${questionCount} question${questionCount !== 1 ? 's' : ''}`);
     } catch (error) {
-      toast.error('Failed to delete question');
+      console.error('Error deleting questions:', error);
+      setDeleteConfirmation(prev => ({ ...prev, isLoading: false }));
+      toast.error(`Failed to delete question${questionCount !== 1 ? 's' : ''}: ${error.message}`);
     }
+  }, [deleteConfirmation]);
+
+  const cancelDelete = useCallback(() => {
+    setDeleteConfirmation({ open: false, questionIds: [], questionCount: 0, isLoading: false });
   }, []);
 
   const handleDuplicateQuestion = useCallback(async (questionId) => {
@@ -826,12 +880,7 @@ const QuestionBank = () => {
                   selectedQuestions={selectedQuestions}
                   setSelectedQuestions={setSelectedQuestions}
                   setShowBulkEditModal={setShowBulkEditModal}
-                  onBulkDelete={() => {
-                    if (window.confirm(`Delete ${selectedQuestions.length} questions?`)) {
-                      setQuestions(prev => prev.filter(q => !selectedQuestions.includes(q.id)));
-                      setSelectedQuestions([]);
-                    }
-                  }}
+                  onBulkDelete={handleBulkDelete}
                   onBulkStatusChange={handleBulkStatusChange}
                   onReloadQuestions={() =>
                     fetchQuestions(filters, currentPage, questionsPerPage)
@@ -1116,6 +1165,125 @@ const QuestionBank = () => {
           availableQuestionTypes={availableQuestionTypes}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmation.open}
+        onClose={deleteConfirmation.isLoading ? undefined : cancelDelete}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: 3
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          pb: 1,
+          fontWeight: 600
+        }}>
+          Delete Question{deleteConfirmation.questionCount > 1 ? 's' : ''}
+          {!deleteConfirmation.isLoading && (
+            <IconButton 
+              onClick={cancelDelete}
+              sx={{ 
+                color: 'text.secondary',
+                '&:hover': { 
+                  backgroundColor: 'action.hover' 
+                }
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          )}
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
+            <Box sx={{ 
+              width: 48, 
+              height: 48, 
+              backgroundColor: 'error.light',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <WarningIcon sx={{ color: 'error.main', fontSize: 24 }} />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body1" sx={{ fontWeight: 500, mb: 2 }}>
+                Are you sure you want to delete {deleteConfirmation.questionCount > 1 ? 'these questions' : 'this question'}?
+              </Typography>
+              
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Count:</strong> {deleteConfirmation.questionCount} question{deleteConfirmation.questionCount > 1 ? 's' : ''}
+                </Typography>
+              </Box>
+              
+              <Alert 
+                severity="warning" 
+                sx={{ mb: 2 }}
+                icon={<WarningIcon fontSize="inherit" />}
+              >
+                <Typography variant="body2">
+                  <strong>Warning:</strong> This will permanently delete all versions of the selected question{deleteConfirmation.questionCount > 1 ? 's' : ''}. This action cannot be undone.
+                </Typography>
+              </Alert>
+              
+              <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 500 }}>
+                This action cannot be undone.
+              </Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ 
+          px: 3, 
+          pb: 3, 
+          pt: 1,
+          backgroundColor: 'grey.50',
+          gap: 1
+        }}>
+          <Button
+            onClick={cancelDelete}
+            variant="outlined"
+            color="inherit"
+            disabled={deleteConfirmation.isLoading}
+            sx={{ 
+              borderColor: 'grey.300',
+              color: 'text.primary',
+              '&:hover': {
+                borderColor: 'grey.400',
+                backgroundColor: 'grey.50'
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmDelete}
+            variant="contained"
+            color="error"
+            disabled={deleteConfirmation.isLoading}
+            startIcon={deleteConfirmation.isLoading ? <CircularProgress size={20} /> : <DeleteIcon />}
+            sx={{ 
+              fontWeight: 500,
+              '&:hover': {
+                backgroundColor: 'error.dark'
+              }
+            }}
+          >
+            {deleteConfirmation.isLoading ? 'Deleting...' : `Delete Question${deleteConfirmation.questionCount > 1 ? 's' : ''}`}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

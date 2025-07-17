@@ -179,7 +179,7 @@ const BulkActionsRow = ({
         throw new Error('Invalid response from server - missing required fields');
       }
 
-      console.log('✅ Tag created successfully:', data);
+      console.log(' Tag created successfully:', data);
       
       // Add the new tag to the local state
       const newTag = {
@@ -239,7 +239,7 @@ const handleConfirmAddTag = async () => {
     }
     
     //  FIXED: Using correct URL parameters format as per API documentation
-    console.log('🔧 Using corrected API call with URL parameters for tag addition');
+    console.log(' Using corrected API call with URL parameters for tag addition');
     
     // Build URL with query parameters as required by the API
     const params = new URLSearchParams();
@@ -287,7 +287,7 @@ const handleConfirmAddTag = async () => {
             console.log('➕ Adding tag to commonTags:', tagObj);
             return [...prevTags, tagObj];
           }
-          console.log('ℹ️ Tag already in commonTags:', tagObj);
+          console.log('Tag already in commonTags:', tagObj);
           return prevTags;
         });
       }
@@ -295,7 +295,7 @@ const handleConfirmAddTag = async () => {
       toast.success(`"${tagName}" tag added successfully!`);
       
       // Don't call fetchCommonTags() here as it might override our manual state update
-      console.log('✅ Tag addition completed successfully');
+      console.log(' Tag addition completed successfully');
     } else {
       console.error('API returned failure:', data);
       toast.error(data.message || data.error || 'Failed to add tag');
@@ -371,39 +371,39 @@ const handleConfirmRemoveTag = async () => {
     
     console.log('Tag Removal API Response Status:', res.status);
     const data = await res.json();
-    console.log('🔥 Tag Removal API Response Data:', data);
+    console.log(' Tag Removal API Response Data:', data);
     
     // Add detailed debugging
-    console.log('🔍 Question IDs:', validQuestionIds);
-    console.log('🔍 Tag ID:', tagId, 'Type:', typeof tagId);
-    console.log('🔍 URL Parameters:', params.toString());
+    console.log(' Question IDs:', validQuestionIds);
+    console.log(' Tag ID:', tagId, 'Type:', typeof tagId);
+    console.log(' URL Parameters:', params.toString());
     
     // Check what the question's current tags are
     if (validQuestionIds.length > 0) {
       const currentQuestion = questions.find(q => q.id === validQuestionIds[0]);
       if (currentQuestion && currentQuestion.tags) {
-        console.log('🔍 Current question tags:', currentQuestion.tags);
-        console.log('🔍 Question tag IDs and types:', 
+        console.log(' Current question tags:', currentQuestion.tags);
+        console.log(' Question tag IDs and types:', 
           currentQuestion.tags.map(tag => ({ id: tag.id, type: typeof tag.id, name: tag.name }))
         );
         const hasTag = currentQuestion.tags.some(t => t.id == tagId);
-        console.log('🔍 Question has tag before removal:', hasTag);
+        console.log(' Question has tag before removal:', hasTag);
         
         // Check exact match with type conversion
         const exactMatch = currentQuestion.tags.find(t => t.id == tagId);
         const strictMatch = currentQuestion.tags.find(t => t.id === tagId);
-        console.log('🔍 Exact match (loose ==):', exactMatch);
-        console.log('🔍 Strict match (===):', strictMatch);
+        console.log(' Exact match (loose ==):', exactMatch);
+        console.log(' Strict match (===):', strictMatch);
       }
     }
     
     // Check if operation was successful
     const allSuccessful = res.ok && data.success;
-    console.log('✅ All operations successful:', allSuccessful);
+    console.log(' All operations successful:', allSuccessful);
     
     // Log detailed response analysis
     if (data.results && data.results.length > 0) {
-      console.log('📊 Processing results:');
+      console.log(' Processing results:');
       data.results.forEach((result, index) => {
         console.log(`  Question ${result.questionid}: ${result.status} - ${result.message}`);
         console.log(`  Processed tags: ${result.processed_tagids}`);
@@ -416,7 +416,7 @@ const handleConfirmRemoveTag = async () => {
       result.status === 'success' && result.processed_tagids && result.processed_tagids.length > 0
     );
     
-    console.log('🔄 Has effective changes:', hasEffectiveChanges);
+    console.log(' Has effective changes:', hasEffectiveChanges);
     
     if (allSuccessful && hasEffectiveChanges) {
       // Update frontend state
@@ -446,7 +446,7 @@ const handleConfirmRemoveTag = async () => {
       toast.success(`Removed "${tagName}" from ${questionCount} question${questionCount !== 1 ? 's' : ''}`);
       
       // Don't call fetchCommonTags() here as it might override our manual state update
-      console.log('✅ Tag removal completed successfully');
+      console.log(' Tag removal completed successfully');
       
       // Verify the tag was actually removed by checking one question's tags
       setTimeout(async () => {
@@ -458,16 +458,16 @@ const handleConfirmRemoveTag = async () => {
             }
           });
           const verifyData = await verifyRes.json();
-          console.log('🔍 Verification: Tags for question', validQuestionIds[0], ':', verifyData.tags || []);
+          console.log(' Verification: Tags for question', validQuestionIds[0], ':', verifyData.tags || []);
           const tagStillExists = (verifyData.tags || []).some(t => t.id == tagId);
-          console.log('🔍 Tag still exists in database?', tagStillExists);
+          console.log(' Tag still exists in database?', tagStillExists);
         } catch (error) {
           console.error('Error verifying tag removal:', error);
         }
       }, 1000); // Wait 1 second before verifying
       
     } else {
-      console.error('❌ Tag removal failed or was ineffective');
+      console.error(' Tag removal failed or was ineffective');
       console.error('Response details:', data);
       
       // Handle different failure scenarios
@@ -475,7 +475,7 @@ const handleConfirmRemoveTag = async () => {
         // API succeeded but no changes were made
         const skippedResults = data.results.filter(r => r.status === 'skipped');
         if (skippedResults.length > 0) {
-          console.log('⚠️ Tag removal was skipped - tag may not be associated with question(s)');
+          console.log(' Tag removal was skipped - tag may not be associated with question(s)');
           toast.error(`Tag "${tagName}" is not associated with the selected question${questionCount !== 1 ? 's' : ''}`);
         } else {
           toast.error('No effective changes were made');
@@ -595,7 +595,7 @@ const handleConfirmRemoveTag = async () => {
       }
       
       //  FIXED: Using correct URL parameters format as per API documentation
-      console.log('🔧 Using corrected API call with URL parameters for bulk tag addition');
+      console.log(' Using corrected API call with URL parameters for bulk tag addition');
       
       // Build URL with query parameters as required by the API
       const params = new URLSearchParams();
@@ -607,7 +607,7 @@ const handleConfirmRemoveTag = async () => {
       });
       
       const addUrl = `${API_BASE_URL}/questions/bulk-tags?${params.toString()}`;
-      console.log('🚀 Sending POST request to:', addUrl);
+      console.log('Sending POST request to:', addUrl);
       
       const res = await fetch(addUrl, {
         method: 'POST',
