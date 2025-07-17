@@ -254,6 +254,8 @@ const QuestionsTable = ({
   const [showMoodlePreview, setShowMoodlePreview] = useState(false);
   const [moodlePreviewUrl, setMoodlePreviewUrl] = useState('');
   const [loadingMoodlePreview, setLoadingMoodlePreview] = useState(false);
+  const [loadingDuplicate, setLoadingDuplicate] = useState(false);
+  const [moodleFormLoading, setMoodleFormLoading] = useState(false);
   const [tagModalOpen, setTagModalOpen] = useState(false);
   const [tagModalQuestion, setTagModalQuestion] = useState(null);
   const fetchedQuestionsRef = useRef(new Set());
@@ -632,18 +634,12 @@ const QuestionsTable = ({
 
       const data = await res.json();
       if (data.status && data.previewurl) {
-        // Open in new window with proper dimensions
-        const previewWindow = window.open(
-          data.previewurl, 
-          "moodle_preview", 
-          "width=1000,height=700,scrollbars=yes,resizable=yes,toolbar=no,menubar=no"
-        );
-        
-        if (!previewWindow) {
-          toast.error('Please allow popups for this site to view the preview');
-        } else {
-          toast.success('Opening Moodle preview in new window...');
-        }
+        // Use modal instead of popup window for better cross-platform compatibility
+        console.log('Opening preview URL in modal:', data.previewurl);
+        setMoodlePreviewUrl(data.previewurl);
+        setShowMoodlePreview(true);
+        setMoodleFormLoading(true);
+        toast.success('Moodle preview is loading...');
       } else {
         toast.error(data.message || 'Failed to get preview URL');
       }
@@ -655,118 +651,171 @@ const QuestionsTable = ({
     }
   };
 
-  const handleEditMoodle = async (question) => {
-    if (!question || !question.id) {
-      toast.error('Invalid question for editing');
-      return;
-    }
 
-    const token = localStorage.getItem('token');
+const handleDuplicateMoodle = async (question) => {
+  if (!question || !question.id) {
+    toast.error('Invalid question for duplication');
+    return;
+  }
 
-    let courseId = localStorage.getItem('CourseID') ||
-      localStorage.getItem('courseid') ||
-      localStorage.getItem('courseId');
+  setLoadingDuplicate(true);
+  
+  const token = localStorage.getItem('token');
+  let courseId = localStorage.getItem('CourseID') ||
+    localStorage.getItem('courseid') ||
+    localStorage.getItem('courseId');
 
-    if (courseId) {
-      courseId = parseInt(courseId, 10);
-    }
+  if (courseId) {
+    courseId = parseInt(courseId, 10);
+  }
 
-    if (!token) {
-      toast.error('Missing authentication token');
-      return;
-    }
+  if (!token) {
+    toast.error('Missing authentication token');
+    setLoadingDuplicate(false);
+    return;
+  }
 
-    if (!courseId || isNaN(courseId)) {
-      toast.error('Missing or invalid course ID. Please select a course first.');
-      return;
-    }
+  if (!courseId || isNaN(courseId)) {
+    toast.error('Missing or invalid course ID. Please select a course first.');
+    setLoadingDuplicate(false);
+    return;
+  }
 
-    try {
-      // Get the preview URL to construct the correct return URL
-      const previewRes = await fetch(`${API_BASE_URL}/questions/preview_moodle_question?questionid=${question.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
-
-      let returnUrl = encodeURIComponent(window.location.href); // fallback
-
-      if (previewRes.ok) {
-        const previewData = await previewRes.json();
-        if (previewData.status && previewData.previewurl) {
-          // Extract the base URL and construct the preview URL in the format Moodle expects
-          const previewUrl = previewData.previewurl;
-          
-          // Check if the preview URL contains the question ID
-          const questionIdMatch = previewUrl.match(/[?&]id=(\d+)/);
-          if (questionIdMatch) {
-            const questionId = questionIdMatch[1];
-            // Construct the preview URL in the correct format
-            const baseUrl = previewUrl.split('/question/')[0];
-            const correctPreviewUrl = `${baseUrl}/question/bank/previewquestion/preview.php?id=${questionId}`;
-            returnUrl = encodeURIComponent(correctPreviewUrl);
-          } else {
-            // Use the original preview URL if we can't extract the ID
-            returnUrl = encodeURIComponent(previewUrl);
-          }
-        }
+  try {
+    const url = `${API_BASE_URL}/questions/duplicate_moodle_form?questionid=${question.id}&courseid=${courseId}`;
+    console.log('Fetching duplicate form from:', url);
+    
+    const res = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
       }
+    });
 
-      console.log('Return URL:', decodeURIComponent(returnUrl)); // Debug log
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('Duplicate form error response:', errorText);
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
 
-      // Get the edit form URL with the correct preview URL as return URL
-      const url = `${API_BASE_URL}/questions/full_edit_moodle_form?questionid=${question.id}&courseid=${courseId}&returnurl=${returnUrl}`;
+    const data = await res.json();
+    console.log('Duplicate form response:', data);
 
-      const res = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
+    if (data.duplicate_form_url) {
+      console.log('Opening duplicate form URL:', data.duplicate_form_url);
+      setMoodlePreviewUrl(data.duplicate_form_url);
+      setShowMoodlePreview(true);
+      setMoodleFormLoading(true);
+      toast.success('Moodle duplicate form is loading...');
+    } else {
+      console.warn('No duplicate form URL in response:', data);
+      toast.error('No duplicate form URL available for this question');
+    }
+  } catch (error) {
+    console.error('Duplicate form error:', error);
+    toast.error('Failed to fetch Moodle duplicate form. Please try again.');
+  } finally {
+    setLoadingDuplicate(false);
+  }
+};
+//use for test edit in real too 
+const handleEditClick = (questionId, courseIdParam) => {
+  const baseMoodleUrl = import.meta.env.VITE_MOODLE_BASE_URL;
+  const frontendBaseUrl = window.location.hostname === 'localhost'
+    ? 'http://localhost:5173'
+    : 'https://your-vercel-app.vercel.app';
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  const courseId = courseIdParam || localStorage.getItem('CourseID');
+
+  if (!courseId) {
+    toast.error('Course ID is missing. Cannot open Moodle editor.');
+    return;
+  }
+
+  const returnUrl = encodeURIComponent(`${frontendBaseUrl}/edit-complete?questionid=${questionId}`);
+  const editFormUrl = `${baseMoodleUrl}/question/bank/editquestion/question.php?courseid=${courseId}&id=${questionId}&returnurl=${returnUrl}`;
+
+  console.log('Opening Moodle edit with:', editFormUrl);
+  window.open(editFormUrl, '_blank');
+};
+
+
+  ///edit for real  moodle question
+const handleEditMoodle = async (question) => {
+  if (!question || !question.id) {
+    toast.error('Invalid question for editing');
+    return;
+  }
+
+  const token = localStorage.getItem('token');
+
+  let courseId = localStorage.getItem('CourseID') ||
+    localStorage.getItem('courseid') ||
+    localStorage.getItem('courseId');
+
+  if (courseId) {
+    courseId = parseInt(courseId, 10);
+  }
+
+  if (!token) {
+    toast.error('Missing authentication token');
+    return;
+  }
+
+  if (!courseId || isNaN(courseId)) {
+    toast.error('Missing or invalid course ID. Please select a course first.');
+    return;
+  }
+
+  try {
+    // Step 1: Get preview URL (for returnurl)
+    const previewRes = await fetch(`${API_BASE_URL}/questions/preview_moodle_question?questionid=${question.id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
       }
+    });
 
-      const data = await res.json();
+    let returnUrl = encodeURIComponent(window.location.href); // fallback
 
-      if (data.edit_form_url) {
-        console.log('Edit form URL:', data.edit_form_url); // Debug log
-        
-        // Open in new window/tab
-        const editWindow = window.open(
-          data.edit_form_url, 
-          'moodle_edit', 
-          'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=yes,menubar=yes'
-        );
-        
-        if (!editWindow) {
-          toast.error('Please allow popups for this site to edit in Moodle');
+    if (previewRes.ok) {
+      const previewData = await previewRes.json();
+      if (previewData.status && previewData.previewurl) {
+        const questionIdMatch = previewData.previewurl.match(/[?&]id=(\d+)/);
+        if (questionIdMatch) {
+          const previewUrl = `${previewData.previewurl.split('/question/')[0]}/question/bank/previewquestion/preview.php?id=${questionIdMatch[1]}`;
+          returnUrl = encodeURIComponent(previewUrl);
         } else {
-          toast.success('Opening Moodle edit form. After saving, you will be redirected to preview automatically!');
-          
-          // Add a listener to refresh data when the window closes
-          const checkClosed = setInterval(() => {
-            if (editWindow.closed) {
-              clearInterval(checkClosed);
-              toast.info('Moodle edit completed. Question data refreshed.');
-              
-              // Refresh the question data after editing
-              if (typeof window.refreshQuestionData === 'function') {
-                window.refreshQuestionData();
-              }
-            }
-          }, 1000);
+          returnUrl = encodeURIComponent(previewData.previewurl);
         }
-      } else {
-        toast.error(data.message || 'Failed to get edit form URL');
       }
-    } catch (error) {
-      console.error('Edit form error:', error);
-      toast.error('Failed to fetch Moodle edit form. Please try again.');
     }
-  };
+
+    // Step 2: Get edit form URL from backend
+    const url = `${API_BASE_URL}/questions/full_edit_moodle_form?questionid=${question.id}&courseid=${courseId}&returnurl=${returnUrl}`;
+    const res = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    const data = await res.json();
+
+    if (data.edit_form_url) {
+      setMoodlePreviewUrl(data.edit_form_url);   // Set modal iframe src
+      setShowMoodlePreview(true);                // Open modal
+      toast.success('Moodle edit form is loading...');
+    } else {
+      toast.error(data.message || 'Failed to get edit form URL');
+    }
+  } catch (error) {
+    console.error('Edit form error:', error);
+    toast.error('Failed to fetch Moodle edit form. Please try again.');
+  }
+};
+
 
   const openEditModal = (question) => {
     if (!question) {
@@ -988,8 +1037,9 @@ const QuestionsTable = ({
         onRequestClose={() => {
           setShowMoodlePreview(false);
           setMoodlePreviewUrl('');
+          setMoodleFormLoading(false);
         }}
-        contentLabel="Edit in Real Moodle"
+        contentLabel="Moodle Form"
         style={{
           overlay: { zIndex: 1000 },
           content: {
@@ -1005,17 +1055,50 @@ const QuestionsTable = ({
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div className="flex items-center justify-between p-4 border-b">
             <h3 className="text-lg font-semibold">
-              {moodlePreviewUrl.includes('editquestion') ? 'Edit in Real Moodle' : 'Preview in Real Moodle'}
+              {moodlePreviewUrl.includes('editquestion') ? 'Edit in Real Moodle' : 
+               moodlePreviewUrl.includes('duplicate') ? 'Duplicate in Moodle' : 
+               moodlePreviewUrl.includes('preview') ? 'Preview in Moodle' :
+               'Moodle Form'}
             </h3>
-            <button onClick={() => setShowMoodlePreview(false)}>&times;</button>
+            <button 
+              onClick={() => {
+                setShowMoodlePreview(false);
+                setMoodlePreviewUrl('');
+                setMoodleFormLoading(false);
+              }}
+              className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+            >
+              &times;
+            </button>
           </div>
-
+          
+          {/* Loading overlay */}
+          {moodleFormLoading && (
+            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading Moodle form...</p>
+                <p className="text-sm text-gray-500 mt-2">This may take a moment due to server processing</p>
+              </div>
+            </div>
+          )}
+          
           <iframe
             src={moodlePreviewUrl}
             style={{ flexGrow: 1, border: 'none' }}
             width="100%"
             height="100%"
-            title="Moodle Edit Form"
+            title="Moodle Form"
+            onLoad={(e) => {
+              // Form has loaded successfully
+              console.log('Moodle form loaded successfully');
+              setMoodleFormLoading(false);
+            }}
+            onError={(e) => {
+              console.error('Moodle form failed to load:', e);
+              setMoodleFormLoading(false);
+              toast.error('Failed to load Moodle form. Please try again.');
+            }}
           />
         </div>
       </ReactModal>
@@ -1286,7 +1369,7 @@ const QuestionsTable = ({
                                     <i className={`fa ${loadingMoodlePreview ? 'fa-spinner fa-spin' : 'fa-eye'} w-4 text-center mr-2 text-blue-500`}></i>
                                     <span>{loadingMoodlePreview ? 'Loading...' : 'Preview Moodle'}</span>
                                   </a>
-                                  <a
+                                  {/* <a
                                     href="#"
                                     className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors"
                                     role="menuitem"
@@ -1299,7 +1382,37 @@ const QuestionsTable = ({
                                   >
                                     <i className="fa fa-edit w-4 text-center mr-2 text-blue-500"></i>
                                     <span>Edit in Moodle</span>
+                                  </a> */}
+                                  <a
+                                    href="#"
+                                    className="flex items-center px-4 py-2 text-sm text-green-700 hover:bg-green-50 hover:text-green-900 transition-colors"
+                                    role="menuitem"
+                                    tabIndex="-1"
+                                    onClick={async (e) => {
+                                      e.preventDefault();
+                                      await handleDuplicateMoodle(question);
+                                      setOpenActionDropdown(null);
+                                    }}
+                                  >
+                                    <i className="fa fa-copy w-4 text-center mr-2 text-green-500"></i>
+                                    <span>Duplicate in Moodle</span>
                                   </a>
+                                  <a
+                                href="#"
+                                className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors"
+                                role="menuitem"
+                                tabIndex="-1"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleEditClick(question.id, question.courseid|| localStorage.getItem('CourseID')); // or question.courseId based on your API
+
+                                  setOpenActionDropdown(null);
+                                }}
+                              >
+                                <i className="fa fa-edit w-4 text-center mr-2 text-blue-500"></i>
+                                <span>Edit  Moodle</span>
+                              </a>
+
                                   <a
                                     href="#"
                                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"

@@ -11,6 +11,7 @@ import LoginPage from './pages/LoginPage';
 import { logoutUser } from './api/userapi';
 import './styles/moodle-question-bank.css';
 import ReactModal from 'react-modal';
+import EditCompletePage from './shared/components/EditCompletePage';
 ReactModal.setAppElement('#root');
 const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -201,7 +202,12 @@ const handleLogin = (token, username, userid, profileimageurl) => {
                 <Navigate to="/login" replace />
               }
             />
-            
+            <Route
+  path="/edit-complete"
+  element={
+    isAuthenticated ? <EditCompletePage /> : <Navigate to="/login" replace />
+  }
+/>
             {/* Root Route - redirect to dashboard if authenticated, login if not */}
             <Route
               path="/"
