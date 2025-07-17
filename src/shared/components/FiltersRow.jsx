@@ -453,11 +453,11 @@ const FiltersRow = ({
     <Paper elevation={2} sx={{ p: 2, mb: 2, boxShadow: 0.4 }}>
       <Grid container spacing={2} alignItems="flex-end">
         {/* Search */}
-        <Grid item sx={{ width: 400 }}>
+        <Grid item sx={{ width: 300 }}>
           <TextField
             id="search-questions"
             fullWidth
-            sx={{ minWidth: 350 }} 
+            sx={{ minWidth: 300 }} 
             label="Search Questions"
             variant="outlined"
             size="small"
@@ -682,7 +682,7 @@ const FiltersRow = ({
 
 
         {/* Clear Button */}
-        <Grid item xs={12}>
+        <Grid item xs={10}>
           {hasActiveFilters && (
             <Button
               variant="outlined"

@@ -19,7 +19,7 @@ ReactQuill.Quill = Quill;
 
 import 'react-quill/dist/quill.snow.css';
 import QuestionPreviewModal from './QuestionPreviewModal';
-import QuestionHistoryView from './QuestionHistoryModal';
+import QuestionHistoryView from './QuestionHistoryView';
 import ReactModal from 'react-modal';
 import QuestionCommentsModal from './preview/comments/QuestionCommentsModal';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -241,6 +241,7 @@ const QuestionsTable = ({
   setQType = () => {},
   username = '',
   setQuestions = () => {},
+  onBack = null,
 }) => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [pendingSaveQuestionId, setPendingSaveQuestionId] = useState(null);
@@ -1103,6 +1104,22 @@ const handleEditMoodle = async (question) => {
       </ReactModal>
 
       <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
+        {/* Back button header */}
+        {onBack && (
+          <div className="flex items-center gap-3 p-4 border-b border-gray-200 bg-gray-50">
+            <button 
+              onClick={onBack}
+              className="flex items-center justify-center w-10 h-10 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+            >
+              <i className="fas fa-arrow-left"></i>
+            </button>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Question Bank</h3>
+              <p className="text-sm text-gray-600">Manage your questions</p>
+            </div>
+          </div>
+        )}
+        
         {questions.length === 0 ? (
           <div className="flex items-center justify-center py-12 text-gray-500">
             <div className="text-center">
