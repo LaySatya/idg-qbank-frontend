@@ -718,25 +718,50 @@ const handleDuplicateMoodle = async (question) => {
     setLoadingDuplicate(false);
   }
 };
-//use for test edit in real too 
-const handleEditClick = (questionId, courseIdParam) => {
-  const baseMoodleUrl = import.meta.env.VITE_MOODLE_BASE_URL;
-  const frontendBaseUrl = window.location.hostname === 'localhost'
-    ? 'http://localhost:5173'
-    : 'https://your-vercel-app.vercel.app';
-
-  const courseId = courseIdParam || localStorage.getItem('CourseID');
-
-  if (!courseId) {
-    toast.error('Course ID is missing. Cannot open Moodle editor.');
+//use for edit in modal too 
+const handleEditClick = async (question) => {
+  if (!question || !question.id) {
+    toast.error('Invalid question for editing');
     return;
   }
 
-  const returnUrl = encodeURIComponent(`${frontendBaseUrl}/edit-complete?questionid=${questionId}`);
-  const editFormUrl = `${baseMoodleUrl}/question/bank/editquestion/question.php?courseid=${courseId}&id=${questionId}&returnurl=${returnUrl}`;
+  const token = localStorage.getItem('token');
+  let courseId = localStorage.getItem('CourseID') ||
+    localStorage.getItem('courseid') ||
+    localStorage.getItem('courseId');
 
-  console.log('Opening Moodle edit with:', editFormUrl);
-  window.open(editFormUrl, '_blank');
+  if (courseId) {
+    courseId = parseInt(courseId, 10);
+  }
+
+  if (!token) {
+    toast.error('Missing authentication token');
+    return;
+  }
+
+  if (!courseId || isNaN(courseId)) {
+    toast.error('Missing or invalid course ID. Please select a course first.');
+    return;
+  }
+
+  try {
+    const baseMoodleUrl = import.meta.env.VITE_MOODLE_BASE_URL;
+    const frontendBaseUrl = window.location.hostname === 'localhost'
+      ? 'http://localhost:5173'
+      : 'https://your-vercel-app.vercel.app';
+
+    const returnUrl = encodeURIComponent(`${frontendBaseUrl}/edit-complete?questionid=${question.id}`);
+    const editFormUrl = `${baseMoodleUrl}/question/bank/editquestion/question.php?courseid=${courseId}&id=${question.id}&returnurl=${returnUrl}`;
+
+    console.log('Opening edit form URL in modal:', editFormUrl);
+    setMoodlePreviewUrl(editFormUrl);
+    setShowMoodlePreview(true);
+    setMoodleFormLoading(true);
+    toast.success('Moodle edit form is loading...');
+  } catch (error) {
+    console.error('Edit form error:', error);
+    toast.error('Failed to open Moodle edit form. Please try again.');
+  }
 };
 
 
@@ -1055,7 +1080,7 @@ const handleEditMoodle = async (question) => {
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div className="flex items-center justify-between p-4 border-b">
             <h3 className="text-lg font-semibold">
-              {moodlePreviewUrl.includes('editquestion') ? 'Edit in Real Moodle' : 
+              {moodlePreviewUrl.includes('editquestion') || moodlePreviewUrl.includes('question.php') ? 'Edit in Moodle' : 
                moodlePreviewUrl.includes('duplicate') ? 'Duplicate in Moodle' : 
                moodlePreviewUrl.includes('preview') ? 'Preview in Moodle' :
                'Moodle Form'}
@@ -1385,7 +1410,7 @@ const handleEditMoodle = async (question) => {
                                   </a> */}
                                   <a
                                     href="#"
-                                    className="flex items-center px-4 py-2 text-sm text-green-700 hover:bg-green-50 hover:text-green-900 transition-colors"
+                                    className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors"
                                     role="menuitem"
                                     tabIndex="-1"
                                     onClick={async (e) => {
@@ -1394,26 +1419,23 @@ const handleEditMoodle = async (question) => {
                                       setOpenActionDropdown(null);
                                     }}
                                   >
-                                    <i className="fa fa-copy w-4 text-center mr-2 text-green-500"></i>
+                                    <i className="fa fa-copy w-4 text-center mr-2 text-blue-500"></i>
                                     <span>Duplicate in Moodle</span>
                                   </a>
                                   <a
-                                href="#"
-                                className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors"
-                                role="menuitem"
-                                tabIndex="-1"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handleEditClick(question.id, question.courseid|| localStorage.getItem('CourseID')); // or question.courseId based on your API
-
-                                  setOpenActionDropdown(null);
-                                }}
-                              >
-                                <i className="fa fa-edit w-4 text-center mr-2 text-blue-500"></i>
-                                <span>Edit  Moodle</span>
-                              </a>
-
-                                  <a
+                                    href="#"
+                                    className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors"
+                                    role="menuitem"
+                                    tabIndex="-1"
+                                    onClick={async (e) => {
+                                      e.preventDefault();
+                                      await handleEditClick(question);
+                                      setOpenActionDropdown(null);
+                                    }}
+                                  >
+                                    <i className="fa fa-edit w-4 text-center mr-2 text-blue-500"></i>
+                                    <span>Edit in Moodle</span>
+                                  </a>                                  <a
                                     href="#"
                                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
                                     role="menuitem"
