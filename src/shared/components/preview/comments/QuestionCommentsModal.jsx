@@ -41,6 +41,15 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
     const profileimageurl = localStorage.getItem('profileimageurl');
     
     console.log('📱 Setting current user:', { username, userid, firstname, lastname, profileimageurl });
+    console.log('📱 Profile image URL type:', typeof profileimageurl, 'Value:', profileimageurl);
+    
+    // Better handling of profile image URL
+    let cleanProfileUrl = null;
+    if (profileimageurl && profileimageurl !== 'null' && profileimageurl !== 'undefined' && profileimageurl.trim() !== '') {
+      cleanProfileUrl = profileimageurl.trim();
+    }
+    
+    console.log('📱 Clean profile URL:', cleanProfileUrl);
     
     setCurrentUser({
       id: userid,
@@ -48,7 +57,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
       fullname: `${firstname} ${lastname}`.trim() || username || 'Current User',
       firstname,
       lastname,
-      profileimageurl: profileimageurl || undefined // Ensure it's undefined if null/empty
+      profileimageurl: cleanProfileUrl
     });
   }, []);
 
@@ -164,6 +173,13 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
     // Handle success or failure outside of try-catch to prevent duplicate toasts
     if (apiCallSucceeded) {
       // API succeeded - use optimistic update and show success toast
+      const cleanProfileImageUrl = currentUser?.profileimageurl && 
+                                   currentUser.profileimageurl !== 'null' && 
+                                   currentUser.profileimageurl !== 'undefined' && 
+                                   currentUser.profileimageurl.trim() !== '' 
+                                   ? currentUser.profileimageurl.trim() 
+                                   : null;
+      
       const newOptimisticComment = {
         id: Date.now(),
         content: newComment.trim(),
@@ -176,15 +192,24 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
           firstname: currentUser?.firstname || '',
           lastname: currentUser?.lastname || '',
           email: currentUser?.username || '',
-          profileimageurl: currentUser?.profileimageurl && currentUser.profileimageurl !== 'null' ? currentUser.profileimageurl : null
+          profileimageurl: cleanProfileImageUrl
         }
       };
       
-      console.log('🖼️ Creating optimistic comment with profile image:', {
+      console.log(' Creating optimistic comment with profile image:', {
         originalUrl: currentUser?.profileimageurl,
+        cleanUrl: cleanProfileImageUrl,
         finalUrl: newOptimisticComment.user.profileimageurl,
-        currentUser: currentUser
+        currentUser: currentUser,
+        hasProfileImage: !!cleanProfileImageUrl
       });
+      
+      // Test if the image can be loaded
+      if (cleanProfileImageUrl) {
+        testImageLoad(cleanProfileImageUrl).then(canLoad => {
+          console.log(' Profile image accessibility test:', canLoad ? 'PASS' : 'FAIL');
+        });
+      }
       
       setComments(prev => [newOptimisticComment, ...prev]);
       setNewComment('');
@@ -207,6 +232,13 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
       
     } else {
       // API failed - use optimistic update and show fallback toast
+      const cleanProfileImageUrl = currentUser?.profileimageurl && 
+                                   currentUser.profileimageurl !== 'null' && 
+                                   currentUser.profileimageurl !== 'undefined' && 
+                                   currentUser.profileimageurl.trim() !== '' 
+                                   ? currentUser.profileimageurl.trim() 
+                                   : null;
+      
       const optimisticComment = {
         id: Date.now(),
         content: newComment.trim(),
@@ -219,7 +251,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
           firstname: currentUser?.firstname || '',
           lastname: currentUser?.lastname || '',
           email: currentUser?.username || '',
-          profileimageurl: currentUser?.profileimageurl && currentUser.profileimageurl !== 'null' ? currentUser.profileimageurl : null
+          profileimageurl: cleanProfileImageUrl
         }
       };
       
@@ -374,6 +406,22 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
       .substring(0, 2);
   };
 
+  // Test if profile image can be loaded
+  const testImageLoad = (url) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        console.log(' Image loaded successfully:', url);
+        resolve(true);
+      };
+      img.onerror = () => {
+        console.log(' Image failed to load:', url);
+        resolve(false);
+      };
+      img.src = url;
+    });
+  };
+
    return (
     <>
 <Dialog 
@@ -475,8 +523,29 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
         </Box>
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          {comments.map((comment, index) => (
-            <Box key={comment.id || index}>
+          {comments.map((comment, index) => {
+            const hasValidProfileImage = comment.user?.profileimageurl && 
+                                        comment.user.profileimageurl !== 'null' && 
+                                        comment.user.profileimageurl !== 'undefined' && 
+                                        comment.user.profileimageurl.trim() !== '';
+            
+            console.log(` Comment ${index}:`, {
+              id: comment.id,
+              hasUser: !!comment.user,
+              profileUrl: comment.user?.profileimageurl,
+              hasValidProfileImage,
+              authorName: getAuthorName(comment)
+            });
+            
+            // Test image loading for debugging
+            if (hasValidProfileImage) {
+              testImageLoad(comment.user.profileimageurl).then(canLoad => {
+                console.log(`🔍 Comment ${index} image test:`, canLoad ? 'PASS' : 'FAIL', comment.user.profileimageurl);
+              });
+            }
+            
+            return (
+            <Box key={`${comment.id}-${refreshKey}-${index}`}>
               <Box sx={{
                 display: 'flex',
                 gap: 1.5,
@@ -490,27 +559,38 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
                   borderColor: '#d1ecf1'
                 }
               }}>
-                {comment.user?.profileimageurl && comment.user.profileimageurl !== 'null' ? (
+                {hasValidProfileImage ? (
                   <Avatar 
-                    src={`${comment.user.profileimageurl}?t=${Date.now()}`}
+                    src={comment.user.profileimageurl}
                     alt={getAuthorName(comment)}
                     sx={{ width: 32, height: 32 }}
                     onError={(e) => { 
-                      console.log(' Comment avatar failed to load:', comment.user.profileimageurl);
-                      e.target.src = ''; 
+                      console.log(' Avatar failed to load:', comment.user.profileimageurl);
+                      console.log(' Error details:', e);
+                      // Force fallback to initials by hiding this avatar and showing the fallback
+                      e.target.style.display = 'none';
+                      const fallbackAvatar = e.target.parentElement?.querySelector('.fallback-avatar');
+                      if (fallbackAvatar) {
+                        fallbackAvatar.style.display = 'flex';
+                      }
                     }}
                   />
-                ) : (
-                  <Avatar sx={{ 
+                ) : null}
+                
+                {/* Fallback avatar - always present but hidden when image loads */}
+                <Avatar 
+                  className="fallback-avatar"
+                  sx={{ 
                     bgcolor: 'primary.main', 
                     width: 32, 
                     height: 32,
                     fontSize: '13px',
-                    fontWeight: '600'
-                  }}>
-                    {getInitials(getAuthorName(comment))}
-                  </Avatar>
-                )}
+                    fontWeight: '600',
+                    display: hasValidProfileImage ? 'none' : 'flex'
+                  }}
+                >
+                  {getInitials(getAuthorName(comment))}
+                </Avatar>
 
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
@@ -546,7 +626,8 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
                 <Divider sx={{ my: 1, opacity: 0.5 }} />
               )}
             </Box>
-          ))}
+            );
+          })}
         </Box>
       )}
     </Box>
@@ -560,22 +641,46 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
     }}>
       {currentUser && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          {currentUser.profileimageurl && 
+           currentUser.profileimageurl !== 'null' && 
+           currentUser.profileimageurl !== 'undefined' && 
+           currentUser.profileimageurl.trim() !== '' ? (
+            <Avatar
+              src={currentUser.profileimageurl}
+              alt={currentUser.fullname}
+              sx={{
+                bgcolor: 'secondary.main',
+                width: 28,
+                height: 28,
+                fontSize: '12px'
+              }}
+              onError={(e) => {
+                console.log(' Commenting avatar failed to load:', currentUser.profileimageurl);
+                e.target.style.display = 'none';
+                const fallback = e.target.parentElement?.querySelector('.commenting-fallback');
+                if (fallback) {
+                  fallback.style.display = 'flex';
+                }
+              }}
+            />
+          ) : null}
+          
           <Avatar
-            src={currentUser.profileimageurl && currentUser.profileimageurl !== 'null' ? currentUser.profileimageurl : undefined}
-            alt={currentUser.fullname}
+            className="commenting-fallback"
             sx={{
               bgcolor: 'secondary.main',
               width: 28,
               height: 28,
-              fontSize: '12px'
-            }}
-            onError={(e) => {
-              console.log(' Profile image failed to load:', currentUser.profileimageurl);
-              e.target.src = '';
+              fontSize: '12px',
+              display: (currentUser.profileimageurl && 
+                       currentUser.profileimageurl !== 'null' && 
+                       currentUser.profileimageurl !== 'undefined' && 
+                       currentUser.profileimageurl.trim() !== '') ? 'none' : 'flex'
             }}
           >
-            {(!currentUser.profileimageurl || currentUser.profileimageurl === 'null') && getInitials(currentUser.fullname)}
+            {getInitials(currentUser.fullname)}
           </Avatar>
+          
           <Typography variant="body2" color="text.secondary">
             Commenting as: <strong>{currentUser.fullname}</strong>
           </Typography>
