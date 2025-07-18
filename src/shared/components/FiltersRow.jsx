@@ -687,11 +687,15 @@ const FiltersRow = ({
             <Button
               variant="outlined"
               color="error"
+              size="small"
+              sx={{ borderRadius: 2, textTransform: 'none', minWidth: 120 }}
+
+
               startIcon={<FontAwesomeIcon icon={faTimes} />}
               onClick={handleClearFilters}
               fullWidth
             >
-              Clear All Filters
+              Clear All 
             </Button>
           )}
         </Grid>

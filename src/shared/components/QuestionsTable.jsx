@@ -21,6 +21,7 @@ import TagIcon from '@mui/icons-material/LocalOffer';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
+import EditIcon from '@mui/icons-material/Edit';
 import Quill from 'quill';
 import ReactQuill from 'react-quill';
 
@@ -517,14 +518,6 @@ const QuestionsTable = ({
   setQuestions = () => {},
   onBack = null,
 }) => {
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [pendingSaveQuestionId, setPendingSaveQuestionId] = useState(null);
-  const [pendingSaveTitle, setPendingSaveTitle] = useState('');
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editModalQuestion, setEditModalQuestion] = useState(null);
-  const [editModalType, setEditModalType] = useState(null);
-  const [editModalName, setEditModalName] = useState('');
-  const [editModalText, setEditModalText] = useState('');
   const [dropdownDirection, setDropdownDirection] = useState({});
   const [showMoodlePreview, setShowMoodlePreview] = useState(false);
   const [moodlePreviewUrl, setMoodlePreviewUrl] = useState('');
@@ -583,16 +576,6 @@ const QuestionsTable = ({
     }
     fetchQtypeIcons();
   }, []);
-
-  const openEditModalByType = (question) => {
-    if (!question) {
-      console.error('No question provided to openEditModalByType');
-      return;
-    }
-    setEditModalQuestion(question);
-    setEditModalOpen(true);
-    setEditModalType(question.qtype || question.questionType || 'multichoice');
-  };
 
   const openCommentsModal = (question) => {
     if (!question) {
@@ -1093,17 +1076,6 @@ const handleEditMoodle = async (question) => {
 };
 
 
-  const openEditModal = (question) => {
-    if (!question) {
-      console.error('No question provided to openEditModal');
-      return;
-    }
-    setEditModalQuestion(question);
-    setEditModalName(question.name || question.title || '');
-    setEditModalText(question.questiontext || question.questionText || '');
-    setEditModalOpen(true);
-  };
-
   const openTagModal = (question) => {
     if (!question) {
       console.error('No question provided to openTagModal');
@@ -1141,64 +1113,6 @@ const handleEditMoodle = async (question) => {
   const handleBackFromHistory = () => {
     setShowHistoryView(false);
     setHistoryQuestion(null);
-  };
-
-  const handleEditModalSave = async () => {
-    if (!editModalName.trim()) {
-      toast.error('Question name cannot be empty');
-      return;
-    }
-
-    if (!editModalQuestion) {
-      toast.error('No question to save');
-      return;
-    }
-
-    try {
-      const userid = localStorage.getItem('userid');
-      if (!userid) {
-        toast.error('User session expired');
-        return;
-      }
-
-      const result = await questionAPI.updateQuestionName(
-        editModalQuestion.id,
-        editModalName,
-        editModalText,
-        Number(userid)
-      );
-
-      if (result.status) {
-        if (setQuestions) {
-          setQuestions(prev => {
-            if (!Array.isArray(prev)) return prev;
-            
-            return prev.map(q =>
-              q.id === editModalQuestion.id
-                ? {
-                  ...q,
-                  name: editModalName,
-                  questiontext: editModalText,
-                  questionText: editModalText,
-                  modifiedBy: {
-                    name: result.modifiedby?.name || q.modifiedBy?.name || '',
-                    date: result.modifiedby?.date || q.modifiedBy?.date || '',
-                  }
-                }
-                : q
-            );
-          });
-        }
-        toast.success(result.message || 'Question updated successfully');
-        setEditModalOpen(false);
-        setEditModalQuestion(null);
-      } else {
-        toast.error(result.message || 'Failed to update question');
-      }
-    } catch (error) {
-      console.error('Save error:', error);
-      toast.error(`Failed to update: ${error.message}`);
-    }
   };
 
   const toggleQuestionSelection = (id) => {
@@ -1248,10 +1162,11 @@ const handleEditMoodle = async (question) => {
         return;
       }
 
+      // Only update the question name, keep existing question text
       const result = await questionAPI.updateQuestionName(
         questionId,
         newQuestionTitle,
-        question.questiontext || '',
+        question.questiontext || question.questionText || '', // Preserve existing question text
         Number(userid)
       );
 
@@ -1496,35 +1411,59 @@ const handleEditMoodle = async (question) => {
                         <div className="w-full mb-2">
                           <label htmlFor={`checkq${question.id}`} className="block">
                             {editingQuestion === question.id ? (
-                              <input
-                                type="text"
-                                value={newQuestionTitle}
-                                onChange={(e) => setNewQuestionTitle(e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                                autoFocus
-                                onBlur={() => {
-                                  setPendingSaveQuestionId(question.id);
-                                  setPendingSaveTitle(newQuestionTitle);
-                                  setShowSaveModal(true);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    setPendingSaveQuestionId(question.id);
-                                    setPendingSaveTitle(newQuestionTitle);
-                                    setShowSaveModal(true);
-                                  }
-                                  if (e.key === 'Escape') setEditingQuestion(null);
-                                }}
-                              />
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={newQuestionTitle}
+                                  onChange={(e) => setNewQuestionTitle(e.target.value)}
+                                  className="flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                                  autoFocus
+                                  onKeyDown={async (e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault(); // Prevent form submission and button clicks
+                                      console.log('Enter pressed - saving directly');
+                                      await initiateQuestionSave(question.id);
+                                    }
+                                    if (e.key === 'Escape') {
+                                      e.preventDefault();
+                                      console.log('Escape pressed - canceling edit');
+                                      setEditingQuestion(null);
+                                    }
+                                  }}
+                                />
+                                <button
+                                  onClick={async (e) => {
+                                    e.preventDefault(); // Prevent any form submission
+                                    console.log('Save button clicked - saving directly');
+                                    await initiateQuestionSave(question.id);
+                                  }}
+                                  className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    console.log('Cancel button clicked');
+                                    setEditingQuestion(null);
+                                  }}
+                                  className="px-3 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
                             ) : (
                               <span
-                                className="inline-flex items-center group cursor-pointer"
-                                onClick={() => openEditModal(question)}
+                                className="inline-flex items-center group cursor-pointer hover:bg-blue-50 rounded px-1 py-1 transition-colors"
+                                onClick={() => {
+                                  console.log('Editing question:', question.id, question.name);
+                                  setEditingQuestion(question.id);
+                                  setNewQuestionTitle(question.name || question.title || '');
+                                }}
                               >
                                 <span className="ml-2 text-black hover:text-blue-700 flex items-center" style={{ fontFamily: "'Noto Sans Khmer', Arial, sans-serif" }}>
                                   {question.name || question.title || '(No title)'}
-                                  <span className="ml-2">
-                                    <i className="fa-regular fa-pen-to-square text-gray-400"></i>
+                                  <span className="ml-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                    <EditIcon sx={{ fontSize: 16, color: '#3b82f6' }} />
                                   </span>
                                 </span>
                               </span>
@@ -1711,12 +1650,13 @@ const handleEditMoodle = async (question) => {
                                     tabIndex="-1"
                                     onClick={(e) => {
                                       e.preventDefault();
-                                      openEditModalByType(question);
+                                      setEditingQuestion(question.id);
+                                      setNewQuestionTitle(question.name || question.title || '');
                                       setOpenActionDropdown(null);
                                     }}
                                   >
                                     <i className="fa fa-cog w-4 text-center mr-2 text-gray-500"></i>
-                                    <span>Edit question</span>
+                                    <span>Edit question name</span>
                                   </a>
                                   {/* <a
                                     href="#"
@@ -1817,124 +1757,6 @@ const handleEditMoodle = async (question) => {
         )}
       </div>
 
-      {/* Save confirmation modal */}
-      {showSaveModal && pendingSaveQuestionId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white border border-gray-300 rounded shadow-lg p-6 max-w-md w-full mx-4">
-            <h3 className="font-bold text-lg mb-2">Save Changes?</h3>
-            <p className="mb-4">
-              Do you want to save the new question name:
-              <span className="font-semibold text-blue-700"> "{pendingSaveTitle}"</span>?
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
-                onClick={() => {
-                  setShowSaveModal(false);
-                  setEditingQuestion(null);
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded bg-sky-600 text-white hover:bg-sky-700"
-                onClick={async () => {
-                  await initiateQuestionSave(pendingSaveQuestionId);
-                  setShowSaveModal(false);
-                }}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Question Modal */}
-      <ReactModal
-        isOpen={editModalOpen}
-        onRequestClose={() => setEditModalOpen(false)}
-        contentLabel="Edit Question"
-        style={{
-          overlay: { zIndex: 1000 },
-          content: {
-            maxWidth: 1000,
-            margin: 'auto',
-            top: '20%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            padding: '32px',
-            borderRadius: '20px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-          }
-        }}
-      >
-        {editModalOpen && editModalQuestion && (
-          <>
-            {editModalType === 'multichoice' && (
-              <CreateMultipleChoiceQuestion
-                question={editModalQuestion}
-                onClose={() => setEditModalOpen(false)}
-                onSave={(updatedQuestion) => {
-                  setEditModalOpen(false);
-                }}
-              />
-            )}
-            {editModalType === 'truefalse' && (
-              <CreateTrueFalseQuestion
-                existingQuestion={editModalQuestion}
-                onClose={() => setEditModalOpen(false)}
-                onSave={(updatedQuestion) => {
-                  setEditModalOpen(false);
-                }}
-              />
-            )}
-            {(!editModalType || (editModalType !== 'multichoice' && editModalType !== 'truefalse')) && (
-              <>
-                <h3 className="text-xl font-bold mb-6">Edit Question</h3>
-                <form className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Question Name</label>
-                    <input
-                      type="text"
-                      value={editModalName}
-                      onChange={e => setEditModalName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Question Text</label>
-                    <ReactQuill
-                      value={editModalText}
-                      onChange={setEditModalText}
-                      theme="snow"
-                      style={{ minHeight: '280px' }}
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2 pt-2">
-                    <button
-                      type="button"
-                      className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
-                      onClick={() => setEditModalOpen(false)}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      className="px-4 py-2 rounded bg-sky-600 text-white hover:bg-sky-700"
-                      onClick={handleEditModalSave}
-                    >
-                      Save
-                    </button>
-                  </div>
-                </form>
-              </>
-            )}
-          </>
-        )}
-      </ReactModal>
-
       {/* Tag Management Modal */}
       <TagManagementModal
         isOpen={tagModalOpen}
@@ -1982,7 +1804,8 @@ const handleEditMoodle = async (question) => {
         question={previewQuestion}
         onEdit={(question) => {
           setPreviewModalOpen(false);
-          openEditModal(question);
+          setEditingQuestion(question.id);
+          setNewQuestionTitle(question.name || question.title || '');
         }}
         onDuplicate={(questionId) => {
           setPreviewModalOpen(false);

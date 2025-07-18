@@ -15,6 +15,7 @@ import {
   Chip,
   IconButton
 } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { Close as CloseIcon, Warning as WarningIcon, Delete as DeleteIcon } from '@mui/icons-material';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -209,7 +210,7 @@ const QuestionHistoryView = ({
             onClick={onBack}
             className="flex items-center justify-center w-10 h-10 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
           >
-            <i className="fas fa-arrow-left"></i>
+            <ArrowBackIcon className="w-5 h-5" />
           </button>
           <div>
             <h3 className="text-lg font-semibold text-gray-900">Question History</h3>

@@ -729,18 +729,18 @@ const handleConfirmRemoveTag = async () => {
             <MenuItem onClick={() => handleAction('tags')}>
               <TagIcon sx={{ mr: 1 }} /> Manage Tags
             </MenuItem>
-            <MenuItem onClick={() => handleAction('duplicate')}>
+            {/* <MenuItem onClick={() => handleAction('duplicate')}>
               <ContentCopyIcon sx={{ mr: 1 }} /> Duplicate Questions
-            </MenuItem>
+            </MenuItem> */}
             <MenuItem onClick={() => handleAction('export')}>
               <DownloadIcon sx={{ mr: 1 }} /> Export to XML
             </MenuItem>
             <MenuItem onClick={() => handleAction('preview')}>
               <VisibilityIcon sx={{ mr: 1 }} /> Preview Questions
             </MenuItem>
-            <MenuItem onClick={() => handleAction('statistics')}>
+            {/* <MenuItem onClick={() => handleAction('statistics')}>
               <BarChartIcon sx={{ mr: 1 }} /> View Statistics
-            </MenuItem>
+            </MenuItem> */}
           </Menu>
           <Button
             variant="contained"

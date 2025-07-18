@@ -141,7 +141,7 @@ const PaginationControls = ({
             value={safeItemsPerPage}
             onChange={(e) => handleItemsPerPageChange(e.target.value)}
             disabled={isLoading}
-            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value={5}>5</option>
             <option value={10}>10</option>
@@ -189,7 +189,7 @@ const PaginationControls = ({
       </div>
       <style>{`
         .pagination .active .page-link {
-          background-color: #2563eb !important; /* blue-600 */
+          background-color: #2563eb !important; /* sky-600 */
           color: #fff !important;
           border-color: #2563eb !important;
         }
@@ -197,7 +197,7 @@ const PaginationControls = ({
       {isLoading && (
         <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
           <div className="flex items-center gap-2 text-sm text-gray-600">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-sky-600"></div>
             Loading...
           </div>
         </div>
