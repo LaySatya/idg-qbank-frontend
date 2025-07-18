@@ -706,14 +706,14 @@ const handleConfirmRemoveTag = async () => {
         </Stack>
         {/* Actions */}
         <Stack direction="row" spacing={2}>
-          <Button
+          {/* <Button
             variant="outlined"
             // startIcon={<EditIcon />}
             onClick={() => setShowBulkEditModal(true)}
           >
             Bulk Edit
             {<EditIcon />}
-          </Button>
+          </Button> */}
            <Button
             variant="outlined"
             
