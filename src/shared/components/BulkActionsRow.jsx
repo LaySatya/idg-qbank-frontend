@@ -693,7 +693,7 @@ const handleConfirmRemoveTag = async () => {
 
   return (
     <>
-      <Paper elevation={1} sx={{ mb: 2, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Paper elevation={1} sx={{ mb: 2, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
         {/* Selection Info */}
         <Stack direction="row" alignItems="center" spacing={2}>
           <GroupIcon color="primary" />

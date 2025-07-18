@@ -30,6 +30,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Get current user info
   useEffect(() => {
@@ -175,12 +176,19 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
           firstname: currentUser?.firstname || '',
           lastname: currentUser?.lastname || '',
           email: currentUser?.username || '',
-          profileimageurl: currentUser?.profileimageurl || undefined
+          profileimageurl: currentUser?.profileimageurl && currentUser.profileimageurl !== 'null' ? currentUser.profileimageurl : null
         }
       };
       
+      console.log('🖼️ Creating optimistic comment with profile image:', {
+        originalUrl: currentUser?.profileimageurl,
+        finalUrl: newOptimisticComment.user.profileimageurl,
+        currentUser: currentUser
+      });
+      
       setComments(prev => [newOptimisticComment, ...prev]);
       setNewComment('');
+      setRefreshKey(prev => prev + 1); // Force re-render
       
       // Update the questions data to reflect the new comment count
       if (setQuestions) {
@@ -211,12 +219,13 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
           firstname: currentUser?.firstname || '',
           lastname: currentUser?.lastname || '',
           email: currentUser?.username || '',
-          profileimageurl: currentUser?.profileimageurl || undefined
+          profileimageurl: currentUser?.profileimageurl && currentUser.profileimageurl !== 'null' ? currentUser.profileimageurl : null
         }
       };
       
       setComments(prev => [optimisticComment, ...prev]);
       setNewComment('');
+      setRefreshKey(prev => prev + 1); // Force re-render
       
       // Update the questions data to reflect the new comment count (optimistic)
       if (setQuestions) {
@@ -483,7 +492,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
               }}>
                 {comment.user?.profileimageurl && comment.user.profileimageurl !== 'null' ? (
                   <Avatar 
-                    src={comment.user.profileimageurl}
+                    src={`${comment.user.profileimageurl}?t=${Date.now()}`}
                     alt={getAuthorName(comment)}
                     sx={{ width: 32, height: 32 }}
                     onError={(e) => { 
