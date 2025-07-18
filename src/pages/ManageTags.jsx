@@ -37,7 +37,7 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-hot-toast';
 import PaginationControls from '../shared/components/PaginationControls';
-
+import CloseIcon from '@mui/icons-material/Close';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const ManageTags = () => {
@@ -319,7 +319,7 @@ const ManageTags = () => {
           Manage Tags
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Create, edit, and delete tags for your question bank
+          Create, edit, and delete tags for  question bank
         </Typography>
       </Box>
 
@@ -569,7 +569,8 @@ const ManageTags = () => {
               '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
             }}
           >
-            <span style={{ fontSize: 18 }}>×</span>
+            <CloseIcon sx={{ color: '#64748b', fontSize: 22 }} />
+        
           </IconButton>
         </Box>
 
@@ -683,7 +684,7 @@ const ManageTags = () => {
           bgcolor: '#f8fafc'
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <DeleteIcon sx={{ color: '#ef4444', fontSize: 22 }} />
+            <DeleteIcon sx={{ color: '#dc2626', fontSize: 22 }} />
             <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 700, color: '#334155', margin: 0 }}>
               Confirm Delete
             </Typography>
@@ -696,7 +697,8 @@ const ManageTags = () => {
               '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
             }}
           >
-            <span style={{ fontSize: 18 }}>×</span>
+            <CloseIcon sx={{ color: '#64748b', fontSize: 22 }} />
+            
           </IconButton>
         </Box>
 
@@ -781,17 +783,17 @@ const ManageTags = () => {
             sx={{
               px: 2.5,
               py: 1,
-              bgcolor: '#ef4444',
-              color: '#fff',
+              bgcolor: '#dc2626',
+              color: '#334155',
               borderRadius: 1,
-              fontWeight: 600,
+              fontWeight: 500,
               fontSize: 15,
               textTransform: 'none',
               '&:hover': { bgcolor: '#dc2626' },
               '&:disabled': { bgcolor: '#fca5a5', color: '#fef2f2' }
             }}
           >
-            {deleting ? 'Deleting...' : 'Delete Tags'}
+            {deleting ? 'Deleting...' : 'Delete'}
           </Button>
         </Box>
       </Dialog>

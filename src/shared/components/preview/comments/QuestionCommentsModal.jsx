@@ -18,7 +18,7 @@ import CommentIcon from '@mui/icons-material/Comment';
 import PersonIcon from '@mui/icons-material/Person';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SendIcon from '@mui/icons-material/Send';
-
+import CloseIcon from '@mui/icons-material/Close';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions }) => {
@@ -431,7 +431,8 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
           '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
         }}
       >
-        <span style={{ fontSize: 18 }}>×</span>
+        <CloseIcon sx={{ fontSize: 18 }} />
+       
       </IconButton>
     </Box>
   </Box>
@@ -486,7 +487,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
                     alt={getAuthorName(comment)}
                     sx={{ width: 32, height: 32 }}
                     onError={(e) => { 
-                      console.log('❌ Comment avatar failed to load:', comment.user.profileimageurl);
+                      console.log(' Comment avatar failed to load:', comment.user.profileimageurl);
                       e.target.src = ''; 
                     }}
                   />
@@ -517,7 +518,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
                         onClick={() => handleDeleteComment(comment.id)}
                         sx={{ ml: 'auto', opacity: 0.7, '&:hover': { opacity: 1 } }}
                       >
-                        <DeleteIcon fontSize="small" />
+                        <DeleteIcon sx={{ fontSize: 18 ,  color: '#dc2626' }} />
                       </IconButton>
                     )}
                   </Box>
@@ -560,7 +561,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
               fontSize: '12px'
             }}
             onError={(e) => {
-              console.log('❌ Profile image failed to load:', currentUser.profileimageurl);
+              console.log(' Profile image failed to load:', currentUser.profileimageurl);
               e.target.src = '';
             }}
           >
@@ -579,7 +580,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder="Add your comment here... (Press Enter to submit)"
+          placeholder="Add your comment here... "
           variant="outlined"
           size="small"
           sx={{
@@ -613,9 +614,9 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
         </Button>
       </Box>
       
-      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+      {/* <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
          Tip: Press Enter to submit, Shift+Enter for new line
-      </Typography>
+      </Typography> */}
     </Box>
   </Box>
 
@@ -676,8 +677,8 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
     bgcolor: '#f8fafc'
   }}>
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-      <DeleteIcon sx={{ color: '#ef4444', fontSize: 22 }} />
-      <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 700, color: '#334155', margin: 0 }}>
+      <DeleteIcon sx={{ color: '#dc2626', fontSize: 22 }} />
+      <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 600, color: '#334155', margin: 0 }}>
         Delete Comment
       </Typography>
     </Box>
@@ -689,7 +690,8 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
         '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
       }}
     >
-      <span style={{ fontSize: 18 }}>×</span>
+      <CloseIcon sx={{ fontSize: 18 }} />
+      
     </IconButton>
   </Box>
 
@@ -744,17 +746,17 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
       sx={{
         px: 2.5,
         py: 1,
-        bgcolor: '#ef4444',
-        color: '#fff',
+        bgcolor: '#d32f2f',
+        color: '#000',
         borderRadius: 1,
-        fontWeight: 600,
+        fontWeight: 500,
         fontSize: 15,
         textTransform: 'none',
         '&:hover': { bgcolor: '#dc2626' },
         '&:disabled': { bgcolor: '#fca5a5', color: '#fef2f2' }
       }}
     >
-      {deleting ? 'Deleting...' : 'Delete Comment'}
+      {deleting ? 'Deleting...' : 'Delete'}
     </Button>
   </Box>
 </Dialog>

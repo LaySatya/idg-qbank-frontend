@@ -12,6 +12,15 @@ import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import TextField from '@mui/material/TextField';
+import Chip from '@mui/material/Chip';
+import Autocomplete from '@mui/material/Autocomplete';
+import InputAdornment from '@mui/material/InputAdornment';
+import CircularProgress from '@mui/material/CircularProgress';
+import TagIcon from '@mui/icons-material/LocalOffer';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
 import Quill from 'quill';
 import ReactQuill from 'react-quill';
 
@@ -26,7 +35,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 import CreateMultipleChoiceQuestion from '../../features/questions/components/forms/CreateMultipleChoiceQuestion';
 import CreateTrueFalseQuestion from '../../features/questions/components/forms/CreateTrueFalseQuestion';
 
-// Simplified Tag Management Modal Component
+// Enhanced Tag Management Modal Component with styling from BulkActionsRow
 const TagManagementModal = ({
   isOpen,
   onRequestClose,
@@ -36,15 +45,16 @@ const TagManagementModal = ({
 }) => {
   const [allTags, setAllTags] = useState([]);
   const [questionTags, setQuestionTags] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [newTagName, setNewTagName] = useState('');
+  const [selectedTagsToAdd, setSelectedTagsToAdd] = useState([]);
   const [loadingTags, setLoadingTags] = useState(false);
+  const [creatingTag, setCreatingTag] = useState(false);
 
   // Load all tags and question tags when modal opens
   useEffect(() => {
     if (isOpen && question) {
       loadAllTags();
       loadQuestionTags();
+      setSelectedTagsToAdd([]); // Clear selected tags when opening modal
     }
   }, [isOpen, question]);
 
@@ -84,40 +94,73 @@ const TagManagementModal = ({
     }
   };
 
-  const handleCreateTag = async () => {
-    if (!newTagName.trim()) return;
+  const handleCreateTag = async (tagName) => {
+    if (!tagName || !tagName.trim()) {
+      toast.error('Please enter a tag name');
+      return null;
+    }
+
+    setCreatingTag(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/questions/tags`, {
+      const trimmedName = tagName.trim();
+      
+      // Use the manage_tags endpoint like in BulkActionsRow
+      const res = await fetch(`${API_BASE_URL}/questions/manage_tags?name=${encodeURIComponent(trimmedName)}&rawname=${encodeURIComponent(trimmedName)}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
           'Accept': 'application/json'
-        },
-        body: JSON.stringify({ name: newTagName })
+        }
       });
+
       const data = await res.json();
-      if (data.success) {
-        setNewTagName('');
-        loadAllTags();
+      
+      if (!res.ok || data.exception || data.errorcode || data.error) {
+        throw new Error(data.message || data.exception || 'Failed to create tag');
       }
+
+      if (!data.id || !data.name) {
+        throw new Error('Invalid response format from server');
+      }
+
+      console.log('Tag created successfully:', data);
+      
+      const newTag = {
+        id: data.id,
+        name: data.name,
+        rawname: data.rawname || data.name
+      };
+      
+      setAllTags(prev => [...prev, newTag]);
+      toast.success(`Tag "${data.name}" created successfully!`);
+      
+      return newTag;
     } catch (error) {
       console.error('Error creating tag:', error);
+      toast.error(`Failed to create tag: ${error.message}`);
+      return null;
+    } finally {
+      setCreatingTag(false);
     }
   };
 
   const addTagToQuestion = async (tag) => {
     if (!question) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/questions/bulk-tags`, {
+      const params = new URLSearchParams();
+      params.append('questionids[0]', question.id.toString());
+      params.append('tagids[0]', tag.id.toString());
+      
+      const addUrl = `${API_BASE_URL}/questions/bulk-tags?${params.toString()}`;
+      
+      const res = await fetch(addUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
           'Accept': 'application/json'
-        },
-        body: JSON.stringify({ questionids: [question.id], tagids: [tag.id] })
+        }
       });
+      
       const data = await res.json();
       if (res.ok && data.success) {
         loadQuestionTags();
@@ -135,15 +178,20 @@ const TagManagementModal = ({
   const removeTagFromQuestion = async (tag) => {
     if (!question) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/questions/bulk-tags`, {
+      const params = new URLSearchParams();
+      params.append('questionids[0]', question.id.toString());
+      params.append('tagids[0]', tag.id.toString());
+      
+      const deleteUrl = `${API_BASE_URL}/questions/bulk-tags?${params.toString()}`;
+      
+      const res = await fetch(deleteUrl, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
           'Accept': 'application/json'
-        },
-        body: JSON.stringify({ questionids: [question.id], tagids: [tag.id] })
+        }
       });
+      
       const data = await res.json();
       if (res.ok && data.success) {
         loadQuestionTags();
@@ -158,58 +206,284 @@ const TagManagementModal = ({
     }
   };
 
-  const filteredTags = allTags.filter(tag =>
-    tag.name && tag.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  const availableTags = filteredTags.filter(tag =>
-    !questionTags.some(qt => qt.id === tag.id)
+  // Enhanced tag search/filter logic with options for autocomplete
+  const tagOptions = allTags.map(tag => ({
+    label: tag.name || '',
+    value: tag.id,
+    rawname: tag.rawname || ''
+  }));
+
+  const availableTagOptions = tagOptions.filter(option =>
+    !questionTags.some(questionTag => questionTag.id === option.value)
   );
 
+  // Handle tag selection with autocomplete (with new tag creation and immediate adding)
+  const handleTagAutocompleteChange = async (event, newValue, reason) => {
+    if (reason === 'clear') {
+      setSelectedTagsToAdd([]);
+      return;
+    }
+
+    if (Array.isArray(newValue)) {
+      const processedTags = [];
+      const tagsToAdd = [];
+      
+      for (const value of newValue) {
+        if (typeof value === 'string') {
+          // New tag creation
+          const createdTag = await handleCreateTag(value);
+          if (createdTag) {
+            processedTags.push({
+              label: createdTag.name,
+              value: createdTag.id,
+              rawname: createdTag.rawname
+            });
+            tagsToAdd.push({
+              label: createdTag.name,
+              value: createdTag.id
+            });
+          }
+        } else if (value && value.isCreateOption) {
+          // Create option selected
+          const createdTag = await handleCreateTag(value.label);
+          if (createdTag) {
+            processedTags.push({
+              label: createdTag.name,
+              value: createdTag.id,
+              rawname: createdTag.rawname
+            });
+            tagsToAdd.push({
+              label: createdTag.name,
+              value: createdTag.id
+            });
+          }
+        } else if (value && value.value) {
+          // Existing tag selected
+          processedTags.push(value);
+          tagsToAdd.push(value);
+        }
+      }
+      
+      setSelectedTagsToAdd(processedTags);
+      
+      // Automatically add newly selected tags
+      if (tagsToAdd.length > 0) {
+        for (const tagToAdd of tagsToAdd) {
+          const tag = allTags.find(t => t.id === tagToAdd.value);
+          if (tag) {
+            await addTagToQuestion(tag);
+          }
+        }
+        // Clear selection after adding
+        setSelectedTagsToAdd([]);
+      }
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onClose={onRequestClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Manage Tags</DialogTitle>
-      <DialogContent>
-        <Typography>
-          Add or remove tags for this question.
+    <Dialog open={isOpen} onClose={onRequestClose} maxWidth="md" fullWidth>
+      <DialogTitle sx={{ pb: 1.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <TagIcon color="primary" sx={{ fontSize: 24 }} />
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>Manage Tags</Typography>
+        </Box>
+      </DialogTitle>
+      <DialogContent sx={{ pt: 2, pb: 1.5 }}>
+        <Typography variant="body1" sx={{ mb: 3 }}>
+          Add or remove tags for <strong>Question #{question?.id}</strong>
         </Typography>
-        <Box mt={2}>
-          <Typography color="text.secondary" mb={1}>Current tags:</Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap" mb={2}>
-            {questionTags.map(tag => (
-              <Box key={tag.id} sx={{ bgcolor: '#e0e7ff', px: 1.5, py: 0.5, borderRadius: 2, display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Typography variant="body2">{tag.name}</Typography>
-                <Button size="small" color="error" sx={{ ml: 1 }} onClick={() => removeTagFromQuestion(tag)}>Remove</Button>
-              </Box>
-            ))}
-            {questionTags.length === 0 && (
-              <Typography variant="body2" color="text.secondary">No tags assigned.</Typography>
+        
+        {/* Current Tags Section */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle1" color="text.primary" sx={{ mb: 1.5, fontWeight: 500 }}>
+            Current tags for this question:
+          </Typography>
+          {questionTags.length > 0 ? (
+            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+              {questionTags.map(tag => (
+                <Chip
+                  key={tag.id}
+                  label={tag.name}
+                  color="primary"
+                  variant="filled"
+                  onDelete={() => removeTagFromQuestion(tag)}
+                  deleteIcon={<DeleteIcon />}
+                  sx={{
+                    backgroundColor: '#e3f2fd',
+                    color: '#1976d2',
+                    fontSize: '0.875rem',
+                    height: '32px',
+                    '& .MuiChip-label': {
+                      fontWeight: 500,
+                      px: 1
+                    },
+                    '& .MuiChip-deleteIcon': {
+                      color: '#d32f2f',
+                      fontSize: '18px',
+                      '&:hover': {
+                        color: '#b71c1c'
+                      }
+                    }
+                  }}
+                />
+              ))}
+            </Stack>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+              No tags assigned to this question.
+            </Typography>
+          )}
+        </Box>
+        
+        {/* Add Tags Section */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle1" color="text.primary" sx={{ mb: 1.5, fontWeight: 500 }}>
+            Search and add tags (tags will be added automatically when selected):
+          </Typography>
+          
+          <Autocomplete
+            multiple
+            freeSolo // Enable new tag creation
+            options={availableTagOptions}
+            value={selectedTagsToAdd}
+            onChange={handleTagAutocompleteChange}
+            getOptionLabel={(option) => {
+              if (typeof option === 'string') {
+                return option;
+              }
+              return option.label || '';
+            }}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => {
+                const { key, ...tagProps } = getTagProps({ index });
+                const isNewTag = typeof option === 'string' || !option.value;
+                return (
+                  <Chip
+                    key={typeof option === 'string' ? option : option.value}
+                    label={typeof option === 'string' ? option : option.label}
+                    {...tagProps}
+                    color={isNewTag ? "success" : "secondary"}
+                    variant={isNewTag ? "filled" : "outlined"}
+                    size="small"
+                    icon={isNewTag ? <AddIcon /> : <TagIcon />}
+                    sx={{
+                      m: 0.5,
+                      height: '28px',
+                      fontSize: '0.8rem',
+                      '& .MuiChip-label': {
+                        fontWeight: 500,
+                        px: 1
+                      },
+                      '& .MuiChip-icon': {
+                        color: isNewTag ? '#fff' : 'inherit',
+                        fontSize: '16px'
+                      }
+                    }}
+                  />
+                );
+              })
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder="Search and select tags (auto-added) or type new tag names..."
+                variant="outlined"
+                size="small"
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="action" sx={{ fontSize: 20 }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <>
+                      {creatingTag && <CircularProgress size={20} />}
+                      {params.InputProps.endAdornment}
+                    </>
+                  )
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    minHeight: '40px',
+                    fontSize: '0.875rem',
+                    '&:hover fieldset': {
+                      borderColor: '#1976d2',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#1976d2',
+                    }
+                  }
+                }}
+              />
             )}
-          </Stack>
-          <Typography color="text.secondary" mb={1}>Add tag:</Typography>
-          <Box display="flex" gap={1} mb={2}>
-            <input
-              type="text"
-              placeholder="Search or create tag"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              style={{ flex: 1, padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
-            />
-            <Button variant="contained" onClick={handleCreateTag} disabled={!searchTerm.trim()}>Create</Button>
-          </Box>
-          <Box display="flex" gap={1} flexWrap="wrap">
-            {availableTags.map(tag => (
-              <Button key={tag.id} size="small" variant="outlined" onClick={() => addTagToQuestion(tag)}>
-                {tag.name}
-              </Button>
-            ))}
-            {availableTags.length === 0 && (
-              <Typography variant="body2" color="text.secondary">No tags found.</Typography>
-            )}
-          </Box>
+            renderOption={(props, option, { inputValue }) => {
+              const { key, ...otherProps } = props;
+              const isCreateOption = option.isCreateOption || false;
+              
+              return (
+                <li key={key} {...otherProps}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    width: '100%',
+                    py: 0.5
+                  }}>
+                    {isCreateOption ? (
+                      <>
+                        <AddIcon fontSize="small" color="success" />
+                        <Typography variant="body2" sx={{ fontWeight: 500, color: '#2e7d32' }}>
+                          {option.label}
+                        </Typography>
+                      </>
+                    ) : (
+                      <>
+                        <TagIcon fontSize="small" color="action" />
+                        <Typography variant="body2">{option.label}</Typography>
+                      </>
+                    )}
+                  </Box>
+                </li>
+              );
+            }}
+            filterOptions={(options, { inputValue }) => {
+              const filtered = options.filter(option =>
+                option.label.toLowerCase().includes(inputValue.toLowerCase())
+              );
+              
+              // Add create option if inputValue doesn't match any existing tag
+              if (inputValue && !filtered.some(option => 
+                option.label.toLowerCase() === inputValue.toLowerCase()
+              )) {
+                filtered.push({
+                  label: `Create "${inputValue}"`,
+                  value: `create-${inputValue}`,
+                  isCreateOption: true
+                });
+              }
+              
+              return filtered;
+            }}
+            loading={loadingTags}
+            loadingText="Loading tags..."
+            noOptionsText="Type to create a new tag..."
+            sx={{ mb: 2 }}
+          />
         </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onRequestClose}>Close</Button>
+      <DialogActions sx={{ p: 2 }}>
+        <Button onClick={onRequestClose} color="inherit" sx={{ px: 2, py: 0.5 }}>
+          Cancel
+        </Button>
+        <Button 
+          variant="contained" 
+          onClick={onRequestClose}
+          color="primary"
+          sx={{ px: 2, py: 0.5 }}
+        >
+          Done
+        </Button>
       </DialogActions>
     </Dialog>
   );
@@ -268,6 +542,7 @@ const QuestionsTable = ({
   const [commentsModalOpen, setCommentsModalOpen] = useState(false);
   const [commentsQuestion, setCommentsQuestion] = useState(null);
   const [qtypeIcons, setQtypeIcons] = useState({});
+  const [highlightedQuestions, setHighlightedQuestions] = useState(new Set());
   
   useEffect(() => {
     async function fetchQtypeIcons() {
@@ -1154,9 +1429,9 @@ const handleEditMoodle = async (question) => {
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 min-w-[300px]" scope="col">
                   <div className="font-semibold">Question</div>
                   <div className="mt-1 space-x-1">
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Question name ascending">Question name</a>
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by Question name ascending">Question name</a>
                     <span className="text-gray-400">/</span>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by ID number ascending">ID number</a>
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by ID number ascending">ID number</a>
                   </div>
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 w-24" scope="col">Status</th>
@@ -1167,26 +1442,26 @@ const handleEditMoodle = async (question) => {
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 min-w-[140px]" scope="col">
                   <div className="font-semibold">Created by</div>
                   <div className="mt-1 space-x-1">
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by First name ascending">First name</a>
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by First name ascending">First name</a>
                     <span className="text-gray-400">/</span>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Last name ascending">Last name</a>
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by Last name ascending">Last name</a>
                     <span className="text-gray-400">/</span>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Date ascending">Date</a>
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by Date ascending">Date</a>
                   </div>
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 min-w-[140px]" scope="col">
                   <div className="font-semibold">Modified by</div>
                   <div className="mt-1 space-x-1">
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by First name ascending">First name</a>
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by First name ascending">First name</a>
                     <span className="text-gray-400">/</span>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Last name ascending">Last name</a>
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by Last name ascending">Last name</a>
                     <span className="text-gray-400">/</span>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Date ascending">Date</a>
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by Date ascending">Date</a>
                   </div>
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 w-16" scope="col">
                   <div>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900" title="Sort by Question type descending">
+                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by Question type descending">
                       T<i className="fa fa-sort-asc fa-fw ml-1 text-gray-500" title="Ascending" role="img" aria-label="Ascending"></i>
                     </a>
                   </div>
@@ -1290,7 +1565,7 @@ const handleEditMoodle = async (question) => {
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
                       <button
-                        className="text-blue-600 hover:text-blue-900 underline"
+                        className="text-blue-600 hover:text-blue-900 underline cursor-pointer"
                         onClick={() => openCommentsModal(question)}
                       >
                         {question.comments || 0}
@@ -1300,7 +1575,7 @@ const handleEditMoodle = async (question) => {
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">{question.version || 'v1'}</td>
 
                     <td className="px-3 py-4 whitespace-nowrap">
-                      <a href="#" className="text-blue-600 hover:text-blue-900">
+                      <a href="#" className="text-blue-600 hover:text-blue-900 cursor-pointer">
                         {question.usage || 0}
                       </a>
                     </td>
@@ -1336,7 +1611,7 @@ const handleEditMoodle = async (question) => {
                             <div>
                               <a
                                 href="#"
-                                className="text-blue-600 hover:text-blue-900 focus:outline-none"
+                                className="text-blue-600 hover:text-blue-900 focus:outline-none cursor-pointer"
                                 aria-label="Edit"
                                 role="button"
                                 aria-haspopup="true"
@@ -1371,7 +1646,7 @@ const handleEditMoodle = async (question) => {
                                 >
                                   <a
                                     href="#"
-                                    className={`flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors ${loadingMoodlePreview ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors cursor-pointer ${loadingMoodlePreview ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     role="menuitem"
                                     tabIndex="-1"
                                     onClick={async (e) => {
@@ -1387,7 +1662,7 @@ const handleEditMoodle = async (question) => {
                                   </a>
                                   <a
                                     href="#"
-                                    className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors"
+                                    className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors cursor-pointer"
                                     role="menuitem"
                                     tabIndex="-1"
                                     onClick={async (e) => {
@@ -1401,7 +1676,7 @@ const handleEditMoodle = async (question) => {
                                   </a>
                                   <a
                                     href="#"
-                                    className="flex items-center px-4 py-2 text-sm text-green-700 hover:bg-green-50 hover:text-green-900 transition-colors"
+                                    className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors cursor-pointer"
                                     role="menuitem"
                                     tabIndex="-1"
                                     onClick={async (e) => {
@@ -1410,7 +1685,7 @@ const handleEditMoodle = async (question) => {
                                       setOpenActionDropdown(null);
                                     }}
                                   >
-                                    <i className="fa fa-copy w-4 text-center mr-2 text-green-500"></i>
+                                    <i className="fa fa-copy w-4 text-center mr-2 text-blue-500"></i>
                                     <span>Duplicate in Moodle</span>
                                   </a>
                                   {/* <a
@@ -1431,7 +1706,7 @@ const handleEditMoodle = async (question) => {
 
                                   <a
                                     href="#"
-                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
                                     role="menuitem"
                                     tabIndex="-1"
                                     onClick={(e) => {
@@ -1443,9 +1718,9 @@ const handleEditMoodle = async (question) => {
                                     <i className="fa fa-cog w-4 text-center mr-2 text-gray-500"></i>
                                     <span>Edit question</span>
                                   </a>
-                                  <a
+                                  {/* <a
                                     href="#"
-                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
                                     role="menuitem"
                                     tabIndex="-1"
                                     onClick={(e) => {
@@ -1456,10 +1731,10 @@ const handleEditMoodle = async (question) => {
                                   >
                                     <i className="fa fa-copy w-4 text-center mr-2 text-gray-500"></i>
                                     <span>Duplicate</span>
-                                  </a>
+                                  </a> */}
                                   <a
                                     href="#"
-                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
                                     role="menuitem"
                                     tabIndex="-1"
                                     onClick={(e) => {
@@ -1473,7 +1748,7 @@ const handleEditMoodle = async (question) => {
                                   </a>
                                   <a
                                     href="#"
-                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
                                     role="menuitem"
                                     tabIndex="-1"
                                     onClick={(e) => {
@@ -1487,7 +1762,7 @@ const handleEditMoodle = async (question) => {
                                   </a>
                                   <a
                                     href="#"
-                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
                                     role="menuitem"
                                     tabIndex="-1"
                                     onClick={(e) => {
@@ -1501,7 +1776,7 @@ const handleEditMoodle = async (question) => {
                                   </a>
                                   <a
                                     href="#"
-                                    className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
+                                    className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer"
                                     role="menuitem"
                                     tabIndex="-1"
                                     onClick={(e) => {
@@ -1515,7 +1790,7 @@ const handleEditMoodle = async (question) => {
                                   </a>
                                   <a
                                     href="#"
-                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
                                     role="menuitem"
                                     tabIndex="-1"
                                     onClick={(e) => {
