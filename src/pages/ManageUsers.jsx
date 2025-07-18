@@ -65,21 +65,47 @@ const ManageUsers = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   
+  // Roles state
+  const [roles, setRoles] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+  
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
-  // Load users
+  // Load users and roles
   useEffect(() => {
-    loadUsers();
+    loadUsersAndRoles();
   }, []);
+
+  const loadUsersAndRoles = async () => {
+    try {
+      // Load users first
+      const userData = await loadUsers();
+      // Then load roles (which can fall back to user roles if API fails)
+      await loadRoles(userData);
+    } catch (error) {
+      console.error(' Failed to load users and roles:', error);
+    }
+  };
 
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const usersData = await userAPI.getUsers();
+      
+      // Try to get users with role information first
+      console.log(' Attempting to fetch users with role information...');
+      let usersData;
+      
+      try {
+        usersData = await userAPI.getUsersWithRoles();
+        console.log(' Successfully fetched users with roles:', usersData.length);
+      } catch (roleError) {
+        console.warn(' Failed to fetch users with roles, falling back to basic user fetch:', roleError.message);
+        usersData = await userAPI.getUsers();
+      }
       
       // Debug: Log the actual response structure
       console.log('Raw API Response:', usersData);
@@ -102,7 +128,7 @@ const ManageUsers = () => {
         firstname: user.firstname || '',
         lastname: user.lastname || '',
         email: user.email || 'N/A',
-        role: user.userrole || user.role || user.rolename || 'User',
+        role: user.userrole || user.role || user.rolename || 'Unknown',
         status: user.suspended === false ? 'Active' : 'Inactive',
         avatar: user.profileimageurl || null,
         department: user.department || 'N/A',
@@ -125,16 +151,68 @@ const ManageUsers = () => {
       }));
 
       setUsers(processedUsers);
+      return processedUsers; // Return the processed users for use in loadRoles
     } catch (error) {
       console.error('Failed to load users:', error);
       setUsers([]);
+      return []; // Return empty array on error
     } finally {
       setLoading(false);
     }
   };
 
-  // Get unique roles for filter dropdown
-  const uniqueRoles = [...new Set(users.map(user => user.role))];
+  const loadRoles = async (usersData = null) => {
+    try {
+      setRolesLoading(true);
+      const rolesData = await userAPI.getRoles();
+      console.log(' Roles fetched:', rolesData);
+      
+      // Extract roles array from the response
+      let rolesArray = rolesData.roles || [];
+      
+      // If no roles from API, create roles from users data
+      const availableUsers = usersData || users;
+      if (rolesArray.length === 0 && availableUsers.length > 0) {
+        console.log(' No roles from API, extracting from users data');
+        const uniqueUserRoles = [...new Set(availableUsers.map(user => user.role))];
+        rolesArray = uniqueUserRoles.map((roleName, index) => ({
+          id: index + 1,
+          name: roleName,
+          shortname: roleName.toLowerCase(),
+          description: `${roleName} role`
+        }));
+        console.log(' Extracted roles from users:', rolesArray);
+      }
+      
+      setRoles(rolesArray);
+    } catch (error) {
+      console.error(' Failed to load roles:', error);
+      
+      // Final fallback: create basic roles from current users
+      const availableUsers = usersData || users;
+      if (availableUsers.length > 0) {
+        console.log(' Creating fallback roles from users');
+        const uniqueUserRoles = [...new Set(availableUsers.map(user => user.role))];
+        const fallbackRoles = uniqueUserRoles.map((roleName, index) => ({
+          id: index + 1,
+          name: roleName,
+          shortname: roleName.toLowerCase(),
+          description: `${roleName} role`
+        }));
+        setRoles(fallbackRoles);
+        console.log(' Using fallback roles:', fallbackRoles);
+      } else {
+        setRoles([]);
+      }
+      
+      // Don't show error toast for API failures, just log them
+      console.warn(' Using fallback role extraction instead of API');
+    } finally {
+      setRolesLoading(false);
+    }
+  };  const handleRefresh = async () => {
+    await loadUsersAndRoles();
+  };
 
   // Filter and sort users
   const filteredAndSortedUsers = users
@@ -144,7 +222,19 @@ const ManageUsers = () => {
         user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.role.toLowerCase().includes(searchQuery.toLowerCase());
       
-      const matchesRole = filterRole === 'all' || user.role === filterRole;
+      // Enhanced role matching: match by shortname (which is what the API uses)
+      const matchesRole = filterRole === 'all' || 
+        user.role === filterRole || 
+        user.role.toLowerCase() === filterRole.toLowerCase() ||
+        // Also check if user role matches any role shortname or name from API
+        roles.some(role => 
+          role.shortname === filterRole && (
+            role.shortname === user.role ||
+            role.shortname.toLowerCase() === user.role.toLowerCase() ||
+            (role.name && role.name.toLowerCase() === user.role.toLowerCase())
+          )
+        );
+      
       const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
       
       return matchesSearch && matchesRole && matchesStatus;
@@ -223,11 +313,11 @@ const ManageUsers = () => {
     }
   };
 
-  const handleSort = (property) => {
-    const isAsc = sortBy === property && sortOrder === 'asc';
-    setSortOrder(isAsc ? 'desc' : 'asc');
-    setSortBy(property);
-  };
+  // const handleSort = (property) => {
+  //   const isAsc = sortBy === property && sortOrder === 'asc';
+  //   setSortOrder(isAsc ? 'desc' : 'asc');
+  //   setSortBy(property);
+  // };
 
   // Handle select all/none
   const handleSelectAll = (event) => {
@@ -368,15 +458,18 @@ const ManageUsers = () => {
                 value={filterRole}
                 onChange={(e) => setFilterRole(e.target.value)}
                 label="Role"
+                disabled={rolesLoading}
               >
                 <MenuItem value="all">All Roles</MenuItem>
-                {uniqueRoles.map(role => (
-                  <MenuItem key={role} value={role}>{role}</MenuItem>
+                {roles.map(role => (
+                  <MenuItem key={role.id} value={role.shortname}>
+                    {role.name && role.name.trim() !== '' ? role.name : role.shortname}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
 
-            <FormControl size="small" sx={{ minWidth: 120 }}>
+            {/* <FormControl size="small" sx={{ minWidth: 120 }}>
               <InputLabel>Status</InputLabel>
               <Select
                 value={filterStatus}
@@ -388,7 +481,7 @@ const ManageUsers = () => {
                 <MenuItem value="Inactive">Inactive</MenuItem>
                 <MenuItem value="Pending">Pending</MenuItem>
               </Select>
-            </FormControl>
+            </FormControl> */}
 
             <Button
               variant="contained"
@@ -401,8 +494,8 @@ const ManageUsers = () => {
             <Button
               variant="outlined"
               startIcon={<RefreshIcon />}
-              onClick={loadUsers}
-              disabled={loading}
+              onClick={handleRefresh}
+              disabled={loading || rolesLoading}
             >
               Refresh
             </Button>
@@ -465,13 +558,13 @@ const ManageUsers = () => {
                   </TableSortLabel>
                 </TableCell>
                 <TableCell>
-                  <TableSortLabel
+                  {/* <TableSortLabel
                     active={sortBy === 'status'}
                     direction={sortBy === 'status' ? sortOrder : 'asc'}
                     onClick={() => handleSort('status')}
                   >
                     Status
-                  </TableSortLabel>
+                  </TableSortLabel> */}
                 </TableCell>
                 <TableCell>Last Access</TableCell>
                 <TableCell>Actions</TableCell>
@@ -552,7 +645,7 @@ const ManageUsers = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      <Stack spacing={0.5}>
+                      {/* <Stack spacing={0.5}>
                         <Chip 
                           label={user.status} 
                           color={user.status === 'Active' ? 'success' : 'error'} 
@@ -567,7 +660,7 @@ const ManageUsers = () => {
                             size="small"
                           />
                         )}
-                      </Stack>
+                      </Stack> */}
                     </TableCell>
                     <TableCell>
                       <Box>
