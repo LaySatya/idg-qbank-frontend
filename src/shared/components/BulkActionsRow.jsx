@@ -693,7 +693,7 @@ const handleConfirmRemoveTag = async () => {
 
   return (
     <>
-      <Paper elevation={1} sx={{ mb: 2, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+      <Paper elevation={1} sx={{ mb: 2, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* Selection Info */}
         <Stack direction="row" alignItems="center" spacing={2}>
           <GroupIcon color="primary" />
@@ -706,14 +706,14 @@ const handleConfirmRemoveTag = async () => {
         </Stack>
         {/* Actions */}
         <Stack direction="row" spacing={2}>
-          {/* <Button
+          <Button
             variant="outlined"
             // startIcon={<EditIcon />}
             onClick={() => setShowBulkEditModal(true)}
           >
             Bulk Edit
             {<EditIcon />}
-          </Button> */}
+          </Button>
            <Button
             variant="outlined"
             
@@ -729,18 +729,18 @@ const handleConfirmRemoveTag = async () => {
             <MenuItem onClick={() => handleAction('tags')}>
               <TagIcon sx={{ mr: 1 }} /> Manage Tags
             </MenuItem>
-            {/* <MenuItem onClick={() => handleAction('duplicate')}>
+            <MenuItem onClick={() => handleAction('duplicate')}>
               <ContentCopyIcon sx={{ mr: 1 }} /> Duplicate Questions
-            </MenuItem> */}
+            </MenuItem>
             <MenuItem onClick={() => handleAction('export')}>
               <DownloadIcon sx={{ mr: 1 }} /> Export to XML
             </MenuItem>
             <MenuItem onClick={() => handleAction('preview')}>
               <VisibilityIcon sx={{ mr: 1 }} /> Preview Questions
             </MenuItem>
-            {/* <MenuItem onClick={() => handleAction('statistics')}>
+            <MenuItem onClick={() => handleAction('statistics')}>
               <BarChartIcon sx={{ mr: 1 }} /> View Statistics
-            </MenuItem> */}
+            </MenuItem>
           </Menu>
           <Button
             variant="contained"

@@ -152,7 +152,7 @@ const handleLogin = (token, username, userid, profileimageurl) => {
           />
         )}
         <main className="flex-1 min-h-0 overflow-auto">
-          <div className="p-4">
+          <div className="p-4 h-full">
           <Routes>
             {/* Login Route */}
             <Route

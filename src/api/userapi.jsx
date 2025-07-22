@@ -229,64 +229,6 @@ export const getUsers = async () => {
   }
 };
 
-// Get users with role information by fetching from all roles
-export const getUsersWithRoles = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    console.log(' Fetching users with role information...');
-
-    // First, get all available roles
-    const rolesResponse = await getRoles();
-    const roles = rolesResponse.roles || [];
-
-    if (roles.length === 0) {
-      console.warn(' No roles found, falling back to basic user fetch');
-      return await getUsers();
-    }
-
-    // Fetch users for each role
-    const allUsersWithRoles = [];
-    const userMap = new Map(); // To avoid duplicates
-
-    for (const role of roles) {
-      try {
-        console.log(` Fetching users for role: ${role.shortname}`);
-        const roleUsersResponse = await getUsersByRole(role.shortname);
-        const roleUsers = roleUsersResponse.users || [];
-
-        roleUsers.forEach(user => {
-          if (!userMap.has(user.id)) {
-            // Add role information to the user
-            const userWithRole = {
-              ...user,
-              role: role.shortname,
-              rolename: role.name || role.shortname,
-              userrole: role.shortname
-            };
-            userMap.set(user.id, userWithRole);
-            allUsersWithRoles.push(userWithRole);
-          }
-        });
-      } catch (roleError) {
-        console.warn(` Failed to fetch users for role ${role.shortname}:`, roleError.message);
-      }
-    }
-
-    console.log(` Fetched ${allUsersWithRoles.length} users with role information`);
-    return allUsersWithRoles;
-
-  } catch (error) {
-    console.error(' Error fetching users with roles:', error);
-    // Fallback to regular user fetch
-    console.log(' Falling back to regular user fetch');
-    return await getUsers();
-  }
-};
-
 // Get user by ID
 export const getUserById = async (userId) => {
   try {
@@ -305,141 +247,14 @@ export const getUserById = async (userId) => {
   }
 };
 
-// Get all user roles from the system
-export const getRoles = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    console.log(' Attempting to fetch roles from:', `${API_BASE_URL}/users/roles`);
-    
-    const response = await fetch(`${API_BASE_URL}/users/roles`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      console.warn(` Roles endpoint returned ${response.status}. Trying alternative endpoints...`);
-      
-      // Try alternative endpoints
-      const alternatives = [
-        `${API_BASE_URL}/roles`,
-        `${API_BASE_URL}/user/roles`,
-        `${API_BASE_URL}/admin/roles`
-      ];
-      
-      for (const endpoint of alternatives) {
-        try {
-          console.log(' Trying alternative endpoint:', endpoint);
-          const altResponse = await fetch(endpoint, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (altResponse.ok) {
-            const altData = await altResponse.json();
-            console.log('Success with alternative endpoint:', endpoint, altData);
-            return altData;
-          }
-        } catch (altError) {
-          console.log(` Alternative endpoint ${endpoint} failed:`, altError.message);
-        }
-      }
-      
-      throw new Error(`Failed to fetch roles - ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    const roles = data.roles || [];
-    
-    console.log(' Fetched roles from API:', roles);
-    return { roles };
-  } catch (error) {
-    console.error(' Error fetching roles from API:', error);
-    
-    // Fallback: Return empty roles array and let the component handle it
-    console.log(' Falling back to empty roles - component will extract from users');
-    return { roles: [] };
-  }
-};
-
-// Get users by role shortname
-export const getUsersByRole = async (rolename) => {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    console.log(' Fetching users by role:', rolename);
-    
-    const response = await fetch(`${API_BASE_URL}/users/user-role?rolename=${encodeURIComponent(rolename)}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch users by role - ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    let users = [];
-    
-    // Handle different response structures
-    if (data.users && Array.isArray(data.users)) {
-      users = data.users;
-    } else if (Array.isArray(data)) {
-      users = data;
-    } else {
-      users = [];
-    }
-    
-    // Since the role-specific endpoint doesn't include role info, 
-    // we'll add the role information based on what we queried for
-    const usersWithRole = users.map(user => ({
-      ...user,
-      role: user.role || user.userrole || user.rolename || rolename,
-      userrole: user.userrole || rolename,
-      rolename: user.rolename || rolename
-    }));
-    
-    console.log(`👥 Fetched ${usersWithRole.length} users with role '${rolename}':`, usersWithRole);
-    
-    // Return in the same format as the main getUsers function
-    return {
-      users: usersWithRole,
-      totalcount: data.totalcount || usersWithRole.length,
-      page: data.page || 0,
-      perpage: data.perpage || usersWithRole.length
-    };
-  } catch (error) {
-    console.error(' Error fetching users by role:', error);
-    throw error;
-  }
-};
-
 // Optionally, group all functions in an object for easier import:
 export const userAPI = {
   loginUser,
   logoutUser,
   getUsers,
-  getUsersWithRoles,
   getCurrentUser,
   updateCurrentUser,
   getUserById,
-  getRoles,
-  getUsersByRole,
 };
 
 export default userAPI;

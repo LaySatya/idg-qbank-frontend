@@ -357,8 +357,7 @@ const FiltersRow = ({
           }}>
             <Box sx={{ 
               color: level === 0 ? '#1976d2' : 'inherit',
-              // fontWeight: level === 0 ? 500 : 'normal',
-              fontWeight: 'normal',
+              fontWeight: level === 0 ? 500 : 'normal',
               fontSize: level === 0 ? '0.9rem' : '0.875rem'
             }}>
               {iconPrefix}{displayName}
@@ -451,8 +450,7 @@ const FiltersRow = ({
   }, [categoryGroups, categoryCountMap, filters.category, totalQuestionsAllCategories, calculateGroupTotal]);
 
   return (
-    // <Paper elevation={2} sx={{ p: 2, mb: 2, boxShadow: 0.4 }}>
-    <Paper elevation={2} sx={{ p: 2, mb: 2, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+    <Paper elevation={2} sx={{ p: 2, mb: 2, boxShadow: 0.4 }}>
       <Grid container spacing={2} alignItems="flex-end">
         {/* Search */}
         <Grid item sx={{ width: 300 }}>
@@ -689,15 +687,11 @@ const FiltersRow = ({
             <Button
               variant="outlined"
               color="error"
-              size="small"
-              sx={{ borderRadius: 2, textTransform: 'none', minWidth: 120 }}
-
-
               startIcon={<FontAwesomeIcon icon={faTimes} />}
               onClick={handleClearFilters}
               fullWidth
             >
-              Clear All 
+              Clear All Filters
             </Button>
           )}
         </Grid>

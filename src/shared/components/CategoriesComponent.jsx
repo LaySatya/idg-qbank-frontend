@@ -323,13 +323,18 @@ const CategoriesComponent = ({
       // Save user preference
       localStorage.setItem('CourseCategoryId', categoryId.toString());
       
-    
-  
+      // setSuccess({ 
+      //   type: 'success', 
+      //   message: `Selected: ${categoryName} - Loading courses...` 
+      // });
 
       // NEW: Lazy load courses for this category
       const courses = await loadCoursesForCategory(categoryId);
       
-  
+      // setSuccess({ 
+      //   type: 'success', 
+      //   message: `Selected: ${categoryName} (${courses.length} courses loaded)` 
+      // });
     }
   };
 
@@ -345,7 +350,32 @@ const CategoriesComponent = ({
     if (!selectedCourse) return;
 
     const course = selectedCourse;
+    // When selecting a category
+//  localStorage.setItem('userCourseCategoryId', selectedCategory?.toString() || '');
+// Save user preference
+// localStorage.setItem('userPreferredCourseId', course.id.toString());
+// localStorage.setItem('userPreferredCourseName', course.name);
+// Save question category name (if available)
+//const questionCategoryName = findCategoryById(selectedCategory)?.name || '';
+// localStorage.setItem('userPreferredQuestionCategoryName', questionCategoryName);
+// Optionally, save the question category id again for clarity
+//localStorage.setItem('userPreferredQuestionCategoryId', selectedCategory?.toString() || '');
+    // Set filters for course-specific questions
 
+//     This means your questions are filtered by courseId only, not by the categories that belong to that course.
+// If your questions are organized by category, this may show questions from other categories as well.
+
+
+    // if (setFilters) {
+    //   setFilters({ 
+    //     category: 'All', 
+    //     status: 'All', 
+    //     type: 'All', 
+    //     courseId: course.id,
+    //     courseName: course.name
+    //   });
+    // }
+        // Find all categories for this course
     const courseCategories = categories.filter(cat => cat.courseid === course.id || cat.course_id === course.id);
     const categoryIds = courseCategories.map(cat => cat.id);
     
@@ -379,7 +409,7 @@ const CategoriesComponent = ({
   const handleClearSelection = () => {
     setSelectedCategory(null);
     setSelectedCourse(null);
-    // setSuccess({ type: 'info', message: 'Selection cleared' });
+    setSuccess({ type: 'info', message: 'Selection cleared' });
   };
   
   const toggleExpanded = (categoryId) => {
@@ -500,8 +530,8 @@ const CategoriesComponent = ({
               tabIndex={-1}
             >
               {isExpanded ? 
-                <RemoveIcon sx={{ fontSize: 16, color: '#64748b', fontWeight: 300 }} /> : 
-                <AddIcon sx={{ fontSize: 16, color: '#64748b', fontWeight: 300 }} />
+                <RemoveIcon size={14} color="#52525b" /> : 
+                <AddIcon size={14} color="#52525b" />
               }
             </button>
           ) : (
@@ -511,18 +541,19 @@ const CategoriesComponent = ({
           {/* Selection Radio */}
           <div style={{ flexShrink: 0, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {isSelected ? (
-              <CheckCircleOutlineIcon sx={{ fontSize: 16, color: '#2563eb', fontWeight: 400 }} />
+              <CheckCircleOutlineIcon size={16} color="#2563eb" />
             ) : (
-              <RadioButtonUncheckedIcon sx={{ fontSize: 16, color: '#cbd5e1', fontWeight: 300 }} />
+              <RadioButtonUncheckedIcon size={16} color="#9ca3af" />
             )}
           </div>
           
           {/* Category Icon - Different for main vs sub */}
           <div style={{ flexShrink: 0, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {level === 0 ? (
-              <FolderIcon sx={{ fontSize: 18, color: isSelected ? '#2563eb' : '#64748b', fontWeight: 400 }} />
+             
+              <CategoryIcon size={16} color={isSelected ? '#2563eb' : '#64748b'} />
             ) : (
-              <FolderIcon sx={{ fontSize: 16, color: isSelected ? '#2563eb' : '#94a3b8', fontWeight: 300 }} />
+              <FolderIcon size={16} color={isSelected ? '#2563eb' : '#94a3b8'} />
             )}
           </div>
           
@@ -545,7 +576,7 @@ const CategoriesComponent = ({
               
               {/* Loading indicator */}
               {isLoadingCourses && (
-                <LoopIcon sx={{ fontSize: 12, color: '#2563eb', fontWeight: 300, animation: 'spin 1s linear infinite' }} />
+                <LoopIcon size={12} style={{ color: '#2563eb', animation: 'spin 1s linear infinite' }} />
               )}
             </div>
             
@@ -637,12 +668,12 @@ const CategoriesComponent = ({
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
             {/* <span style={visibleBadgeStyle}>{course.visible ? 'Visible' : 'Hidden'}</span> */}
-            {isSelected && <CheckCircleOutlineIcon sx={{ fontSize: 18, color: '#2563eb', fontWeight: 400 }} />}
+            {isSelected && <CheckCircleOutlineIcon sx={{ fontSize: 18 }} color="primary" />}
           </div>
         </div>
         {/* Category Breadcrumb */}
         <div style={breadcrumbStyle}>
-          <SchoolIcon sx={{ fontSize: 12, color: '#64748b', fontWeight: 300 }} />
+          <SchoolIcon size={10} />
           <span>{course.categoryName}</span>
         </div>
         {/* Summary */}
@@ -826,21 +857,16 @@ const neutralButtonStyle = {
 
 const proceedButtonStyle = {
   ...neutralButtonStyle,
-  background: '#4fafe3',
-  color: '#334155',
-  fontWeight: 500,
+  background: '#64748b',
+  color: '#fff',
+  fontWeight: 600,
 };
 
 const clearButtonStyle = {
   ...neutralButtonStyle,
   background: '#fff',
   color: '#ef4444',
-  border: '0.5px solid #ef4444',
-  size: 12,
-  padding: '4px 8px',
-  fontWeight: 500,
-  cursor: 'pointer',
-  transition: 'background 0.2s, color 0.2s',
+  border: '1px solid #ef4444',
 };
 
 
@@ -859,7 +885,7 @@ const modalContent = (
       {/* Header */}
       <div style={headerStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <HomeIcon sx={{ fontSize: 22, color: '#64748b', fontWeight: 400 }} />
+          <HomeIcon size={22} color="#64748b" />
           <h2 style={{ fontSize: 18, fontWeight: 700, color: '#334155', margin: 0 }}>Course Categories & Courses</h2>
         </div>
         <button
@@ -867,7 +893,7 @@ const modalContent = (
           style={{ ...neutralButtonStyle, padding: 6, background: 'none', color: '#64748b' }}
           aria-label="Close"
         >
-          <ClearIcon sx={{ fontSize: 18, color: '#64748b', fontWeight: 300 }} />
+          <ClearIcon size={18} />
         </button>
       </div>
       {/* Status Messages */}
@@ -877,7 +903,7 @@ const modalContent = (
             <AlertCircle size={14} color="#f87171" style={{ marginRight: 8 }} />
             <span style={{ color: '#b91c1c', fontSize: 13 }}>{error}</span>
             <button onClick={clearError} style={{ marginLeft: 'auto', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}>
-              <ClearIcon sx={{ fontSize: 12, color: '#f87171', fontWeight: 300 }} />
+              <ClearIcon size={12} />
             </button>
           </div>
         </div>
@@ -885,10 +911,10 @@ const modalContent = (
       {success && (
         <div style={{ margin: '16px 16px 0 16px', background: '#f3f4f6', borderLeft: '4px solid #2563eb', padding: 8, borderRadius: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <CheckIcon sx={{ fontSize: 14, color: '#2563eb', fontWeight: 400, marginRight: 1 }} />
+            <CheckIcon size={14} color="#2563eb" style={{ marginRight: 8 }} />
             <span style={{ color: '#2563eb', fontSize: 13 }}>{success.message}</span>
-            <button onClick={() => setSuccess(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#4c8fed' }}>
-              <ClearIcon sx={{ fontSize: 12, color: '#64748b', fontWeight: 300 }} />
+            <button onClick={() => setSuccess(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+              <ClearIcon size={12} />
             </button>
           </div>
         </div>
@@ -913,12 +939,12 @@ const modalContent = (
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {loadingStates.categories ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
-                <LoopIcon sx={{ fontSize: 20, color: '#64748b', fontWeight: 300, marginRight: 1, animation: 'spin 1s linear infinite' }} />
+                <LoopIcon className="animate-spin" size={20} color="#64748b" style={{ marginRight: 8 }} />
                 <span style={{ color: '#64748b' }}>Loading categories...</span>
               </div>
             ) : categories.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: '#64748b' }}>
-                <CategoryIcon sx={{ fontSize: 36, color: '#cbd5e1', margin: '0 auto 12px', display: 'block', fontWeight: 300 }} />
+                <Building2 size={36} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
                 <p style={{ fontSize: 15, fontWeight: 500, color: '#334155', marginBottom: 6 }}>No categories found</p>
                 <p style={{ fontSize: 13 }}>Check your API connection.</p>
               </div>
@@ -941,7 +967,7 @@ const modalContent = (
               )}
             </div>
             <div style={{ position: 'relative' }}>
-              <SearchIcon sx={{ fontSize: 16, position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontWeight: 300 }} />
+              <SearchIcon size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 type="text"
                 placeholder="Search courses..."
@@ -963,18 +989,18 @@ const modalContent = (
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {!selectedCategory ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: '#64748b' }}>
-                <ImportContactsIcon sx={{ fontSize: 36, color: '#cbd5e1', margin: '0 auto 12px', display: 'block', fontWeight: 300 }} />
+                <ImportContactsIcon size={36} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
                 <p style={{ fontSize: 15, fontWeight: 500, color: '#334155', marginBottom: 6 }}>Select a category</p>
                 <p style={{ fontSize: 13 }}>Choose a category to view its courses.</p>
               </div>
             ) : loadingStates.courses.has(selectedCategory) ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
-                <LoopIcon sx={{ fontSize: 20, color: '#64748b', fontWeight: 300, marginRight: 1, animation: 'spin 1s linear infinite' }} />
+                <LoopIcon className="animate-spin" size={20} color="#64748b" style={{ marginRight: 8 }} />
                 <span style={{ color: '#64748b' }}>Loading courses...</span>
               </div>
             ) : filteredCourses.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: '#64748b' }}>
-                <ImportContactsIcon sx={{ fontSize: 36, color: '#cbd5e1', margin: '0 auto 12px', display: 'block', fontWeight: 300 }} />
+                <ImportContactsIcon size={36} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
                 <p style={{ fontSize: 15, fontWeight: 500, color: '#334155', marginBottom: 6 }}>No courses found</p>
                 <p style={{ fontSize: 13 }}>No courses available in the selected category.</p>
               </div>
@@ -988,7 +1014,7 @@ const modalContent = (
       </div>
       {/* Footer */}
       <div style={footerStyle}>
-        <div style={{ fontSize: 13, color: '#0369a1' }}>
+        <div style={{ fontSize: 13, color: '#64748b' }}>
           {selectedCategory 
             ? loadingStates.courses.has(selectedCategory)
               ? 'Loading courses...'
