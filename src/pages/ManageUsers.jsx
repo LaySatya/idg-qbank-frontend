@@ -54,6 +54,7 @@ import PaginationControls from '../shared/components/PaginationControls';
 
 const ManageUsers = () => {
   const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState('all');
@@ -71,20 +72,93 @@ const ManageUsers = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
-  // Load users
+  // Load users and roles
   useEffect(() => {
-    loadUsers();
+    loadUsersAndRoles();
   }, []);
 
-  const loadUsers = async () => {
+  // Optional: If you want to dynamically load users by role when filter changes
+  // You can enable this for better performance with large datasets
+  const loadUsersByRole = async (rolename) => {
+    if (rolename === 'all') {
+      return loadUsersAndRoles();
+    }
+    
     try {
       setLoading(true);
-      const usersData = await userAPI.getUsers();
+      console.log(`🔄 Loading users with role: ${rolename}`);
+      const usersData = await userAPI.getUsersByRole(rolename);
+      console.log(`👥 Loaded users for role ${rolename}:`, usersData);
       
-      // Debug: Log the actual response structure
-      console.log('Raw API Response:', usersData);
+      let normalizedUsers = [];
+      if (usersData.users && Array.isArray(usersData.users)) {
+        normalizedUsers = usersData.users;
+      } else if (Array.isArray(usersData)) {
+        normalizedUsers = usersData;
+      }
+
+      // Process users same as in loadUsersAndRoles
+      const processedUsers = normalizedUsers.map(user => ({
+        id: user.id,
+        username: user.username || 'N/A',
+        fullname: user.fullname || `${user.firstname || ''} ${user.lastname || ''}`.trim() || 'N/A',
+        firstname: user.firstname || '',
+        lastname: user.lastname || '',
+        email: user.email || 'N/A',
+        role: user.userrole || user.role || user.rolename || rolename,
+        status: user.suspended === false ? 'Active' : 'Inactive',
+        avatar: user.profileimageurl || null,
+        department: user.department || 'N/A',
+        lastaccess: user.lastaccess || null,
+        firstaccess: user.firstaccess || null,
+        timecreated: user.timecreated || null,
+        timemodified: user.timemodified || null,
+        confirmed: user.confirmed || false,
+        suspended: user.suspended || false,
+        deleted: user.deleted || false,
+        phone1: user.phone1 || '',
+        phone2: user.phone2 || '',
+        institution: user.institution || '',
+        address: user.address || '',
+        city: user.city || '',
+        country: user.country || '',
+        lang: user.lang || 'en',
+        ...user
+      }));
+
+      setUsers(processedUsers);
+    } catch (error) {
+      console.error(`Failed to load users for role ${rolename}:`, error);
+      // Fallback to showing all users
+      await loadUsersAndRoles();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUsersAndRoles = async () => {
+    try {
+      setLoading(true);
       
-      // Handle the API response structure you provided
+      // Load roles first
+      console.log('🔄 Loading roles...');
+      const rolesData = await userAPI.getRoles();
+      console.log('📋 Loaded roles:', rolesData);
+      
+      let normalizedRoles = [];
+      if (rolesData.roles && Array.isArray(rolesData.roles)) {
+        normalizedRoles = rolesData.roles;
+      } else if (Array.isArray(rolesData)) {
+        normalizedRoles = rolesData;
+      }
+      setRoles(normalizedRoles);
+      
+      // Load users with roles
+      console.log('🔄 Loading users with roles...');
+      const usersData = await userAPI.getUsersWithRoles();
+      console.log('👥 Loaded users:', usersData);
+      
+      // Handle the API response structure
       let normalizedUsers = [];
       if (usersData.users && Array.isArray(usersData.users)) {
         normalizedUsers = usersData.users;
@@ -126,15 +200,13 @@ const ManageUsers = () => {
 
       setUsers(processedUsers);
     } catch (error) {
-      console.error('Failed to load users:', error);
+      console.error('Failed to load users and roles:', error);
       setUsers([]);
+      setRoles([]);
     } finally {
       setLoading(false);
     }
   };
-
-  // Get unique roles for filter dropdown
-  const uniqueRoles = [...new Set(users.map(user => user.role))];
 
   // Filter and sort users
   const filteredAndSortedUsers = users
@@ -144,7 +216,18 @@ const ManageUsers = () => {
         user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.role.toLowerCase().includes(searchQuery.toLowerCase());
       
-      const matchesRole = filterRole === 'all' || user.role === filterRole;
+      // Enhanced role matching - check both role name and shortname
+      const matchesRole = filterRole === 'all' || 
+        user.role === filterRole || 
+        user.role.toLowerCase() === filterRole.toLowerCase() ||
+        // Also check if user role matches any role shortname
+        roles.some(role => 
+          (role.shortname === filterRole && 
+           (user.role === role.shortname || user.role === role.name)) ||
+          (role.name === filterRole && 
+           (user.role === role.shortname || user.role === role.name))
+        );
+      
       const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
       
       return matchesSearch && matchesRole && matchesStatus;
@@ -366,12 +449,23 @@ const ManageUsers = () => {
               <InputLabel>Role</InputLabel>
               <Select
                 value={filterRole}
-                onChange={(e) => setFilterRole(e.target.value)}
+                onChange={(e) => {
+                  setFilterRole(e.target.value);
+                  setCurrentPage(1); // Reset to first page
+                  setSelectedUsers([]); // Clear selections
+                }}
                 label="Role"
               >
                 <MenuItem value="all">All Roles</MenuItem>
-                {uniqueRoles.map(role => (
-                  <MenuItem key={role} value={role}>{role}</MenuItem>
+                {roles.map(role => (
+                  <MenuItem key={role.id} value={role.shortname}>
+                    {role.name || role.shortname}
+                    {role.name && role.name !== role.shortname && (
+                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                        ({role.shortname})
+                      </Typography>
+                    )}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -401,7 +495,7 @@ const ManageUsers = () => {
             <Button
               variant="outlined"
               startIcon={<RefreshIcon />}
-              onClick={loadUsers}
+              onClick={loadUsersAndRoles}
               disabled={loading}
             >
               Refresh
@@ -498,6 +592,8 @@ const ManageUsers = () => {
                           setSearchQuery('');
                           setFilterRole('all');
                           setFilterStatus('all');
+                          setCurrentPage(1);
+                          setSelectedUsers([]);
                         }}
                         sx={{ mt: 1 }}
                         size="small"
