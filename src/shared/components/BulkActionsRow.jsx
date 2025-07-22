@@ -100,8 +100,8 @@ const BulkActionsRow = ({
   const fetchCommonTags = async (showError = true) => {
     if (selectedQuestions.length === 0) return;
     
-    console.log('🔍 Fetching common tags for questions:', selectedQuestions);
-    console.log('🔍 Current commonTags state before API call:', commonTags);
+    console.log(' Fetching common tags for questions:', selectedQuestions);
+    console.log(' Current commonTags state before API call:', commonTags);
     
     try {
       const tagLists = await Promise.all(
@@ -116,7 +116,7 @@ const BulkActionsRow = ({
             .then(data => {        console.log(`📊 Tags for question ${qid}:`, data.tags || []);
         // Log tag IDs and their types
         if (data.tags && data.tags.length > 0) {
-          console.log(`� Tag IDs and types for question ${qid}:`, 
+          console.log(` Tag IDs and types for question ${qid}:`, 
             data.tags.map(tag => ({ id: tag.id, type: typeof tag.id, name: tag.name }))
           );
         }
@@ -706,14 +706,14 @@ const handleConfirmRemoveTag = async () => {
         </Stack>
         {/* Actions */}
         <Stack direction="row" spacing={2}>
-          <Button
+          {/* <Button
             variant="outlined"
             // startIcon={<EditIcon />}
             onClick={() => setShowBulkEditModal(true)}
           >
             Bulk Edit
             {<EditIcon />}
-          </Button>
+          </Button> */}
            <Button
             variant="outlined"
             

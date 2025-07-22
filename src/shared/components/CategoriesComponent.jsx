@@ -7,18 +7,19 @@ import {
 
 } from 'lucide-react';
 import LoopIcon from '@mui/icons-material/Loop';
-import ImportContactsIcon from '@mui/icons-material/ImportContacts';
+import ImportContactsOutlinedIcon from '@mui/icons-material/ImportContactsOutlined';
 import CheckIcon from '@mui/icons-material/Check';
-import SchoolIcon from '@mui/icons-material/School';
-import HomeIcon from '@mui/icons-material/Home';
+import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
 import ClearIcon from '@mui/icons-material/Clear';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import FolderIcon from '@mui/icons-material/Folder';
-import CategoryIcon from '@mui/icons-material/Category';
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
+import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined';
 import { useCategoriesAPI } from '../../api/categoriesAPI';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const CategoriesComponent = ({ 
@@ -530,8 +531,8 @@ const CategoriesComponent = ({
               tabIndex={-1}
             >
               {isExpanded ? 
-                <RemoveIcon size={14} color="#52525b" /> : 
-                <AddIcon size={14} color="#52525b" />
+                <RemoveIcon sx={{ fontSize: 18, color: '#52525b' }} /> : 
+                <AddIcon sx={{ fontSize: 18, color: '#52525b' }} />
               }
             </button>
           ) : (
@@ -541,9 +542,9 @@ const CategoriesComponent = ({
           {/* Selection Radio */}
           <div style={{ flexShrink: 0, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {isSelected ? (
-              <CheckCircleOutlineIcon size={16} color="#2563eb" />
+              <CheckCircleOutlineIcon sx={{ fontSize: 20, color: '#2563eb' }} />
             ) : (
-              <RadioButtonUncheckedIcon size={16} color="#9ca3af" />
+              <RadioButtonUncheckedIcon sx={{ fontSize: 20, color: '#9ca3af' }} />
             )}
           </div>
           
@@ -551,9 +552,9 @@ const CategoriesComponent = ({
           <div style={{ flexShrink: 0, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {level === 0 ? (
              
-              <CategoryIcon size={16} color={isSelected ? '#2563eb' : '#64748b'} />
+              <CategoryOutlinedIcon sx={{ fontSize: 20, color: isSelected ? '#2563eb' : '#64748b' }} />
             ) : (
-              <FolderIcon size={16} color={isSelected ? '#2563eb' : '#94a3b8'} />
+              <FolderOutlinedIcon sx={{ fontSize: 20, color: isSelected ? '#2563eb' : '#94a3b8' }} />
             )}
           </div>
           
@@ -576,7 +577,7 @@ const CategoriesComponent = ({
               
               {/* Loading indicator */}
               {isLoadingCourses && (
-                <LoopIcon size={12} style={{ color: '#2563eb', animation: 'spin 1s linear infinite' }} />
+                <LoopIcon sx={{ fontSize: 16, color: '#2563eb', animation: 'spin 1s linear infinite' }} />
               )}
             </div>
             
@@ -668,12 +669,12 @@ const CategoriesComponent = ({
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
             {/* <span style={visibleBadgeStyle}>{course.visible ? 'Visible' : 'Hidden'}</span> */}
-            {isSelected && <CheckCircleOutlineIcon sx={{ fontSize: 18 }} color="primary" />}
+            {isSelected && <CheckCircleOutlineIcon sx={{ fontSize: 22 }} color="primary" />}
           </div>
         </div>
         {/* Category Breadcrumb */}
         <div style={breadcrumbStyle}>
-          <SchoolIcon size={10} />
+          <SchoolOutlinedIcon sx={{ fontSize: 14, color: '#64748b' }} />
           <span>{course.categoryName}</span>
         </div>
         {/* Summary */}
@@ -857,7 +858,7 @@ const neutralButtonStyle = {
 
 const proceedButtonStyle = {
   ...neutralButtonStyle,
-  background: '#64748b',
+  background: '#00B2FF',
   color: '#fff',
   fontWeight: 600,
 };
@@ -885,7 +886,7 @@ const modalContent = (
       {/* Header */}
       <div style={headerStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <HomeIcon size={22} color="#64748b" />
+          <HomeOutlinedIcon sx={{ fontSize: 28, color: '#64748b' }} />
           <h2 style={{ fontSize: 18, fontWeight: 700, color: '#334155', margin: 0 }}>Course Categories & Courses</h2>
         </div>
         <button
@@ -893,17 +894,17 @@ const modalContent = (
           style={{ ...neutralButtonStyle, padding: 6, background: 'none', color: '#64748b' }}
           aria-label="Close"
         >
-          <ClearIcon size={18} />
+          <ClearIcon sx={{ fontSize: 24, color: '#64748b' }} />
         </button>
       </div>
       {/* Status Messages */}
       {error && (
         <div style={{ margin: '16px 16px 0 16px', background: '#fef2f2', borderLeft: '4px solid #f87171', padding: 8, borderRadius: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <AlertCircle size={14} color="#f87171" style={{ marginRight: 8 }} />
+            <AlertCircle size={18} color="#f87171" style={{ marginRight: 8 }} />
             <span style={{ color: '#b91c1c', fontSize: 13 }}>{error}</span>
             <button onClick={clearError} style={{ marginLeft: 'auto', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}>
-              <ClearIcon size={12} />
+              <ClearIcon sx={{ fontSize: 16, color: '#f87171' }} />
             </button>
           </div>
         </div>
@@ -911,10 +912,10 @@ const modalContent = (
       {success && (
         <div style={{ margin: '16px 16px 0 16px', background: '#f3f4f6', borderLeft: '4px solid #2563eb', padding: 8, borderRadius: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <CheckIcon size={14} color="#2563eb" style={{ marginRight: 8 }} />
+            <CheckIcon sx={{ fontSize: 18, color: '#2563eb' }} style={{ marginRight: 8 }} />
             <span style={{ color: '#2563eb', fontSize: 13 }}>{success.message}</span>
             <button onClick={() => setSuccess(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-              <ClearIcon size={12} />
+              <ClearIcon sx={{ fontSize: 16, color: '#64748b' }} />
             </button>
           </div>
         </div>
@@ -939,12 +940,12 @@ const modalContent = (
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {loadingStates.categories ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
-                <LoopIcon className="animate-spin" size={20} color="#64748b" style={{ marginRight: 8 }} />
+                <LoopIcon className="animate-spin" sx={{ fontSize: 28, color: '#64748b', marginRight: 1 }} />
                 <span style={{ color: '#64748b' }}>Loading categories...</span>
               </div>
             ) : categories.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: '#64748b' }}>
-                <Building2 size={36} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
+                <BusinessOutlinedIcon sx={{ fontSize: 48, color: '#cbd5e1', margin: '0 auto 12px', display: 'block' }} />
                 <p style={{ fontSize: 15, fontWeight: 500, color: '#334155', marginBottom: 6 }}>No categories found</p>
                 <p style={{ fontSize: 13 }}>Check your API connection.</p>
               </div>
@@ -967,7 +968,7 @@ const modalContent = (
               )}
             </div>
             <div style={{ position: 'relative' }}>
-              <SearchIcon size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <SearchIcon sx={{ fontSize: 20, position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 type="text"
                 placeholder="Search courses..."
@@ -989,18 +990,18 @@ const modalContent = (
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {!selectedCategory ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: '#64748b' }}>
-                <ImportContactsIcon size={36} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
+                <ImportContactsOutlinedIcon sx={{ fontSize: 48, color: '#cbd5e1', margin: '0 auto 12px', display: 'block' }} />
                 <p style={{ fontSize: 15, fontWeight: 500, color: '#334155', marginBottom: 6 }}>Select a category</p>
                 <p style={{ fontSize: 13 }}>Choose a category to view its courses.</p>
               </div>
             ) : loadingStates.courses.has(selectedCategory) ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
-                <LoopIcon className="animate-spin" size={20} color="#64748b" style={{ marginRight: 8 }} />
+                <LoopIcon className="animate-spin" sx={{ fontSize: 28, color: '#64748b', marginRight: 1 }} />
                 <span style={{ color: '#64748b' }}>Loading courses...</span>
               </div>
             ) : filteredCourses.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: '#64748b' }}>
-                <ImportContactsIcon size={36} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
+                <ImportContactsOutlinedIcon sx={{ fontSize: 48, color: '#cbd5e1', margin: '0 auto 12px', display: 'block' }} />
                 <p style={{ fontSize: 15, fontWeight: 500, color: '#334155', marginBottom: 6 }}>No courses found</p>
                 <p style={{ fontSize: 13 }}>No courses available in the selected category.</p>
               </div>

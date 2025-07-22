@@ -9,6 +9,7 @@ const LoginForm = ({ onLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const autoLogin = `${import.meta.env.VITE_AUTO_LOGIN}`;   
+  const autoLoginToken = import.meta.env.VITE_MOODLE_TOKEN;
 
 // Place this anywhere in your component to trigger the background request
 // const openUrlSilently = async (url, e) => {
@@ -37,7 +38,7 @@ const silentMoodleLogin = (url) => {
   };
 };
 const openMoodleAutoLoginTab = (token) => {
-  const url = `${import.meta.env.VITE_MOODLE_BASE_URL}/${autoLogin}?token=${token}`;
+  const url = `${import.meta.env.VITE_MOODLE_BASE_URL}/${autoLogin}?token=${autoLoginToken}`;
   window.open(url, '_blank');
 };
 // Usage in your login logic:

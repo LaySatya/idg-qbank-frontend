@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { ChevronDown, Check, Upload, Plus, AlertCircle, CheckCircle, FolderOpen } from 'lucide-react';
+import { ChevronDown, Check, Upload, Plus, AlertCircle, CheckCircle, FolderOpen, ArrowLeft } from 'lucide-react';
 
 const TopButtonsRow = ({
   showQuestionsDropdown,
@@ -19,7 +19,12 @@ const TopButtonsRow = ({
   // Add these new props for navigation
   currentView = 'questions', // default to questions view
   setCurrentView,
-  onNavigate
+  onNavigate,
+  // New props for back navigation
+  showBackButton = false,
+  backButtonText = 'Back to Courses',
+  onBack,
+  selectedCourseName
 }) => {
   const [isImporting, setIsImporting] = useState(false);
   const [importStatus, setImportStatus] = useState(null);
@@ -247,6 +252,30 @@ const TopButtonsRow = ({
   return (
     <div className="w-full border-2 border-white shadow-sm mb-4">
       <div className="py-3 px-5 flex flex-col justify-between md:flex-row md:items-center md:justify-between gap-4">
+        
+        {/* Back Button and Course Info - show when coming from courses */}
+        {showBackButton && (
+          <div className="flex items-center gap-4 mb-2 md:mb-0">
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center gap-2 rounded-md bg-gray-100 text-gray-700 border border-gray-300 px-3 py-2 text-sm font-medium shadow-sm hover:bg-gray-200 transition-colors duration-200"
+              title={backButtonText}
+            >
+              <ArrowLeft size={16} />
+              {backButtonText}
+            </button>
+            {selectedCourseName && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">Selected Course:</span>
+                <span className="text-sm font-medium text-gray-900 bg-blue-50 px-2 py-1 rounded border">
+                  {selectedCourseName}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+        
         {/* Navigation Dropdown */}
         <div className="flex items-center gap-3 ">
           <label htmlFor="url_select" className="sr-only">
@@ -289,7 +318,7 @@ const TopButtonsRow = ({
           
         
           {/* Open Categories Modal Button */}
-          {(currentView === 'questions' || !currentView) && (
+          {/* {(currentView === 'questions' || !currentView) && (
             <button
               type="button"
               onClick={() => setShowCategoriesModal(true)}
@@ -300,7 +329,7 @@ const TopButtonsRow = ({
                <FolderOpen size={18} />
             </button>
             
-          )}
+          )} */}
         
           {/* Import Button - show in questions view */}
           {/* {(currentView === 'questions' || !currentView) && (

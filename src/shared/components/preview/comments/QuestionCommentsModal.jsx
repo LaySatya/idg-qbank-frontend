@@ -486,7 +486,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
                     alt={getAuthorName(comment)}
                     sx={{ width: 32, height: 32 }}
                     onError={(e) => { 
-                      console.log('❌ Comment avatar failed to load:', comment.user.profileimageurl);
+                      console.log(' Comment avatar failed to load:', comment.user.profileimageurl);
                       e.target.src = ''; 
                     }}
                   />
@@ -560,7 +560,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
               fontSize: '12px'
             }}
             onError={(e) => {
-              console.log('❌ Profile image failed to load:', currentUser.profileimageurl);
+              console.log(' Profile image failed to load:', currentUser.profileimageurl);
               e.target.src = '';
             }}
           >

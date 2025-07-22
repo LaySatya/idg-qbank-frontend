@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const pfToken = import.meta.env.VITE_MOODLE_TOKEN;
+// const pfToken = import.meta.env.VITE_MOODLE_TOKEN;
 
 export const loginUser = async (username, password) => {
   try {
@@ -23,6 +23,7 @@ export const loginUser = async (username, password) => {
     const data = await response.json();
 
     console.log('Full login response:', data);
+    const pfToken = data.token;
     
     if (!response.ok) {
       throw new Error(data.message || 'Login failed');
@@ -371,17 +372,23 @@ export const getRoles = async () => {
   }
 };
 
-// Get users by role shortname
-export const getUsersByRole = async (rolename) => {
+// Get users by role shortname with pagination support
+export const getUsersByRole = async (rolename, page = 1, perpage = 20) => {
   try {
     const token = localStorage.getItem('token');
     if (!token) {
       throw new Error('Authentication required');
     }
 
-    console.log(' Fetching users by role:', rolename);
+    console.log(` Fetching users by role: ${rolename}, page: ${page}, perpage: ${perpage}`);
     
-    const response = await fetch(`${API_BASE_URL}/users/user-role?rolename=${encodeURIComponent(rolename)}`, {
+    const params = new URLSearchParams({
+      rolename: rolename,
+      page: page.toString(),
+      perpage: perpage.toString()
+    });
+    
+    const response = await fetch(`${API_BASE_URL}/users/user-role?${params}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -394,6 +401,8 @@ export const getUsersByRole = async (rolename) => {
     }
 
     const data = await response.json();
+    console.log(` API Response for page ${page}:`, data);
+    
     let users = [];
     
     // Handle different response structures
@@ -414,14 +423,15 @@ export const getUsersByRole = async (rolename) => {
       rolename: user.rolename || rolename
     }));
     
-    console.log(`👥 Fetched ${usersWithRole.length} users with role '${rolename}':`, usersWithRole);
+    console.log(` Fetched ${usersWithRole.length} users with role '${rolename}' (page ${page}):`, usersWithRole);
     
     // Return in the same format as the main getUsers function
     return {
       users: usersWithRole,
-      totalcount: data.totalcount || usersWithRole.length,
-      page: data.page || 0,
-      perpage: data.perpage || usersWithRole.length
+      totalcount: data.totalcount || data.total || usersWithRole.length,
+      currentpage: data.currentpage || data.page || page,
+      totalpages: data.totalpages || Math.ceil((data.totalcount || data.total || usersWithRole.length) / perpage),
+      perpage: data.perpage || perpage
     };
   } catch (error) {
     console.error(' Error fetching users by role:', error);

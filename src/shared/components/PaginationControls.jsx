@@ -82,14 +82,26 @@ const PaginationControls = ({
     return pages;
   };
 
-  //  FIXED: Handle page change with validation
+  //  FIXED: Handle page change with validation and better debugging
   const handlePageChange = (page) => {
     if (isLoading) return;
     
     const newPage = Math.max(1, Math.min(page, safeTotalPages));
+    console.log(' Pagination Debug:', {
+      requestedPage: page,
+      safeCurrentPage,
+      newPage,
+      safeTotalPages,
+      willChange: newPage !== safeCurrentPage
+    });
+    
     if (newPage !== safeCurrentPage && onPageChange) {
       console.log(` Pagination: Changing from page ${safeCurrentPage} to ${newPage}`);
       onPageChange(newPage);
+    } else if (newPage === safeCurrentPage) {
+      console.log(' Pagination: Same page selected, no change needed');
+    } else if (!onPageChange) {
+      console.error(' Pagination: onPageChange callback is missing!');
     }
   };
 
@@ -160,7 +172,10 @@ const PaginationControls = ({
         <Pagination
           count={safeTotalPages}
           page={safeCurrentPage}
-          onChange={(e, page) => handlePageChange(page)}
+          onChange={(event, page) => {
+            console.log('🎯 Material-UI Pagination onChange:', { event: event.type, page, currentPage: safeCurrentPage });
+            handlePageChange(page);
+          }}
           variant="outlined"
           shape="rounded"
           color="primary"

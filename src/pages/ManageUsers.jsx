@@ -1,6 +1,3 @@
-// ============================================================================
-// Modern Manage Users Page Component
-// ============================================================================
 import React, { useState, useEffect } from 'react';
 import {
   Paper,
@@ -43,62 +40,138 @@ import {
   Person as PersonIcon,
   Refresh as RefreshIcon,
   Visibility as VisibilityIcon,
-  Download as DownloadIcon,
-  Filter as FilterIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-hot-toast';
 import { userAPI } from '../api/userapi.jsx';
-import EditUserModal from '../components/modals/EditUserModal';
-import { CreateUserModal, UserDetailsModal } from '../components/modals/CreateUserModal';
 import PaginationControls from '../shared/components/PaginationControls';
 
 const ManageUsers = () => {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('fullname');
   const [sortOrder, setSortOrder] = useState('asc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [usersPerPage, setUsersPerPage] = useState(10);
+  const [usersPerPage, setUsersPerPage] = useState(20);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  
-  // Modal states
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [totalAvailableUsers, setTotalAvailableUsers] = useState(0);
+  const [isLoadingAll, setIsLoadingAll] = useState(false);
 
-  // Load users and roles
+  // Load only roles on initial page load
   useEffect(() => {
-    loadUsersAndRoles();
+    let mounted = true;
+    
+    const loadInitialData = async () => {
+      if (mounted && roles.length === 0) {
+        await loadRolesOnly();
+      }
+    };
+    
+    loadInitialData();
+    
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  // Optional: If you want to dynamically load users by role when filter changes
-  // You can enable this for better performance with large datasets
-  const loadUsersByRole = async (rolename) => {
+  // Load roles only (optimized initial load)
+  const loadRolesOnly = async () => {
+    if (roles.length > 0) {
+      console.log('Roles already loaded, skipping...');
+      return;
+    }
+    
+    try {
+      setInitialLoading(true);
+      console.log('🔧 Loading roles...');
+      const rolesData = await userAPI.getRoles();
+      console.log('✅ Loaded roles:', rolesData);
+      
+      let normalizedRoles = [];
+      if (rolesData.roles && Array.isArray(rolesData.roles)) {
+        normalizedRoles = rolesData.roles;
+      } else if (Array.isArray(rolesData)) {
+        normalizedRoles = rolesData;
+      }
+      setRoles(normalizedRoles);
+    } catch (error) {
+      console.error('❌ Failed to load roles:', error);
+      setRoles([]);
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
+  // Load users by specific role with server-side pagination support
+  const loadUsersByRole = async (rolename, loadAll = false, specificPage = null) => {
     if (rolename === 'all') {
       return loadUsersAndRoles();
     }
     
     try {
       setLoading(true);
-      console.log(`🔄 Loading users with role: ${rolename}`);
-      const usersData = await userAPI.getUsersByRole(rolename);
-      console.log(`👥 Loaded users for role ${rolename}:`, usersData);
+      if (loadAll) {
+        setIsLoadingAll(true);
+      }
       
-      let normalizedUsers = [];
-      if (usersData.users && Array.isArray(usersData.users)) {
-        normalizedUsers = usersData.users;
-      } else if (Array.isArray(usersData)) {
-        normalizedUsers = usersData;
+      if (!specificPage) {
+        setUsers([]);
+      }
+      
+      console.log(`🔍 Loading users with role: ${rolename}`);
+      
+      let allUsers = [];
+      let totalCount = 0;
+      const perPage = usersPerPage;
+      
+      if (loadAll) {
+        // Load all users by paginating through all pages
+        let currentPageNum = 1;
+        let hasMorePages = true;
+        
+        while (hasMorePages) {
+          console.log(`📄 Loading page ${currentPageNum} for role: ${rolename}`);
+          const usersData = await userAPI.getUsersByRole(rolename, currentPageNum, perPage);
+          
+          if (usersData.users && Array.isArray(usersData.users)) {
+            allUsers = [...allUsers, ...usersData.users];
+            totalCount = usersData.totalcount || 0;
+            
+            hasMorePages = usersData.users.length === perPage && allUsers.length < totalCount;
+            currentPageNum++;
+            
+            console.log(`📈 Progress: ${allUsers.length} / ${totalCount} users loaded`);
+            
+            if (hasMorePages) {
+              await new Promise(resolve => setTimeout(resolve, 200));
+            }
+          } else {
+            hasMorePages = false;
+          }
+        }
+        
+        console.log(`✅ Loaded ${allUsers.length} of ${totalCount} total users for role: ${rolename}`);
+      } else {
+        // Load specific page for server-side pagination
+        const pageToLoad = specificPage || currentPage;
+        console.log(`📄 Loading page ${pageToLoad} for role: ${rolename} (server-side pagination)`);
+        const usersData = await userAPI.getUsersByRole(rolename, pageToLoad, perPage);
+        
+        if (usersData.users && Array.isArray(usersData.users)) {
+          allUsers = usersData.users;
+          totalCount = usersData.totalcount || 0;
+        }
+        
+        console.log(`📊 Loaded ${allUsers.length} users from page ${pageToLoad} (${totalCount} total available)`);
       }
 
-      // Process users same as in loadUsersAndRoles
-      const processedUsers = normalizedUsers.map(user => ({
+      // Process users
+      const processedUsers = allUsers.map(user => ({
         id: user.id,
         username: user.username || 'N/A',
         fullname: user.fullname || `${user.firstname || ''} ${user.lastname || ''}`.trim() || 'N/A',
@@ -127,12 +200,28 @@ const ManageUsers = () => {
       }));
 
       setUsers(processedUsers);
+      
+      if (!specificPage) {
+        setCurrentPage(1);
+      }
+      
+      setSelectedUsers([]);
+      setTotalAvailableUsers(totalCount);
+      
+      // Show success message
+      if (loadAll) {
+        toast.success(`Loaded all ${processedUsers.length} users for role: ${rolename}`);
+      } else {
+        const pageInfo = specificPage ? ` (page ${specificPage})` : '';
+        toast.success(`Loaded ${processedUsers.length} users for role: ${rolename}${pageInfo} (${totalCount} total available)`);
+      }
     } catch (error) {
-      console.error(`Failed to load users for role ${rolename}:`, error);
-      // Fallback to showing all users
-      await loadUsersAndRoles();
+      console.error(`❌ Failed to load users for role ${rolename}:`, error);
+      toast.error(`Failed to load users for role: ${rolename}`);
+      setUsers([]);
     } finally {
       setLoading(false);
+      setIsLoadingAll(false);
     }
   };
 
@@ -140,10 +229,9 @@ const ManageUsers = () => {
     try {
       setLoading(true);
       
-      // Load roles first
-      console.log('🔄 Loading roles...');
+      console.log('🔧 Loading roles...');
       const rolesData = await userAPI.getRoles();
-      console.log('📋 Loaded roles:', rolesData);
+      console.log('✅ Loaded roles:', rolesData);
       
       let normalizedRoles = [];
       if (rolesData.roles && Array.isArray(rolesData.roles)) {
@@ -153,12 +241,10 @@ const ManageUsers = () => {
       }
       setRoles(normalizedRoles);
       
-      // Load users with roles
-      console.log('🔄 Loading users with roles...');
+      console.log('🔧 Loading users with roles...');
       const usersData = await userAPI.getUsersWithRoles();
-      console.log('👥 Loaded users:', usersData);
+      console.log('✅ Loaded users:', usersData);
       
-      // Handle the API response structure
       let normalizedUsers = [];
       if (usersData.users && Array.isArray(usersData.users)) {
         normalizedUsers = usersData.users;
@@ -168,7 +254,6 @@ const ManageUsers = () => {
         normalizedUsers = usersData.data;
       }
 
-      // Normalize user data to ensure consistent field names
       const processedUsers = normalizedUsers.map(user => ({
         id: user.id,
         username: user.username || 'N/A',
@@ -194,13 +279,13 @@ const ManageUsers = () => {
         city: user.city || '',
         country: user.country || '',
         lang: user.lang || 'en',
-        // Keep original data for modals
         ...user
       }));
 
       setUsers(processedUsers);
+      setTotalAvailableUsers(processedUsers.length);
     } catch (error) {
-      console.error('Failed to load users and roles:', error);
+      console.error('❌ Failed to load users and roles:', error);
       setUsers([]);
       setRoles([]);
     } finally {
@@ -209,77 +294,84 @@ const ManageUsers = () => {
   };
 
   // Filter and sort users
-  const filteredAndSortedUsers = users
-    .filter(user => {
-      const matchesSearch = 
-        user.fullname.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.role.toLowerCase().includes(searchQuery.toLowerCase());
+  const isServerSidePagination = filterRole !== 'all';
+  
+  let filteredAndSortedUsers, paginatedUsers, totalPages;
+  
+  if (isServerSidePagination) {
+    // Server-side pagination: use users directly from API
+    filteredAndSortedUsers = users;
+    paginatedUsers = users;
+    totalPages = Math.ceil(totalAvailableUsers / usersPerPage);
+  } else {
+    // Client-side pagination for "all roles" view
+    const allFilteredUsers = users
+      .filter(user => {
+        const matchesSearch = 
+          user.fullname.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.role.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
+        
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => {
+        let aValue = a[sortBy] || '';
+        let bValue = b[sortBy] || '';
+        
+        if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+        if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+        
+        if (sortOrder === 'asc') {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
+      });
       
-      // Enhanced role matching - check both role name and shortname
-      const matchesRole = filterRole === 'all' || 
-        user.role === filterRole || 
-        user.role.toLowerCase() === filterRole.toLowerCase() ||
-        // Also check if user role matches any role shortname
-        roles.some(role => 
-          (role.shortname === filterRole && 
-           (user.role === role.shortname || user.role === role.name)) ||
-          (role.name === filterRole && 
-           (user.role === role.shortname || user.role === role.name))
-        );
-      
-      const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
-      
-      return matchesSearch && matchesRole && matchesStatus;
-    })
-    .sort((a, b) => {
-      let aValue = a[sortBy] || '';
-      let bValue = b[sortBy] || '';
-      
-      if (typeof aValue === 'string') aValue = aValue.toLowerCase();
-      if (typeof bValue === 'string') bValue = bValue.toLowerCase();
-      
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
+    filteredAndSortedUsers = allFilteredUsers;
+    totalPages = Math.ceil(allFilteredUsers.length / usersPerPage);
+    const indexOfLastUser = currentPage * usersPerPage;
+    const indexOfFirstUser = indexOfLastUser - usersPerPage;
+    paginatedUsers = allFilteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+  }
 
-  // Pagination
-  const totalPages = Math.ceil(filteredAndSortedUsers.length / usersPerPage);
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const paginatedUsers = filteredAndSortedUsers.slice(indexOfFirstUser, indexOfLastUser);
-
-  // Handle page change
+  // Handle page change with server-side pagination support
   const handlePageChange = (page) => {
+    console.log(`🔄 Page change requested: ${currentPage} → ${page}`);
     setCurrentPage(page);
-    setSelectedUsers([]); // Clear selections when changing pages
+    setSelectedUsers([]);
+    
+    if (filterRole !== 'all') {
+      loadUsersByRole(filterRole, false, page);
+    }
   };
 
-  // Handle items per page change
+  // Handle items per page change  
   const handleItemsPerPageChange = (newItemsPerPage) => {
+    console.log(`📝 Items per page change: ${usersPerPage} → ${newItemsPerPage}`);
     setUsersPerPage(newItemsPerPage);
-    setCurrentPage(1); // Reset to first page
-    setSelectedUsers([]); // Clear selections
+    setCurrentPage(1);
+    setSelectedUsers([]);
+    
+    // If we're in server-side pagination mode, reload with new page size
+    if (filterRole !== 'all') {
+      loadUsersByRole(filterRole, false, 1);
+    }
   };
 
   // Event handlers
   const handleEditUser = (user) => {
-    setSelectedUser(user);
-    setShowEditModal(true);
+    console.log('Edit user:', user);
   };
 
   const handleViewUser = (user) => {
-    setSelectedUser(user);
-    setShowDetailsModal(true);
+    console.log('View user:', user);
   };
 
   const handleDeleteUser = async (userId) => {
     try {
-      // TODO: Implement API call
-      // await userAPI.deleteUser(userId);
       setUsers(prev => prev.filter(user => user.id !== userId));
       toast.success('User deleted successfully');
     } catch (error) {
@@ -295,7 +387,6 @@ const ManageUsers = () => {
     }
     
     try {
-      // TODO: Implement bulk delete API call
       setUsers(prev => prev.filter(user => !selectedUsers.includes(user.id)));
       setSelectedUsers([]);
       setShowDeleteModal(false);
@@ -312,7 +403,6 @@ const ManageUsers = () => {
     setSortBy(property);
   };
 
-  // Handle select all/none
   const handleSelectAll = (event) => {
     if (event.target.checked) {
       setSelectedUsers(paginatedUsers.map(user => user.id));
@@ -321,7 +411,6 @@ const ManageUsers = () => {
     }
   };
 
-  // Handle individual user selection
   const handleUserSelect = (userId) => {
     setSelectedUsers(prev => 
       prev.includes(userId) 
@@ -336,34 +425,11 @@ const ManageUsers = () => {
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
   };
 
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'inactive':
-      case 'suspended':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getRoleColor = (role) => {
-    const colors = {
-      'admin': 'bg-purple-100 text-purple-800',
-      'teacher': 'bg-blue-100 text-blue-800',
-      'student': 'bg-green-100 text-green-800',
-      'manager': 'bg-orange-100 text-orange-800',
-    };
-    return colors[role?.toLowerCase()] || 'bg-gray-100 text-gray-800';
-  };
-
-  if (loading) {
+  if (initialLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <CircularProgress />
+        <Typography variant="body1" sx={{ ml: 2 }}>Loading roles...</Typography>
       </Box>
     );
   }
@@ -387,9 +453,14 @@ const ManageUsers = () => {
           <CardContent>
             <Typography variant="h6" component="div">
               {users.length}
+              {totalAvailableUsers > users.length && (
+                <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                  / {totalAvailableUsers}
+                </Typography>
+              )}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Total Users
+              {totalAvailableUsers > users.length ? 'Loaded / Total Users' : 'Total Users'}
             </Typography>
           </CardContent>
         </Card>
@@ -416,10 +487,10 @@ const ManageUsers = () => {
         <Card>
           <CardContent>
             <Typography variant="h6" component="div">
-              {totalPages}
+              {filterRole !== 'all' ? filterRole : 'All Roles'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Total Pages
+              Current Filter
             </Typography>
           </CardContent>
         </Card>
@@ -449,12 +520,20 @@ const ManageUsers = () => {
               <InputLabel>Role</InputLabel>
               <Select
                 value={filterRole}
-                onChange={(e) => {
-                  setFilterRole(e.target.value);
-                  setCurrentPage(1); // Reset to first page
-                  setSelectedUsers([]); // Clear selections
+                onChange={async (e) => {
+                  const selectedRole = e.target.value;
+                  setFilterRole(selectedRole);
+                  setCurrentPage(1);
+                  setSelectedUsers([]);
+                  
+                  if (selectedRole === 'all') {
+                    await loadUsersAndRoles();
+                  } else {
+                    await loadUsersByRole(selectedRole, false, 1);
+                  }
                 }}
                 label="Role"
+                disabled={loading}
               >
                 <MenuItem value="all">All Roles</MenuItem>
                 {roles.map(role => (
@@ -487,7 +566,7 @@ const ManageUsers = () => {
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => console.log('Add user')}
             >
               Add User
             </Button>
@@ -495,11 +574,38 @@ const ManageUsers = () => {
             <Button
               variant="outlined"
               startIcon={<RefreshIcon />}
-              onClick={loadUsersAndRoles}
+              onClick={async () => {
+                if (filterRole === 'all') {
+                  await loadUsersAndRoles();
+                } else {
+                  await loadUsersByRole(filterRole, false, currentPage);
+                }
+              }}
               disabled={loading}
             >
               Refresh
             </Button>
+            
+            {filterRole !== 'all' && users.length > 0 && totalAvailableUsers > users.length && (
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={isLoadingAll ? <CircularProgress size={16} /> : null}
+                onClick={async () => {
+                  await loadUsersByRole(filterRole, true);
+                }}
+                disabled={loading || isLoadingAll}
+                sx={{ 
+                  bgcolor: 'primary.light',
+                  color: 'primary.contrastText',
+                  '&:hover': {
+                    bgcolor: 'primary.main',
+                  }
+                }}
+              >
+                {isLoadingAll ? 'Loading All Users...' : `Load All Users (${totalAvailableUsers})`}
+              </Button>
+            )}
           </Box>
           
           {selectedUsers.length > 0 && (
@@ -519,6 +625,7 @@ const ManageUsers = () => {
             </Box>
           )}
         </Toolbar>
+
         {/* Table */}
         <TableContainer>
           <Table>
@@ -576,6 +683,20 @@ const ManageUsers = () => {
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                     <CircularProgress />
+                    <Typography variant="body2" sx={{ mt: 2 }}>
+                      Loading users for {filterRole === 'all' ? 'all roles' : `role: ${filterRole}`}...
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : filterRole === 'all' && users.length === 0 && !searchQuery && filterStatus === 'all' ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                      Select a role to view users
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Choose a specific role from the dropdown above to load and view users.
+                    </Typography>
                   </TableCell>
                 </TableRow>
               ) : paginatedUsers.length === 0 ? (
@@ -594,6 +715,8 @@ const ManageUsers = () => {
                           setFilterStatus('all');
                           setCurrentPage(1);
                           setSelectedUsers([]);
+                          setUsers([]);
+                          setTotalAvailableUsers(0);
                         }}
                         sx={{ mt: 1 }}
                         size="small"
@@ -713,17 +836,26 @@ const ManageUsers = () => {
           </Table>
         </TableContainer>
 
-        {/* Pagination Controls */}
-        {filteredAndSortedUsers.length > 0 && (
+        {/* Professional Pagination Controls - Only show when needed */}
+        {(totalAvailableUsers > usersPerPage || totalPages > 1) && (
           <PaginationControls
             currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={filteredAndSortedUsers.length}
+            totalPages={filterRole !== 'all' ? Math.ceil(totalAvailableUsers / usersPerPage) : totalPages}
+            totalItems={filterRole !== 'all' ? totalAvailableUsers : filteredAndSortedUsers.length}
             itemsPerPage={usersPerPage}
             onPageChange={handlePageChange}
             onItemsPerPageChange={handleItemsPerPageChange}
             isLoading={loading}
           />
+        )}
+        
+        {/* Show total count if no pagination needed */}
+        {totalPages <= 1 && filteredAndSortedUsers.length > 0 && (
+          <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="body2" color="text.secondary" align="center">
+              Showing all {filteredAndSortedUsers.length.toLocaleString()} users
+            </Typography>
+          </Box>
         )}
       </Paper>
 
@@ -757,47 +889,6 @@ const ManageUsers = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Modals */}
-      {showCreateModal && (
-        <CreateUserModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onUserCreated={(newUser) => {
-            setUsers(prev => [newUser, ...prev]);
-            setShowCreateModal(false);
-          }}
-        />
-      )}
-
-      {showEditModal && selectedUser && (
-        <EditUserModal
-          isOpen={showEditModal}
-          user={selectedUser}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedUser(null);
-          }}
-          onUserUpdated={(updatedUser) => {
-            setUsers(prev => prev.map(user => 
-              user.id === updatedUser.id ? updatedUser : user
-            ));
-            setShowEditModal(false);
-            setSelectedUser(null);
-          }}
-        />
-      )}
-
-      {showDetailsModal && selectedUser && (
-        <UserDetailsModal
-          isOpen={showDetailsModal}
-          user={selectedUser}
-          onClose={() => {
-            setShowDetailsModal(false);
-            setSelectedUser(null);
-          }}
-        />
-      )}
     </Box>
   );
 };
