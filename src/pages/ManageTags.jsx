@@ -34,6 +34,7 @@ import {
   Search as SearchIcon,
   Tag as TagIcon,
   Refresh as RefreshIcon,
+  CheckBox as CheckBoxIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-hot-toast';
 import PaginationControls from '../shared/components/PaginationControls';
@@ -324,64 +325,144 @@ const ManageTags = () => {
       </Box>
 
       {/* Stats Cards */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2, mb: 3 }}>
-        <Card>
-          <CardContent>
-            <Typography variant="h6" component="div">
-              {tags.length}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Total Tags
-            </Typography>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 2, mb: 3 }}>
+        <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ 
+                p: 1, 
+                borderRadius: 1.5, 
+                bgcolor: 'primary.50',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <TagIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+              </Box>
+              <Box>
+                <Typography variant="h6" component="div" sx={{ fontSize: '1.5rem', fontWeight: 700 }}>
+                  {tags.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                  Total Tags
+                </Typography>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent>
-            <Typography variant="h6" component="div">
-              {selectedTags.length}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Selected Tags
-            </Typography>
+        
+        <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ 
+                p: 1, 
+                borderRadius: 1.5, 
+                bgcolor: 'warning.50',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <CheckBoxIcon sx={{ color: 'warning.main', fontSize: 20 }} />
+              </Box>
+              <Box>
+                <Typography variant="h6" component="div" sx={{ fontSize: '1.5rem', fontWeight: 700 }}>
+                  {selectedTags.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                  Selected
+                </Typography>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent>
-            <Typography variant="h6" component="div">
-              {filteredTags.length}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Filtered Results
-            </Typography>
+
+        <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ 
+                p: 1, 
+                borderRadius: 1.5, 
+                bgcolor: 'success.50',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <SearchIcon sx={{ color: 'success.main', fontSize: 20 }} />
+              </Box>
+              <Box>
+                <Typography variant="h6" component="div" sx={{ fontSize: '1.5rem', fontWeight: 700 }}>
+                  {filteredTags.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                  Filtered
+                </Typography>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent>
-            <Typography variant="h6" component="div">
-              {totalPages}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Total Pages
-            </Typography>
+
+        <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ 
+                p: 1, 
+                borderRadius: 1.5, 
+                bgcolor: 'info.50',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Typography sx={{ color: 'info.main', fontSize: 16, fontWeight: 700 }}>
+                  #
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="h6" component="div" sx={{ fontSize: '1.5rem', fontWeight: 700 }}>
+                  {totalPages}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                  Pages
+                </Typography>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
       </Box>
 
       {/* Main Content */}
-      <Paper elevation={1} sx={{ p: 0 }}>
+      <Paper elevation={1} sx={{ borderRadius: 2, overflow: 'hidden', maxWidth: '1100px', margin: '0 auto' }}>
         {/* Toolbar */}
-        <Toolbar sx={{ pl: 2, pr: 1, bgcolor: 'grey.50' }}>
+        <Toolbar sx={{ 
+          pl: 2, 
+          pr: 1, 
+          bgcolor: 'grey.50',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          minHeight: '60px !important'
+        }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
             <TextField
               placeholder="Search tags..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               size="small"
-              sx={{ minWidth: 300 }}
+              sx={{ 
+                minWidth: 280,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                  bgcolor: 'white',
+                  fontSize: '0.9rem',
+                  '&:hover': {
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'primary.main',
+                    },
+                  },
+                }
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon />
+                    <SearchIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
                   </InputAdornment>
                 )
               }}
@@ -390,6 +471,14 @@ const ManageTags = () => {
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => setShowCreateModal(true)}
+              sx={{ 
+                borderRadius: 1.5,
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 2.5,
+                fontSize: '0.85rem'
+              }}
+              size="small"
             >
               Create Tag
             </Button>
@@ -398,120 +487,212 @@ const ManageTags = () => {
               startIcon={<RefreshIcon />}
               onClick={fetchTags}
               disabled={loading}
+              sx={{ 
+                borderRadius: 1.5,
+                textTransform: 'none',
+                fontWeight: 500,
+                px: 2,
+                fontSize: '0.85rem'
+              }}
+              size="small"
             >
               Refresh
             </Button>
           </Box>
           
           {selectedTags.length > 0 && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="body2" color="text.secondary">
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1.5,
+              bgcolor: 'error.50',
+              px: 2,
+              py: 0.75,
+              borderRadius: 1.5,
+              border: '1px solid',
+              borderColor: 'error.200'
+            }}>
+              <Typography variant="body2" sx={{ color: 'error.dark', fontWeight: 600, fontSize: '0.8rem' }}>
                 {selectedTags.length} selected
               </Typography>
               <Button
-                variant="outlined"
+                variant="contained"
                 color="error"
                 startIcon={<DeleteIcon />}
                 onClick={() => setShowDeleteModal(true)}
                 size="small"
+                sx={{ 
+                  borderRadius: 1,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '0.75rem',
+                  px: 1.5,
+                  py: 0.5,
+                  minHeight: 'auto'
+                }}
               >
-                Delete Selected
+                Delete
               </Button>
             </Box>
           )}
         </Toolbar>
 
-        {/* Table */}
+        {/* Table View */}
         <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell padding="checkbox">
-                  <Checkbox
-                    indeterminate={selectedTags.length > 0 && selectedTags.length < paginatedTags.length}
-                    checked={paginatedTags.length > 0 && selectedTags.length === paginatedTags.length}
-                    onChange={handleSelectAll}
-                  />
-                </TableCell>
-                <TableCell>ID</TableCell>
-                <TableCell>Name</TableCell>
-                <TableCell>Raw Name</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                    <CircularProgress />
+          <Table size="small" sx={{ maxWidth: '1000px', margin: '0 auto' }}>
+              <TableHead>
+                <TableRow sx={{ bgcolor: 'grey.50' }}>
+                  <TableCell 
+                    padding="checkbox" 
+                    sx={{ width: '50px' }}
+                  >
+                    <Checkbox
+                      indeterminate={selectedTags.length > 0 && selectedTags.length < paginatedTags.length}
+                      checked={paginatedTags.length > 0 && selectedTags.length === paginatedTags.length}
+                      onChange={handleSelectAll}
+                      size="small"
+                    />
                   </TableCell>
+                  <TableCell sx={{ width: '80px', fontWeight: 600, fontSize: '0.85rem' }}>ID</TableCell>
+                  <TableCell sx={{ width: '300px', fontWeight: 600, fontSize: '0.85rem' }}>Name</TableCell>
+                  <TableCell sx={{ width: '250px', fontWeight: 600, fontSize: '0.85rem' }}>Raw Name</TableCell>
+                  <TableCell sx={{ width: '140px', fontWeight: 600, fontSize: '0.85rem' }}>Actions</TableCell>
                 </TableRow>
-              ) : filteredTags.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                    <Typography variant="body1" color="text.secondary">
-                      {searchTerm ? 'No tags found matching your search.' : 'No tags found.'}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginatedTags.map((tag) => (
-                  <TableRow key={tag.id} hover>
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        checked={selectedTags.includes(tag.id)}
-                        onChange={() => handleTagSelect(tag.id)}
-                      />
-                    </TableCell>
-                    <TableCell>{tag.id}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={tag.name} 
-                        color="primary" 
-                        variant="outlined" 
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {tag.rawname || tag.name}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Stack direction="row" spacing={1}>
-                        <Tooltip title="Edit Tag">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => {
-                              setEditingTag(tag);
-                              setNewTagName(tag.name);
-                              setNewTagRawName(tag.rawname || tag.name);
-                              setShowCreateModal(true);
-                            }}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete Tag">
-                          <IconButton 
-                            size="small" 
-                            color="error"
-                            onClick={() => {
-                              setSelectedTags([tag.id]);
-                              setShowDeleteModal(true);
-                            }}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                      <CircularProgress size={28} />
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ) : filteredTags.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {searchTerm ? 'No tags found matching your search.' : 'No tags found.'}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedTags.map((tag) => (
+                    <TableRow 
+                      key={tag.id} 
+                      hover 
+                      sx={{
+                        '&:hover': {
+                          bgcolor: 'rgba(0, 0, 0, 0.02)'
+                        }
+                      }}
+                    >
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={selectedTags.includes(tag.id)}
+                          onChange={() => handleTagSelect(tag.id)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell sx={{ py: 1.5 }}>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            color: 'text.secondary',
+                            fontFamily: 'monospace',
+                            fontSize: '0.8rem',
+                            fontWeight: 500
+                          }}
+                        >
+                          #{tag.id}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ py: 1.5 }}>
+                        <Chip 
+                          label={tag.name} 
+                          color="primary" 
+                          variant="outlined" 
+                          size="small"
+                          sx={{
+                            maxWidth: '280px',
+                            height: '26px',
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            borderRadius: '13px',
+                            '& .MuiChip-label': {
+                              px: 1.5,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ py: 1.5 }}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: tag.rawname ? 'text.primary' : 'text.secondary',
+                            fontSize: '0.75rem',
+                            fontStyle: tag.rawname ? 'normal' : 'italic',
+                            maxWidth: '230px',
+                            display: 'block',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
+                          {tag.rawname || 'No raw name'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ py: 1.5 }}>
+                        <Stack direction="row" spacing={1}>
+                          <Tooltip title="Edit Tag">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => {
+                                setEditingTag(tag);
+                                setNewTagName(tag.name);
+                                setNewTagRawName(tag.rawname || tag.name);
+                                setShowCreateModal(true);
+                              }}
+                              sx={{
+                                p: 0.5,
+                                color: 'primary.main',
+                                '&:hover': {
+                                  bgcolor: 'primary.50',
+                                  color: 'primary.dark'
+                                }
+                              }}
+                            >
+                              <EditIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete Tag">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => {
+                                setSelectedTags([tag.id]);
+                                setShowDeleteModal(true);
+                              }}
+                              sx={{
+                                p: 0.5,
+                                color: 'error.main',
+                                '&:hover': {
+                                  bgcolor: 'error.50',
+                                  color: 'error.dark'
+                                }
+                              }}
+                            >
+                              <DeleteIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
 
         {/* Pagination Controls */}
         {filteredTags.length > 0 && (
