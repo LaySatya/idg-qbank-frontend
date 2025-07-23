@@ -175,7 +175,11 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
           firstname: currentUser?.firstname || '',
           lastname: currentUser?.lastname || '',
           email: currentUser?.username || '',
-          profileimageurl: currentUser?.profileimageurl || undefined
+          profileimageurl: (currentUser?.profileimageurl && 
+                           currentUser.profileimageurl !== 'null' && 
+                           currentUser.profileimageurl !== 'undefined' && 
+                           currentUser.profileimageurl.trim() !== '') 
+                           ? currentUser.profileimageurl : undefined
         }
       };
       
@@ -211,7 +215,11 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
           firstname: currentUser?.firstname || '',
           lastname: currentUser?.lastname || '',
           email: currentUser?.username || '',
-          profileimageurl: currentUser?.profileimageurl || undefined
+          profileimageurl: (currentUser?.profileimageurl && 
+                           currentUser.profileimageurl !== 'null' && 
+                           currentUser.profileimageurl !== 'undefined' && 
+                           currentUser.profileimageurl.trim() !== '') 
+                           ? currentUser.profileimageurl : undefined
         }
       };
       
@@ -480,27 +488,86 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
                   borderColor: '#d1ecf1'
                 }
               }}>
-                {comment.user?.profileimageurl && comment.user.profileimageurl !== 'null' ? (
-                  <Avatar 
-                    src={comment.user.profileimageurl}
-                    alt={getAuthorName(comment)}
-                    sx={{ width: 32, height: 32 }}
-                    onError={(e) => { 
-                      console.log(' Comment avatar failed to load:', comment.user.profileimageurl);
-                      e.target.src = ''; 
-                    }}
-                  />
-                ) : (
-                  <Avatar sx={{ 
-                    bgcolor: 'primary.main', 
-                    width: 32, 
-                    height: 32,
-                    fontSize: '13px',
-                    fontWeight: '600'
-                  }}>
-                    {getInitials(getAuthorName(comment))}
-                  </Avatar>
-                )}
+                {(() => {
+                  // Use the same approach as Header.jsx - prioritize localStorage
+                  const getProfileImageUrl = (imageUrl) => {
+                    if (!imageUrl || imageUrl === 'null' || imageUrl === 'undefined' || imageUrl.trim() === '') {
+                      return null;
+                    }
+                    
+                    // If it's a Moodle URL and doesn't have token, add it
+                    if (imageUrl.includes('moodle') || imageUrl.includes('pluginfile.php')) {
+                      const token = localStorage.getItem('token');
+                      if (token && !imageUrl.includes('token=')) {
+                        const separator = imageUrl.includes('?') ? '&' : '?';
+                        return `${imageUrl}${separator}token=${token}`;
+                      }
+                    }
+                    
+                    return imageUrl;
+                  };
+
+                  // For current user, use localStorage first (like Header.jsx)
+                  let profileImageUrl;
+                  if (currentUser?.id == comment.userid || currentUser?.username === comment.username) {
+                    // This is the current user's comment - use localStorage like Header
+                    profileImageUrl = localStorage.getItem('profileimageurl') || getProfileImageUrl(comment.user?.profileimageurl);
+                  } else {
+                    // This is another user's comment - process their URL with token
+                    profileImageUrl = getProfileImageUrl(comment.user?.profileimageurl);
+                  }
+                  
+                  console.log('🖼️ Profile image URL for comment:', {
+                    isCurrentUser: currentUser?.id == comment.userid,
+                    original: comment.user?.profileimageurl,
+                    fromLocalStorage: localStorage.getItem('profileimageurl'),
+                    processed: profileImageUrl
+                  });
+                  
+                  return profileImageUrl ? (
+                    <Avatar 
+                      src={profileImageUrl}
+                      alt={getAuthorName(comment)}
+                      sx={{ width: 32, height: 32 }}
+                      onError={(e) => { 
+                        console.log(' Comment avatar failed to load:', {
+                          original: comment.user?.profileimageurl,
+                          processed: profileImageUrl,
+                          error: e.target.src
+                        });
+                        e.target.style.display = 'none';
+                        // Create fallback avatar
+                        const fallback = e.target.parentNode;
+                        fallback.innerHTML = `
+                          <div style="
+                            width: 32px; 
+                            height: 32px; 
+                            border-radius: 50%; 
+                            background-color: #1976d2; 
+                            display: flex; 
+                            align-items: center; 
+                            justify-content: center; 
+                            color: white; 
+                            font-size: 13px; 
+                            font-weight: 600;
+                          ">
+                            ${getInitials(getAuthorName(comment))}
+                          </div>
+                        `;
+                      }}
+                    />
+                  ) : (
+                    <Avatar sx={{ 
+                      bgcolor: 'primary.main', 
+                      width: 32, 
+                      height: 32,
+                      fontSize: '13px',
+                      fontWeight: '600'
+                    }}>
+                      {getInitials(getAuthorName(comment))}
+                    </Avatar>
+                  );
+                })()}
 
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
@@ -550,22 +617,57 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
     }}>
       {currentUser && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-          <Avatar
-            src={currentUser.profileimageurl && currentUser.profileimageurl !== 'null' ? currentUser.profileimageurl : undefined}
-            alt={currentUser.fullname}
-            sx={{
-              bgcolor: 'secondary.main',
-              width: 28,
-              height: 28,
-              fontSize: '12px'
-            }}
-            onError={(e) => {
-              console.log(' Profile image failed to load:', currentUser.profileimageurl);
-              e.target.src = '';
-            }}
-          >
-            {(!currentUser.profileimageurl || currentUser.profileimageurl === 'null') && getInitials(currentUser.fullname)}
-          </Avatar>
+          {(() => {
+            // Use the same approach as Header.jsx for current user profile image
+            const profileImageUrl = localStorage.getItem('profileimageurl') || currentUser.profileimageurl;
+            
+            console.log(' Current user profile image URL:', {
+              fromLocalStorage: localStorage.getItem('profileimageurl'),
+              fromCurrentUser: currentUser.profileimageurl,
+              final: profileImageUrl
+            });
+            
+            return (
+              <Avatar
+                src={profileImageUrl}
+                alt={currentUser.fullname}
+                sx={{
+                  bgcolor: 'secondary.main',
+                  width: 28,
+                  height: 28,
+                  fontSize: '12px'
+                }}
+                onError={(e) => {
+                  console.log(' Current user avatar failed to load:', {
+                    src: e.target.src,
+                    fromLocalStorage: localStorage.getItem('profileimageurl'),
+                    fromCurrentUser: currentUser.profileimageurl
+                  });
+                  e.target.style.display = 'none';
+                  // Create fallback avatar
+                  const fallback = e.target.parentNode;
+                  fallback.innerHTML = `
+                    <div style="
+                      width: 28px; 
+                      height: 28px; 
+                      border-radius: 50%; 
+                      background-color: #9c27b0; 
+                      display: flex; 
+                      align-items: center; 
+                      justify-content: center; 
+                      color: white; 
+                      font-size: 12px; 
+                      font-weight: 600;
+                    ">
+                      ${getInitials(currentUser.fullname)}
+                    </div>
+                  `;
+                }}
+              >
+                {!profileImageUrl && getInitials(currentUser.fullname)}
+              </Avatar>
+            );
+          })()}
           <Typography variant="body2" color="text.secondary">
             Commenting as: <strong>{currentUser.fullname}</strong>
           </Typography>
@@ -689,6 +791,8 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
         '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
       }}
     >
+      
+
       <span style={{ fontSize: 18 }}>×</span>
     </IconButton>
   </Box>

@@ -60,8 +60,94 @@ const TopButtonsRow = ({
     setShowCreateModal(true);
   };
 
-  // File import click
-  const handleImportClick = () => {
+  // File import click - Updated to use real category IDs with correct context
+  const handleImportClick = async () => {
+    // Log current values for debugging if needed
+    console.log('\n === MOODLE IMPORT REDIRECT ===');
+    
+    const token = localStorage.getItem('token');
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+    const courseId = localStorage.getItem('CourseID');
+    const categoryId = localStorage.getItem('questionCategoryId');
+    
+    console.log(' Real category ID from your system:', categoryId);
+    
+    // Try multiple approaches to find working import URL
+    // Based on discovery: categoryid=7528&contextid=115135 works!
+    const testCases = [
+      // Try with your real category ID and the discovered context pattern
+      { categoryid: categoryId, contextid: '115135', note: 'Real category ID with discovered context 115135' },
+      { categoryid: categoryId, contextid: '1', note: 'Real category ID with context 1' },
+      { categoryid: categoryId, contextid: courseId, note: 'Real category ID with course context' },
+      
+      // Fallback to known working IDs if real one fails
+      { categoryid: '7', contextid: '1', note: 'Known working: category 7' },
+      { categoryid: '8', contextid: '1', note: 'Known working: category 8' },
+    ];
+    
+    console.log(' Testing import URLs in order of preference...');
+    
+    for (const testCase of testCases) {
+      // Skip if we don't have the required values
+      if (!testCase.categoryid || testCase.categoryid === 'All') continue;
+      
+      try {
+        const importUrl = `${API_BASE_URL}/questions/import?categoryid=${testCase.categoryid}&contextid=${testCase.contextid}&courseid=${courseId}`;
+        console.log(`\n Testing: ${testCase.note}`);
+        console.log(`   URL: ${importUrl}`);
+        
+        const response = await fetch(importUrl, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log(' SUCCESS! Import form URL received:', data);
+          
+          if (data.import_form_url) {
+            console.log(' Opening Moodle import form...');
+            console.log(' Form URL:', data.import_form_url);
+            
+            // Show user what's happening
+            setImportStatus({ 
+              type: 'info', 
+              message: `Opening Moodle import form (Category: ${testCase.categoryid}, Context: ${testCase.contextid})...` 
+            });
+            
+            // Open Moodle import form in new window/tab
+            window.open(data.import_form_url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+            
+            // Update status
+            setTimeout(() => {
+              setImportStatus({ 
+                type: 'success', 
+                message: 'Import form opened! Upload your questions in the new window.' 
+              });
+            }, 1000);
+            
+            setTimeout(() => setImportStatus(null), 5000);
+            
+            return; // Success - stop trying other URLs
+          }
+        } else {
+          const errorText = await response.text();
+          console.log(` Failed (${response.status}):`, errorText);
+        }
+        
+      } catch (error) {
+        console.log(` Error testing ${testCase.note}:`, error.message);
+      }
+    }
+    
+    // If all import URLs failed, fallback to local import
+    console.log(' All import URLs failed. Falling back to local file import...');
+    setImportStatus({ 
+      type: 'warning', 
+      message: 'Could not connect to Moodle import. Using local import instead...' 
+    });
     fileInputRef.current?.click();
   };
 
@@ -215,24 +301,145 @@ const TopButtonsRow = ({
       if (parsedQuestions.length === 0) throw new Error('No valid questions found in the file.');
       const { unique, duplicates } = detectDuplicates(parsedQuestions, questions || []);
 
-      // Update parent state for pagination
-      if (handleFileUpload) {
-        await handleFileUpload(file, unique);
-        // Update questions and totalQuestions for pagination
-        if (setQuestions && questions) {
-          const newQuestions = [...unique, ...questions];
-          setQuestions(newQuestions.slice(0, questionsPerPage));
-          if (setTotalQuestions) setTotalQuestions(newQuestions.length);
-          if (setCurrentPage) setCurrentPage(1);
+      // Save imported questions to backend using the import endpoint
+      if (unique.length > 0) {
+        try {
+          const token = localStorage.getItem('token');
+          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+          
+          // Get required parameters from localStorage
+          const courseId = localStorage.getItem('CourseID');
+          const categoryId = localStorage.getItem('questionCategoryId');
+          
+          console.log(' Saving imported questions to server...', {
+            questionsCount: unique.length,
+            courseId,
+            categoryId
+          });
+          
+          // Save each question individually to the questions endpoint
+          const savePromises = unique.map(async (question) => {
+            const payload = {
+              name: question.title,
+              questiontext: question.questionText,
+              qtype: question.qtype,
+              status: question.status || 'draft',
+              defaultmark: question.defaultMark || 1,
+              generalfeedback: question.generalFeedback || '',
+              penalty: question.penaltyFactor || 0,
+              tags: question.tags || [],
+              // Add category and course information if available
+              ...(categoryId && categoryId !== 'All' && { categoryid: categoryId }),
+              ...(courseId && { courseid: courseId }),
+              // Question type specific fields
+              ...(question.qtype === 'truefalse' && {
+                correctanswer: question.correctAnswer,
+                feedbacktrue: question.feedbackTrue || '',
+                feedbackfalse: question.feedbackFalse || ''
+              }),
+              ...(question.qtype === 'multichoice' && {
+                answers: question.choices || [],
+                single: !question.multipleAnswers,
+                shuffleanswers: question.shuffleAnswers ? 1 : 0,
+                answernumbering: question.numberChoices || '1, 2, 3, ...',
+                showstandardinstruction: question.showInstructions ? 1 : 0
+              })
+            };
+            
+            const response = await fetch(`${API_BASE_URL}/questions/create`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              },
+              body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.warn(`Failed to save question "${question.title}": ${response.status} - ${errorText}`);
+              
+              // If create endpoint doesn't work, try other common patterns
+              if (response.status === 404 || response.status === 405) {
+                console.log(`Trying alternative endpoint for question: ${question.title}`);
+                
+                // Try /api/questions/store (Laravel resource pattern)
+                const storeResponse = await fetch(`${API_BASE_URL}/questions/store`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                  },
+                  body: JSON.stringify(payload)
+                });
+                
+                if (storeResponse.ok) {
+                  return await storeResponse.json();
+                }
+                
+                // If still not working, log the available methods
+                console.error(`Both /questions/create and /questions/store failed for "${question.title}"`);
+              }
+              
+              return null;
+            }
+            
+            return await response.json();
+          });
+          
+          const savedQuestions = await Promise.all(savePromises);
+          const successfulSaves = savedQuestions.filter(q => q !== null);
+          
+          console.log(`Successfully saved ${successfulSaves.length} out of ${unique.length} questions to server`);
+          
+          // Update parent state for pagination with imported questions
+          if (handleFileUpload) {
+            await handleFileUpload(file, successfulSaves.length > 0 ? successfulSaves : unique);
+          }
+          
+          // Update local state
+          if (setQuestions && questions) {
+            const newQuestions = [...(successfulSaves.length > 0 ? successfulSaves : unique), ...questions];
+            setQuestions(newQuestions.slice(0, questionsPerPage));
+            if (setTotalQuestions) setTotalQuestions(newQuestions.length);
+            if (setCurrentPage) setCurrentPage(1);
+          }
+          
+          const statusMessage = successfulSaves.length === unique.length
+            ? `Import complete! Added ${unique.length} question(s) to server. ${duplicates.length} duplicate(s) skipped.`
+            : `Import partially successful! Added ${successfulSaves.length} out of ${unique.length} questions. ${unique.length - successfulSaves.length} failed. ${duplicates.length} duplicate(s) skipped.`;
+          
+          setImportStatus({
+            type: successfulSaves.length === unique.length ? 'success' : 'warning',
+            message: statusMessage
+          });
+          
+        } catch (saveError) {
+          console.error(' Failed to save questions to server:', saveError);
+          
+          // Fallback: Still update local state even if server saves failed
+          if (handleFileUpload) {
+            await handleFileUpload(file, unique);
+          }
+          
+          if (setQuestions && questions) {
+            const newQuestions = [...unique, ...questions];
+            setQuestions(newQuestions.slice(0, questionsPerPage));
+            if (setTotalQuestions) setTotalQuestions(newQuestions.length);
+            if (setCurrentPage) setCurrentPage(1);
+          }
+          
+          setImportStatus({
+            type: 'warning',
+            message: `Questions imported locally but failed to save to server: ${saveError.message}. Questions will disappear after page refresh.`
+          });
         }
-        setImportStatus({
-          type: 'success',
-          message: `Import complete! Added ${unique.length} question(s). ${duplicates.length} duplicate(s) skipped.`
-        });
       } else {
         setImportStatus({
-          type: 'success',
-          message: `File processed successfully! Found ${parsedQuestions.length} questions.`
+          type: 'warning',
+          message: `No new questions to import. ${duplicates.length} duplicate(s) found.`
         });
       }
     } catch (error) {
@@ -281,68 +488,22 @@ const TopButtonsRow = ({
           <label htmlFor="url_select" className="sr-only">
             Question bank tertiary navigation
           </label>
-          {/* <select
-            id="url_select"
-            className="block rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium shadow-sm focus:border-sky-500 focus:ring focus:ring-sky-200 focus:ring-opacity-100 min-w-[200px] transition-colors duration-200"
-            name="jump"
-            onChange={(e) => handleNavigation(e.target.value)}
-            value={currentView === 'questions' ? '/question/edit.php' : 
-                  currentView === 'categories' ? '/question/bank/managecategories/category.php' :
-                  currentView === 'export' ? '/question/bank/exportquestions/export.php' :
-                  '/question/edit.php'}
-          >
-            <option value="/question/edit.php">Questions</option>
-            <option value="/question/bank/managecategories/category.php">Categories</option>
-            <option value="/question/bank/importquestions/import.php">Import</option>
-            <option value="/question/bank/exportquestions/export.php">Export</option>
-          </select> */}
-
-          {/* Quick Categories Button - only show when not in categories view */}
-          {/* {currentView !== 'categories' && (
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-md bg-green-600 text-white px-3 py-2 text-sm font-medium shadow hover:bg-green-700 transition-colors duration-200"
-              onClick={() => handleNavigation('/question/bank/managecategories/category.php')}
-              title="Manage Categories"
-            >
-              <FolderOpen size={16} />
-              Categories
-            </button>
-          )} */}
         </div>
   
         {/* Main Actions */}
-                
         <div className="flex items-center gap-4 justify-start flex-1">
-          {/* Create new question - only show in questions view */}
-          
-        
-          {/* Open Categories Modal Button */}
-          {/* {(currentView === 'questions' || !currentView) && (
+          {/* Import from File Button - show in questions view */}
+          {(currentView === 'questions' || !currentView) && (
             <button
               type="button"
-              onClick={() => setShowCategoriesModal(true)}
-              className="inline-flex  items-center gap-2 rounded-md bg-sky-50 text-sky-700 border-r-3 border-sky-700 font-semibold  px-4 py-2   shadow hover:bg-gray-300 transition"
-            >
-             
-              Open Categories
-               <FolderOpen size={18} />
-            </button>
-            
-          )} */}
-        
-          {/* Import Button - show in questions view */}
-          {/* {(currentView === 'questions' || !currentView) && (
-            <button
-              type="button"
-              className="text-white inline-flex items-center gap-2 rounded-md bg-sky-600 text-black px-4 py-2 font-semibold shadow hover:bg-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-white inline-flex items-center gap-2 rounded-md bg-sky-600 px-4 py-2 font-semibold shadow hover:bg-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleImportClick}
               disabled={isImporting}
             >
               <Upload size={18} />
               {isImporting ? 'Importing...' : 'Import Questions'}
             </button>
-          )} */}
+          )}
         
           {/* Hidden file input */}
           <input
@@ -353,20 +514,21 @@ const TopButtonsRow = ({
             onChange={handleFileChange}
           />
         </div>
-     
       </div>
 
       {/* Status Message */}
-      {/* {importStatus && (
+      {importStatus && (
         <div
           className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-md shadow-lg flex items-center gap-2 text-white font-semibold transition-all duration-300
             ${importStatus.type === 'info' ? 'bg-blue-600' : ''}
             ${importStatus.type === 'success' ? 'bg-green-600' : ''}
+            ${importStatus.type === 'warning' ? 'bg-yellow-600' : ''}
             ${importStatus.type === 'error' ? 'bg-red-600' : ''}
           `}
         >
           {importStatus.type === 'info' && <AlertCircle size={20} />}
           {importStatus.type === 'success' && <CheckCircle size={20} />}
+          {importStatus.type === 'warning' && <AlertCircle size={20} />}
           {importStatus.type === 'error' && <AlertCircle size={20} />}
           <span>{importStatus.message}</span>
           <button 
@@ -376,7 +538,7 @@ const TopButtonsRow = ({
             ×
           </button>
         </div>
-      )} */}
+      )}
     </div>
   );
 };
