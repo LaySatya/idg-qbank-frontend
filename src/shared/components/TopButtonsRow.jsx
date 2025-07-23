@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { ChevronDown, Check, Upload, Plus, AlertCircle, CheckCircle, FolderOpen, ArrowLeft } from 'lucide-react';
+import { ChevronDown, Check, Upload, Plus, AlertCircle, CheckCircle, FolderOpen, ArrowLeft, Eye } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const TopButtonsRow = ({
   showQuestionsDropdown,
@@ -27,7 +28,6 @@ const TopButtonsRow = ({
   selectedCourseName
 }) => {
   const [isImporting, setIsImporting] = useState(false);
-  const [importStatus, setImportStatus] = useState(null);
   const fileInputRef = useRef(null);
 
   // Enhanced navigation handler
@@ -40,19 +40,17 @@ const TopButtonsRow = ({
     // Handle different navigation options
     if (value.includes('categories')) {
       if (setCurrentView) setCurrentView('categories');
-      setImportStatus({ type: 'info', message: 'Navigating to Categories...' });
+      // toast('Navigating to Categories...', { icon: '' });
       if (onNavigate) onNavigate('categories');
     } else if (value.includes('export')) {
       if (setCurrentView) setCurrentView('export');
-      setImportStatus({ type: 'info', message: 'Navigating to Export...' });
+      // toast('Navigating to Export...', { icon: '' });
       if (onNavigate) onNavigate('export');
     } else if (value.includes('edit')) {
       if (setCurrentView) setCurrentView('questions');
-      setImportStatus({ type: 'info', message: 'Navigating to Questions...' });
+      // toast('Navigating to Questions...', { icon: '' });
       if (onNavigate) onNavigate('questions');
     }
-    
-    setTimeout(() => setImportStatus(null), 2000);
   };
 
   // Create question modal
@@ -112,23 +110,17 @@ const TopButtonsRow = ({
             console.log(' Form URL:', data.import_form_url);
             
             // Show user what's happening
-            setImportStatus({ 
-              type: 'info', 
-              message: `Opening Moodle import form (Category: ${testCase.categoryid}, Context: ${testCase.contextid})...` 
-            });
+            // toast(`Opening Moodle import form (Category: ${testCase.categoryid}, Context: ${testCase.contextid})...`, { 
+            //   icon: '' 
+            // });
             
             // Open Moodle import form in new window/tab
             window.open(data.import_form_url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
             
             // Update status
             setTimeout(() => {
-              setImportStatus({ 
-                type: 'success', 
-                message: 'Import form opened! Upload your questions in the new window.' 
-              });
+              // toast.success('Import form opened! Upload your questions in the new window.');
             }, 1000);
-            
-            setTimeout(() => setImportStatus(null), 5000);
             
             return; // Success - stop trying other URLs
           }
@@ -144,11 +136,74 @@ const TopButtonsRow = ({
     
     // If all import URLs failed, fallback to local import
     console.log(' All import URLs failed. Falling back to local file import...');
-    setImportStatus({ 
-      type: 'warning', 
-      message: 'Could not connect to Moodle import. Using local import instead...' 
-    });
+    // toast('Could not connect to Moodle import. Using local import instead...', { 
+    //   icon: '' 
+    // });
     fileInputRef.current?.click();
+  };
+
+  // Preview all questions in category
+  const handlePreviewClick = async () => {
+    console.log('\n=== QUESTIONS PREVIEW ===');
+    
+    const token = localStorage.getItem('token');
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+    const categoryId = localStorage.getItem('questionCategoryId');
+    
+    console.log('Category ID for preview:', categoryId);
+    
+    if (!categoryId || categoryId === 'All') {
+      // toast('Please select a specific category to preview questions.', { 
+      //   icon: '' 
+      // });
+      return;
+    }
+    
+    try {
+      // Show loading status
+      // toast('Loading questions preview...', { 
+      //   icon: '' 
+      // });
+      
+      const previewUrl = `${API_BASE_URL}/questions/multi_preview?categoryid=${categoryId}`;
+      console.log('Preview URL:', previewUrl);
+      
+      const response = await fetch(previewUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log(' Preview response:', data);
+        
+        if (data.multi_preview_url) {
+          console.log(' Opening questions preview...');
+          console.log(' Preview URL:', data.multi_preview_url);
+          
+          // Open preview in new window
+          window.open(data.multi_preview_url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+          
+          toast.success('Questions preview opened in new window!');
+          
+        } else {
+          console.log('No preview URL received');
+          // toast('No questions available for preview in this category.', { 
+          //   icon: '' 
+          // });
+        }
+      } else {
+        const errorText = await response.text();
+        console.log(` Preview failed (${response.status}):`, errorText);
+        toast.error(`Failed to load preview: ${response.status}`);
+      }
+      
+    } catch (error) {
+      console.error(' Preview error:', error);
+      // toast.error('Error connecting to preview service.');
+    }
   };
 
   // Parse XML
@@ -282,14 +337,14 @@ const TopButtonsRow = ({
   // Handle file change and update pagination
   const handleFileChange = async (event) => {
     if (!event || !event.target || !event.target.files) {
-      setImportStatus({ type: 'error', message: 'No file selected or event is invalid.' });
+      // toast.error('No file selected or event is invalid.');
       return;
     }
     const file = event.target.files[0];
     if (!file) return;
 
     setIsImporting(true);
-    setImportStatus({ type: 'info', message: `Processing ${file.name}...` });
+    // toast(`Processing ${file.name}...`, { icon: '' });
 
     try {
       const fileContent = await file.text();
@@ -411,10 +466,11 @@ const TopButtonsRow = ({
             ? `Import complete! Added ${unique.length} question(s) to server. ${duplicates.length} duplicate(s) skipped.`
             : `Import partially successful! Added ${successfulSaves.length} out of ${unique.length} questions. ${unique.length - successfulSaves.length} failed. ${duplicates.length} duplicate(s) skipped.`;
           
-          setImportStatus({
-            type: successfulSaves.length === unique.length ? 'success' : 'warning',
-            message: statusMessage
-          });
+          if (successfulSaves.length === unique.length) {
+            toast.success(statusMessage);
+          } else {
+            toast(statusMessage, { icon: '⚠️' });
+          }
           
         } catch (saveError) {
           console.error(' Failed to save questions to server:', saveError);
@@ -431,22 +487,19 @@ const TopButtonsRow = ({
             if (setCurrentPage) setCurrentPage(1);
           }
           
-          setImportStatus({
-            type: 'warning',
-            message: `Questions imported locally but failed to save to server: ${saveError.message}. Questions will disappear after page refresh.`
-          });
+          // toast(`Questions imported locally but failed to save to server: ${saveError.message}. Questions will disappear after page refresh.`, { 
+          //   icon: '' 
+          // });
         }
       } else {
-        setImportStatus({
-          type: 'warning',
-          message: `No new questions to import. ${duplicates.length} duplicate(s) found.`
-        });
+        // toast(`No new questions to import. ${duplicates.length} duplicate(s) found.`, { 
+        //   icon: '' 
+        // });
       }
     } catch (error) {
-      setImportStatus({ type: 'error', message: `Import failed: ${error.message}` });
+      toast.error(`Import failed: ${error.message}`);
     } finally {
       setIsImporting(false);
-      setTimeout(() => setImportStatus(null), 5000);
     }
     event.target.value = '';
   };
@@ -494,15 +547,29 @@ const TopButtonsRow = ({
         <div className="flex items-center gap-4 justify-start flex-1">
           {/* Import from File Button - show in questions view */}
           {(currentView === 'questions' || !currentView) && (
-            <button
-              type="button"
-              className="text-white inline-flex items-center gap-2 rounded-md bg-sky-600 px-4 py-2 font-semibold shadow hover:bg-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleImportClick}
-              disabled={isImporting}
-            >
-              <Upload size={18} />
-              {isImporting ? 'Importing...' : 'Import Questions'}
-            </button>
+            <>
+              <button
+                type="button"
+                className="text-sky-600 border border-sky-600 inline-flex items-center gap-2 rounded-md bg-transparent px-4 py-2 font-semibold shadow hover:bg-sky-50 hover:text-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-sky-600"
+                onClick={handleImportClick}
+                disabled={isImporting}
+              >
+                
+                {isImporting ? 'Importing...' : 'Import Questions'}
+                <Upload size={18} />
+              </button>
+              
+              <button
+                type="button"
+                className="text-sky-600 border border-sky-600 inline-flex items-center gap-2 rounded-md bg-transparent px-4 py-2 font-semibold shadow hover:bg-purple-50 hover:text-purple-700 transition-colors duration-200"
+                onClick={handlePreviewClick}
+                title="Preview all questions in selected category"
+              >
+                
+                Preview Questions
+                <Eye size={18} />
+              </button>
+            </>
           )}
         
           {/* Hidden file input */}
@@ -515,30 +582,6 @@ const TopButtonsRow = ({
           />
         </div>
       </div>
-
-      {/* Status Message */}
-      {importStatus && (
-        <div
-          className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-md shadow-lg flex items-center gap-2 text-white font-semibold transition-all duration-300
-            ${importStatus.type === 'info' ? 'bg-blue-600' : ''}
-            ${importStatus.type === 'success' ? 'bg-green-600' : ''}
-            ${importStatus.type === 'warning' ? 'bg-yellow-600' : ''}
-            ${importStatus.type === 'error' ? 'bg-red-600' : ''}
-          `}
-        >
-          {importStatus.type === 'info' && <AlertCircle size={20} />}
-          {importStatus.type === 'success' && <CheckCircle size={20} />}
-          {importStatus.type === 'warning' && <AlertCircle size={20} />}
-          {importStatus.type === 'error' && <AlertCircle size={20} />}
-          <span>{importStatus.message}</span>
-          <button 
-            onClick={() => setImportStatus(null)}
-            className="ml-2 hover:bg-white/20 rounded p-1 transition-colors"
-          >
-            ×
-          </button>
-        </div>
-      )}
     </div>
   );
 };

@@ -32,7 +32,7 @@ import Modals from '../../../shared/components/Modals';
 import CategoriesComponent from '../../../shared/components/CategoriesComponent';
 import PaginationControls from '../../../shared/components/PaginationControls';
 import { EDIT_COMPONENTS, BULK_EDIT_COMPONENTS } from '../../../shared/constants/questionConstants';
-import { Toaster, toast } from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -692,7 +692,7 @@ const QuestionBank = () => {
     setCurrentPage(1);
 
     console.log(' Course switched successfully with cleared category filter');
-    toast.success(`Filtering questions for: ${courseName}`);
+    // toast.success(`Filtering questions for: ${courseName}`);
   }, [setFiltersWithLogging, setTagFilter, fetchQuestionCategoriesForCourse]);
 
   // Status change handlers
@@ -1237,8 +1237,6 @@ const QuestionBank = () => {
 
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">
-      <Toaster position="top-right" />
-
       {/* Performance indicator */}
       {loading && (
         <div className="fixed top-0 left-0 w-full h-1 bg-blue-200 z-50">
