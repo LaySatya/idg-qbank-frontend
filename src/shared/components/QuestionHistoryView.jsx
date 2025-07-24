@@ -15,7 +15,13 @@ import {
   Chip,
   IconButton
 } from '@mui/material';
-import { Close as CloseIcon, Warning as WarningIcon, Delete as DeleteIcon } from '@mui/icons-material';
+
+import { 
+  Close as CloseIcon, 
+  Warning as WarningIcon, 
+  Delete as DeleteIcon,
+  ArrowBackIos as ArrowBackIosIcon 
+} from '@mui/icons-material';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -203,17 +209,17 @@ const QuestionHistoryView = ({
   return (
     <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 bg-gray-50">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <button 
             onClick={onBack}
-            className="flex items-center justify-center w-10 h-10 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+            className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors flex-shrink-0"
           >
-            <i className="fas fa-arrow-left"></i>
+            <ArrowBackIosIcon className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Question History</h3>
-            <p className="text-sm text-blue-600">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">Question History</h3>
+            <p className="text-xs sm:text-sm text-blue-600 truncate">
               {question?.name || question?.title} (ID: {question?.id})
             </p>
           </div>
@@ -224,82 +230,223 @@ const QuestionHistoryView = ({
       <div className="p-0">
         {/* Loading State */}
         {loading && (
-          <div className="flex items-center justify-center py-12">
+          <div className="flex items-center justify-center py-8 sm:py-12">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading history...</p>
+              <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-sm sm:text-base text-gray-600">Loading history...</p>
             </div>
           </div>
         )}
 
         {/* Error State */}
         {error && (
-          <div className="p-4">
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <div className="p-3 sm:p-4">
+            <div className="bg-red-100 border border-red-400 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded text-sm">
               Error loading history: {error}
             </div>
           </div>
         )}
 
-        {/* History Table */}
+        {/* History Table - Desktop */}
         {historyData && historyData.versions && (
-          <div className="overflow-x-auto">
-            <table className="w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Version
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[300px]">
-                    <div>
-                      <div className="font-semibold">Question</div>
-                      <div className="text-xs text-gray-400">Question name / ID number</div>
-                    </div>
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                    Comments
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                    Version
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                    Usage
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-                    Last used
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
-                    <div>
-                      <div className="font-semibold">Created by</div>
-                      <div className="text-xs text-gray-400">First name / Last name / Date</div>
-                    </div>
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
-                    <div>
-                      <div className="font-semibold">Modified by</div>
-                      <div className="text-xs text-gray-400">First name / Last name / Date</div>
-                    </div>
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
-                    Type
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+          <>
+            {/* Desktop Table View - Hidden on mobile */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Version
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[300px]">
+                      <div>
+                        <div className="font-semibold">Question</div>
+                        <div className="text-xs text-gray-400">Question name / ID number</div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                      Comments
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                      Version
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                      Usage
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                      Last used
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
+                      <div>
+                        <div className="font-semibold">Created by</div>
+                        <div className="text-xs text-gray-400">First name / Last name / Date</div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
+                      <div>
+                        <div className="font-semibold">Modified by</div>
+                        <div className="text-xs text-gray-400">First name / Last name / Date</div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                      Type
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {historyData.versions.map((version, index) => (
+                    <tr 
+                      key={version.id} 
+                      className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                    >
+                      {/* Version Badge */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-1">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            v{version.version}
+                          </span>
+                          {version.version === latestVersionNumber && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Current
+                            </span>
+                          )}
+                          {version.version === 1 && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              Original
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      
+                      {/* Question text and content */}
+                      <td className="px-4 py-4">
+                        <div className="flex flex-col">
+                          <div className="mb-2">
+                            <div className="font-medium text-gray-900">
+                              {version.name || '(No title)'}
+                            </div>
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 mt-1">
+                              ID {version.questionid}
+                            </span>
+                          </div>
+                          {version.questiontext && (
+                            <div 
+                              className="text-sm text-gray-600 line-clamp-2"
+                              dangerouslySetInnerHTML={{ __html: version.questiontext }}
+                            />
+                          )}
+                        </div>
+                      </td>
+                      
+                      {/* Status Column */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          version.status === 'ready' ? 'bg-green-100 text-green-800' : 
+                          version.status === 'draft' ? 'bg-yellow-100 text-yellow-800' : 
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {version.status}
+                        </span>
+                      </td>
+                      
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800 cursor-pointer">
+                        0
+                      </td>
+                      
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                        v{version.version}
+                      </td>
+                      
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800 cursor-pointer">
+                        0
+                      </td>
+                      
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                        Never
+                      </td>
+                      
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {version.createdbyuser ? 
+                            `${version.createdbyuser.firstname} ${version.createdbyuser.lastname}` : 
+                            `User ${version.createdby}`
+                          }
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {formatDate(version.timecreated)}
+                        </div>
+                      </td>
+                      
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {version.modifiedbyuser ? 
+                            `${version.modifiedbyuser.firstname} ${version.modifiedbyuser.lastname}` : 
+                            `User ${version.modifiedby}`
+                          }
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {formatDate(version.timemodified)}
+                        </div>
+                      </td>
+                      
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="flex justify-center">
+                          {getQuestionTypeIcon(version.qtype)}
+                        </div>
+                      </td>
+                      
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <button 
+                            className="text-blue-600 hover:text-blue-800 text-sm"
+                            onClick={() => handlePreviewVersion(version)}
+                          >
+                            Preview
+                          </button>
+                          <span className="text-gray-300">|</span>
+                          <button 
+                            className="text-green-600 hover:text-green-800 text-sm"
+                            onClick={() => handleRevertToVersion(version)}
+                          >
+                            Revert
+                          </button>
+                          <span className="text-gray-300">|</span>
+                          <button 
+                            className="text-red-600 hover:text-red-800 text-sm"
+                            onClick={() => handleDeleteVersion(version)}
+                            disabled={deletingVersions.has(version.questionid)}
+                          >
+                            {deletingVersions.has(version.questionid) ? (
+                              <span className="flex items-center gap-1">
+                                <div className="w-3 h-3 border border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                                Deleting...
+                              </span>
+                            ) : (
+                              'Delete'
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View - Visible on mobile and tablet */}
+            <div className="lg:hidden">
+              <div className="divide-y divide-gray-200">
                 {historyData.versions.map((version, index) => (
-                  <tr 
-                    key={version.id} 
-                    className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
-                  >
-                    {/* Version Badge */}
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-1">
+                  <div key={version.id} className="p-4 bg-white hover:bg-gray-50 transition-colors">
+                    {/* Mobile Card Header */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           v{version.version}
                         </span>
@@ -314,128 +461,104 @@ const QuestionHistoryView = ({
                           </span>
                         )}
                       </div>
-                    </td>
-                    
-                    {/* Question text and content */}
-                    <td className="px-4 py-4">
-                      <div className="flex flex-col">
-                        <div className="mb-2">
-                          <div className="font-medium text-gray-900">
-                            {version.name || '(No title)'}
-                          </div>
-                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 mt-1">
-                            ID {version.questionid}
-                          </span>
-                        </div>
-                        {version.questiontext && (
-                          <div 
-                            className="text-sm text-gray-600 line-clamp-2"
-                            dangerouslySetInnerHTML={{ __html: version.questiontext }}
-                          />
-                        )}
-                      </div>
-                    </td>
-                    
-                    {/* Status Column */}
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        version.status === 'ready' ? 'bg-green-100 text-green-800' : 
-                        version.status === 'draft' ? 'bg-yellow-100 text-yellow-800' : 
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {version.status}
-                      </span>
-                    </td>
-                    
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800 cursor-pointer">
-                      0
-                    </td>
-                    
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      v{version.version}
-                    </td>
-                    
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800 cursor-pointer">
-                      0
-                    </td>
-                    
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      Never
-                    </td>
-                    
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {version.createdbyuser ? 
-                          `${version.createdbyuser.firstname} ${version.createdbyuser.lastname}` : 
-                          `User ${version.createdby}`
-                        }
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {formatDate(version.timecreated)}
-                      </div>
-                    </td>
-                    
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {version.modifiedbyuser ? 
-                          `${version.modifiedbyuser.firstname} ${version.modifiedbyuser.lastname}` : 
-                          `User ${version.modifiedby}`
-                        }
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {formatDate(version.timemodified)}
-                      </div>
-                    </td>
-                    
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="flex justify-center">
+                      <div className="flex items-center gap-1">
                         {getQuestionTypeIcon(version.qtype)}
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ml-2 ${
+                          version.status === 'ready' ? 'bg-green-100 text-green-800' : 
+                          version.status === 'draft' ? 'bg-yellow-100 text-yellow-800' : 
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {version.status}
+                        </span>
                       </div>
-                    </td>
-                    
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <button 
-                          className="text-blue-600 hover:text-blue-800 text-sm"
-                          onClick={() => handlePreviewVersion(version)}
-                        >
-                          Preview
-                        </button>
-                        <span className="text-gray-300">|</span>
-                        <button 
-                          className="text-green-600 hover:text-green-800 text-sm"
-                          onClick={() => handleRevertToVersion(version)}
-                        >
-                          Revert
-                        </button>
-                        <span className="text-gray-300">|</span>
-                        <button 
-                          className="text-red-600 hover:text-red-800 text-sm"
-                          onClick={() => handleDeleteVersion(version)}
-                          disabled={deletingVersions.has(version.questionid)}
-                        >
-                          {deletingVersions.has(version.questionid) ? (
-                            <span className="flex items-center gap-1">
-                              <div className="w-3 h-3 border border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                              Deleting...
-                            </span>
-                          ) : (
-                            'Delete'
-                          )}
-                        </button>
+                    </div>
+
+                    {/* Question Info */}
+                    <div className="mb-3">
+                      <div className="font-medium text-gray-900 mb-1">
+                        {version.name || '(No title)'}
                       </div>
-                    </td>
-                  </tr>
+                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                        ID {version.questionid}
+                      </span>
+                      {version.questiontext && (
+                        <div 
+                          className="text-sm text-gray-600 mt-2 line-clamp-3"
+                          dangerouslySetInnerHTML={{ __html: version.questiontext }}
+                        />
+                      )}
+                    </div>
+
+                    {/* Mobile Details Grid */}
+                    <div className="grid grid-cols-2 gap-3 text-xs mb-3">
+                      <div>
+                        <span className="text-gray-500 block">Created by</span>
+                        <span className="text-gray-900 font-medium">
+                          {version.createdbyuser ? 
+                            `${version.createdbyuser.firstname} ${version.createdbyuser.lastname}` : 
+                            `User ${version.createdby}`
+                          }
+                        </span>
+                        <span className="text-gray-500 block text-xs">
+                          {formatDate(version.timecreated)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block">Modified by</span>
+                        <span className="text-gray-900 font-medium">
+                          {version.modifiedbyuser ? 
+                            `${version.modifiedbyuser.firstname} ${version.modifiedbyuser.lastname}` : 
+                            `User ${version.modifiedby}`
+                          }
+                        </span>
+                        <span className="text-gray-500 block text-xs">
+                          {formatDate(version.timemodified)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Mobile Action Buttons */}
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                      <button 
+                        className="flex-1 sm:flex-none px-3 py-2 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+                        onClick={() => handlePreviewVersion(version)}
+                      >
+                        Preview
+                      </button>
+                      <button 
+                        className="flex-1 sm:flex-none px-3 py-2 text-xs bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors"
+                        onClick={() => handleRevertToVersion(version)}
+                      >
+                        Revert
+                      </button>
+                      <button 
+                        className="flex-1 sm:flex-none px-3 py-2 text-xs bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50"
+                        onClick={() => handleDeleteVersion(version)}
+                        disabled={deletingVersions.has(version.questionid)}
+                      >
+                        {deletingVersions.has(version.questionid) ? (
+                          <span className="flex items-center justify-center gap-1">
+                            <div className="w-3 h-3 border border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                            Deleting...
+                          </span>
+                        ) : (
+                          'Delete'
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </div>
+          </>
         )}
 
         {/* No History */}
         {historyData && (!historyData.versions || historyData.versions.length === 0) && (
-          <div className="flex items-center justify-center py-12 text-gray-500">
-            <p>No version history found.</p>
+          <div className="flex items-center justify-center py-8 sm:py-12 text-gray-500">
+            <div className="text-center">
+              <p className="text-sm sm:text-base">No version history found.</p>
+            </div>
           </div>
         )}
       </div>

@@ -769,6 +769,52 @@ processImageURLs(htmlContent) {
     }
   },
 
+  // Get course categories - NEW METHOD
+  async getCourseCategories() {
+    try {
+      console.log(' Fetching course categories');
+      
+      const response = await fetch(`${API_BASE_URL}/questions/course-categories`, {
+        method: 'GET',
+        headers: getAuthHeaders()
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(' Course categories response:', data);
+      
+      return {
+        data: Array.isArray(data) ? data : (data.categories || data.data || [])
+      };
+      
+    } catch (error) {
+      console.error(' Error fetching course categories:', error);
+      throw error;
+    }
+  },
+
+  // Get question overview - NEW METHOD
+  async getQuestionOverview(categoryId) {
+    try {
+      console.log(' Fetching question overview for category:', categoryId);
+      
+      const response = await fetch(`${API_BASE_URL}/questions/overview?categoryid=${categoryId}`, {
+        method: 'GET',
+        headers: getAuthHeaders()
+      });
+      
+      const data = await handleAPIResponse(response);
+      console.log(' Question overview response:', data);
+      
+      return {
+        data: data
+      };
+      
+    } catch (error) {
+      console.error(' Error fetching question overview:', error);
+      throw error;
+    }
+  },
+
   // Get question categories for course - Fixed URL
   async getQuestionCategories(courseId) {
     try {
@@ -793,15 +839,18 @@ processImageURLs(htmlContent) {
         categories = data.data;
       }
 
-      return categories.map(cat => ({
-        id: cat.id || cat.categoryid,
-        name: cat.name || cat.category_name || `Category ${cat.id}`,
-        info: cat.info || cat.description || '',
-        parent: cat.parent || 0,
-        contextid: cat.contextid || cat.context_id,
-        sortorder: cat.sortorder || 0,
-        questioncount: cat.questioncount || 0
-      })).filter(cat => cat.id);
+      return {
+        data: categories.map(cat => ({
+          id: cat.id || cat.categoryid,
+          name: cat.name || cat.category_name || `Category ${cat.id}`,
+          info: cat.info || cat.description || '',
+          parent: cat.parent || 0,
+          contextid: cat.contextid || cat.context_id,
+          sortorder: cat.sortorder || 0,
+          questioncount: cat.questioncount || 0,
+          children: cat.children || []
+        })).filter(cat => cat.id)
+      };
       
     } catch (error) {
       console.error(' Error fetching question categories:', error);
@@ -828,12 +877,12 @@ processImageURLs(htmlContent) {
       
       // Handle different response formats
       if (data && data.courses && Array.isArray(data.courses)) {
-        return data.courses;
+        return { data: data.courses };
       } else if (Array.isArray(data)) {
-        return data;
+        return { data: data };
       } else {
         console.warn('Unexpected courses response format:', data);
-        return [];
+        return { data: [] };
       }
     } catch (error) {
       console.error(' Error fetching courses:', error);

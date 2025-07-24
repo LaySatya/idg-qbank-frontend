@@ -22,10 +22,6 @@ import {
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import DownloadIcon from '@mui/icons-material/Download';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import BarChartIcon from '@mui/icons-material/BarChart';
 import TagIcon from '@mui/icons-material/Tag';
 import SettingsIcon from '@mui/icons-material/Settings';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -33,6 +29,7 @@ import WarningIcon from '@mui/icons-material/Warning';
 import GroupIcon from '@mui/icons-material/Group';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
 import { toast } from 'react-hot-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -51,10 +48,6 @@ const BulkActionsRow = ({
   const [anchorEl, setAnchorEl] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
-  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [showStatisticsModal, setShowStatisticsModal] = useState(false);
   const [showConfirmAddModal, setShowConfirmAddModal] = useState(false);
   const [pendingTagOperation, setPendingTagOperation] = useState(null);
 
@@ -677,14 +670,6 @@ const handleConfirmRemoveTag = async () => {
         setShowStatusModal(true); break;
       case 'tags':
         setShowTagModal(true); break;
-      case 'duplicate':
-        setShowDuplicateModal(true); break;
-      case 'export':
-        setShowExportModal(true); break;
-      case 'preview':
-        setShowPreviewModal(true); break;
-      case 'statistics':
-        setShowStatisticsModal(true); break;
       default: break;
     }
   };
@@ -693,7 +678,7 @@ const handleConfirmRemoveTag = async () => {
 
   return (
     <>
-      <Paper elevation={1} sx={{ mb: 2, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Paper elevation={1} sx={{ mb: 2, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
         {/* Selection Info */}
         <Stack direction="row" alignItems="center" spacing={2}>
           <GroupIcon color="primary" />
@@ -706,21 +691,12 @@ const handleConfirmRemoveTag = async () => {
         </Stack>
         {/* Actions */}
         <Stack direction="row" spacing={2}>
-          {/* <Button
-            variant="outlined"
-            // startIcon={<EditIcon />}
-            onClick={() => setShowBulkEditModal(true)}
-          >
-            Bulk Edit
-            {<EditIcon />}
-          </Button> */}
            <Button
             variant="outlined"
-            
             onClick={handleMenuClick}
           >
             Actions
-            {<MoreVertIcon />}
+            <MoreVertIcon />
           </Button>
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
             <MenuItem onClick={() => handleAction('status')}>
@@ -729,29 +705,14 @@ const handleConfirmRemoveTag = async () => {
             <MenuItem onClick={() => handleAction('tags')}>
               <TagIcon sx={{ mr: 1 }} /> Manage Tags
             </MenuItem>
-            <MenuItem onClick={() => handleAction('duplicate')}>
-              <ContentCopyIcon sx={{ mr: 1 }} /> Duplicate Questions
-            </MenuItem>
-            <MenuItem onClick={() => handleAction('export')}>
-              <DownloadIcon sx={{ mr: 1 }} /> Export to XML
-            </MenuItem>
-            <MenuItem onClick={() => handleAction('preview')}>
-              <VisibilityIcon sx={{ mr: 1 }} /> Preview Questions
-            </MenuItem>
-            <MenuItem onClick={() => handleAction('statistics')}>
-              <BarChartIcon sx={{ mr: 1 }} /> View Statistics
-            </MenuItem>
           </Menu>
           <Button
             variant="contained"
             color="error"
-             onClick={onBulkDelete}
-            >
-              Delete
-            {<DeleteIcon />}
-           
-          
-            
+            onClick={onBulkDelete}
+          >
+            Delete
+            <DeleteIcon />
           </Button>
         </Stack>
       </Paper>
@@ -794,281 +755,393 @@ const handleConfirmRemoveTag = async () => {
       </Dialog>
 
       {/* Tag Management Modal - Enhanced with MUI styling */}
-      <Dialog open={showTagModal} onClose={() => setShowTagModal(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <TagIcon color="primary" />
-            <Typography variant="h6">Manage Tags</Typography>
+      <Dialog 
+        open={showTagModal} 
+        onClose={() => setShowTagModal(false)} 
+        maxWidth="md" 
+        fullWidth
+        sx={{
+          '& .MuiDialog-container': {
+            alignItems: 'flex-start',
+            paddingTop: '80px'
+          }
+        }}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+            overflow: 'hidden',
+            border: '1px solid #e5e7eb'
+          }
+        }}
+      >
+        {/* Minimal Header */}
+        <DialogTitle 
+          sx={{ 
+            backgroundColor: '#f9fafb',
+            borderBottom: '1px solid #e5e7eb',
+            color: '#111827',
+            p: 3
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 2,
+                  backgroundColor: '#e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <TagIcon sx={{ fontSize: 20, color: '#6b7280' }} />
+              </Box>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', mb: 0.5 }}>
+                  Manage Tags
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                  {selectedQuestions.length} question{selectedQuestions.length !== 1 ? 's' : ''} selected
+                </Typography>
+              </Box>
+            </Box>
+            <IconButton
+              onClick={() => setShowTagModal(false)}
+              sx={{
+                color: '#6b7280',
+                backgroundColor: 'transparent',
+                '&:hover': {
+                  backgroundColor: '#e5e7eb',
+                  color: '#374151'
+                },
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" sx={{ mb: 3 }}>
-            Add or remove tags for <strong>{selectedQuestions.length}</strong> selected question{selectedQuestions.length !== 1 ? 's' : ''}
-          </Typography>
-          
-          {/* Common Tags Section */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
-              Common tags for all selected questions:
+        {/* Main Content */}
+        <DialogContent sx={{ p: 0 }}>
+          {/* Info Bar */}
+          <Box 
+            sx={{ 
+              backgroundColor: 'white',
+              borderBottom: '1px solid #e5e7eb',
+              p: 3
+            }}
+          >
+            <Typography variant="body2" color="#6b7280">
+              Add or remove tags for selected questions
             </Typography>
-            {commonTags.length > 0 ? (
-              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-                {commonTags.map(tag => (
-                  <Chip
-                    key={tag.id}
-                    label={tag.name}
-                    color="primary"
-                    variant="filled"
-                    onDelete={() => handleRemoveTag(tag.id)}
-                    deleteIcon={<DeleteIcon />}
+          </Box>
+
+          <Box sx={{ p: 4 }}>
+            {/* Common Tags Section */}
+            <Box sx={{ mb: 4 }}>
+              <Typography 
+                variant="subtitle1" 
+                sx={{ 
+                  mb: 2,
+                  fontWeight: 600,
+                  color: '#111827'
+                }}
+              >
+                Common Tags
+              </Typography>
+              
+              {commonTags.length > 0 ? (
+                <Box 
+                  sx={{ 
+                    p: 3,
+                    backgroundColor: '#f9fafb',
+                    borderRadius: 1,
+                    border: '1px solid #e5e7eb'
+                  }}
+                >
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                    {commonTags.map(tag => (
+                      <Chip
+                        key={tag.id}
+                        label={tag.name}
+                        onDelete={() => handleRemoveTag(tag.id)}
+                        deleteIcon={<DeleteIcon />}
+                        sx={{
+                          backgroundColor: '#e5e7eb',
+                          color: '#374151',
+                          fontSize: '0.875rem',
+                          height: '32px',
+                          borderRadius: '6px',
+                          '& .MuiChip-label': {
+                            fontWeight: 500,
+                            px: 1.5
+                          },
+                          '& .MuiChip-deleteIcon': {
+                            color: '#6b7280',
+                            fontSize: '18px',
+                            '&:hover': {
+                              color: '#374151',
+                              backgroundColor: '#d1d5db',
+                              borderRadius: '50%'
+                            }
+                          },
+                          '&:hover': {
+                            backgroundColor: '#d1d5db'
+                          },
+                          transition: 'all 0.2s ease'
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                </Box>
+              ) : (
+                <Box 
+                  sx={{ 
+                    p: 3,
+                    backgroundColor: '#f9fafb',
+                    borderRadius: 1,
+                    border: '1px dashed #d1d5db',
+                    textAlign: 'center'
+                  }}
+                >
+                  <Typography variant="body2" color="#6b7280" sx={{ fontStyle: 'italic' }}>
+                    No common tags found for all selected questions
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+            
+            {/* Add Tags Section */}
+            <Box>
+              <Typography 
+                variant="subtitle1" 
+                sx={{ 
+                  mb: 2,
+                  fontWeight: 600,
+                  color: '#111827'
+                }}
+              >
+                Add Tags
+              </Typography>
+              
+              <Typography variant="body2" color="#6b7280" sx={{ mb: 3 }}>
+                Search existing tags or create new ones
+              </Typography>
+            
+              <Autocomplete
+                multiple
+                freeSolo
+                options={filteredAvailableOptions}
+                value={selectedTagsToAdd}
+                onChange={handleTagAutocompleteChange}
+                getOptionLabel={(option) => {
+                  if (typeof option === 'string') {
+                    return option;
+                  }
+                  return option.label || '';
+                }}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => {
+                    const { key, ...tagProps } = getTagProps({ index });
+                    const isNewTag = typeof option === 'string' || !option.value;
+                    return (
+                      <Chip
+                        key={typeof option === 'string' ? option : option.value}
+                        label={typeof option === 'string' ? option : option.label}
+                        {...tagProps}
+                        sx={{
+                          m: 0.5,
+                          height: '28px',
+                          fontSize: '0.8rem',
+                          backgroundColor: isNewTag ? '#111827' : '#e5e7eb',
+                          color: isNewTag ? 'white' : '#374151',
+                          borderRadius: '6px',
+                          '& .MuiChip-label': {
+                            fontWeight: 500,
+                            px: 1
+                          },
+                          '& .MuiChip-deleteIcon': {
+                            color: isNewTag ? 'rgba(255,255,255,0.7)' : '#6b7280',
+                            '&:hover': {
+                              color: isNewTag ? 'white' : '#374151'
+                            }
+                          }
+                        }}
+                      />
+                    );
+                  })
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="Search or create tags..."
+                    variant="outlined"
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon sx={{ color: '#9ca3af', fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <>
+                          {creatingTag && <CircularProgress size={20} />}
+                          {params.InputProps.endAdornment}
+                        </>
+                      )
+                    }}
                     sx={{
-                      backgroundColor: '#e3f2fd',
-                      color: '#1976d2',
-                      '& .MuiChip-deleteIcon': {
-                        color: '#d32f2f',
-                        '&:hover': {
-                          color: '#b71c1c'
+                      '& .MuiOutlinedInput-root': {
+                        minHeight: '48px',
+                        fontSize: '0.875rem',
+                        borderRadius: '6px',
+                        backgroundColor: 'white',
+                        '& fieldset': {
+                          borderColor: '#d1d5db'
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#9ca3af'
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#6b7280',
+                          borderWidth: '1px'
                         }
                       }
                     }}
                   />
-                ))}
-              </Stack>
-            ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                No common tags found for all selected questions.
-              </Typography>
-            )}
-          </Box>
-          
-          {/* Add Tags Section */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
-              Search and add tags (tags will be added automatically when selected):
-            </Typography>
-            
-            <Autocomplete
-              multiple
-              freeSolo // Enable new tag creation
-              options={filteredAvailableOptions}
-              value={selectedTagsToAdd}
-              onChange={handleTagAutocompleteChange}
-              getOptionLabel={(option) => {
-                if (typeof option === 'string') {
-                  return option;
-                }
-                return option.label || '';
-              }}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => {
-                  const { key, ...tagProps } = getTagProps({ index });
-                  const isNewTag = typeof option === 'string' || !option.value;
+                )}
+                renderOption={(props, option, { inputValue }) => {
+                  const { key, ...otherProps } = props;
+                  const isCreateOption = option.isCreateOption || false;
+                  
                   return (
-                    <Chip
-                      key={typeof option === 'string' ? option : option.value}
-                      label={typeof option === 'string' ? option : option.label}
-                      {...tagProps}
-                      color={isNewTag ? "success" : "secondary"}
-                      variant={isNewTag ? "filled" : "outlined"}
-                      size="small"
-                      icon={isNewTag ? <AddIcon /> : <TagIcon />}
-                      sx={{
-                        m: 0.5,
-                        '& .MuiChip-icon': {
-                          color: isNewTag ? '#fff' : 'inherit'
-                        }
-                      }}
-                    />
-                  );
-                })
-              }
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder="Search and select tags (auto-added) or type new tag names..."
-                  variant="outlined"
-                  size="small"
-                  InputProps={{
-                    ...params.InputProps,
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon color="action" />
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <>
-                        {creatingTag && <CircularProgress size={20} />}
-                        {params.InputProps.endAdornment}
-                      </>
-                    )
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '&:hover fieldset': {
-                        borderColor: '#1976d2',
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: '#1976d2',
-                      }
-                    }
-                  }}
-                />
-              )}
-              renderOption={(props, option, { inputValue }) => {
-                const { key, ...otherProps } = props;
-                const isCreateOption = option.isCreateOption || false;
-                
-                return (
-                  <li key={key} {...otherProps}>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 1,
-                      width: '100%',
-                      py: 0.5
-                    }}>
-                      {isCreateOption ? (
-                        <>
-                          <AddIcon fontSize="small" color="success" />
-                          <Typography variant="body2" sx={{ fontWeight: 500, color: '#2e7d32' }}>
+                    <li key={key} {...otherProps}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 2,
+                        width: '100%',
+                        py: 1,
+                        px: 1
+                      }}>
+                        <Box
+                          sx={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '4px',
+                            backgroundColor: isCreateOption ? '#111827' : '#e5e7eb',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          {isCreateOption ? (
+                            <AddIcon fontSize="small" sx={{ color: 'white' }} />
+                          ) : (
+                            <TagIcon fontSize="small" sx={{ color: '#6b7280' }} />
+                          )}
+                        </Box>
+                        <Box sx={{ flex: 1 }}>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontWeight: 500,
+                              color: '#374151'
+                            }}
+                          >
                             {option.label}
                           </Typography>
-                        </>
-                      ) : (
-                        <>
-                          <TagIcon fontSize="small" color="action" />
-                          <Typography variant="body2">{option.label}</Typography>
-                        </>
-                      )}
-                    </Box>
-                  </li>
-                );
-              }}
-              filterOptions={(options, { inputValue }) => {
-                const filtered = options.filter(option =>
-                  option.label.toLowerCase().includes(inputValue.toLowerCase())
-                );
-                
-                // Add create option if inputValue doesn't match any existing tag
-                if (inputValue && !filtered.some(option => 
-                  option.label.toLowerCase() === inputValue.toLowerCase()
-                )) {
-                  filtered.push({
-                    label: `Create "${inputValue}"`,
-                    value: `create_${inputValue}`,
-                    inputValue: inputValue,
-                    isCreateOption: true
-                  });
-                }
-                
-                return filtered;
-              }}
-              loading={loadingTags}
-              loadingText="Loading tags..."
-              noOptionsText="Type to create a new tag..."
-              sx={{ mb: 2 }}
-            />
+                          <Typography variant="caption" sx={{ color: '#9ca3af' }}>
+                            {isCreateOption ? 'Create new' : 'Existing'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </li>
+                  );
+                }}
+                filterOptions={(options, { inputValue }) => {
+                  const filtered = options.filter(option =>
+                    option.label.toLowerCase().includes(inputValue.toLowerCase())
+                  );
+                  
+                  if (inputValue && !filtered.some(option => 
+                    option.label.toLowerCase() === inputValue.toLowerCase()
+                  )) {
+                    filtered.push({
+                      label: `Create "${inputValue}"`,
+                      value: `create_${inputValue}`,
+                      inputValue: inputValue,
+                      isCreateOption: true
+                    });
+                  }
+                  
+                  return filtered;
+                }}
+                loading={loadingTags}
+                loadingText="Loading tags..."
+                noOptionsText="Type to create a new tag..."
+                sx={{ mb: 2 }}
+              />
+            </Box>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setShowTagModal(false)} color="inherit">
+        {/* Minimal Footer */}
+        <DialogActions 
+          sx={{ 
+            backgroundColor: '#f9fafb',
+            borderTop: '1px solid #e5e7eb',
+            p: 3,
+            gap: 2,
+            justifyContent: 'flex-end'
+          }}
+        >
+          <Button 
+            onClick={() => setShowTagModal(false)} 
+            variant="outlined"
+            sx={{ 
+              px: 3,
+              py: 1,
+              borderRadius: '6px',
+              textTransform: 'none',
+              fontWeight: 500,
+              borderColor: '#d1d5db',
+              color: '#6b7280',
+              backgroundColor: 'white',
+              '&:hover': {
+                borderColor: '#9ca3af',
+                backgroundColor: '#f9fafb',
+                color: '#374151'
+              }
+            }}
+          >
             Cancel
           </Button>
           <Button 
             variant="contained" 
             onClick={() => setShowTagModal(false)}
-            color="primary"
+            sx={{ 
+              px: 3,
+              py: 1,
+              borderRadius: '6px',
+              textTransform: 'none',
+              fontWeight: 500,
+              backgroundColor: '#111827',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: '#000000'
+              },
+              transition: 'all 0.2s ease'
+            }}
           >
             Done
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Duplicate Modal */}
-      <Dialog open={showDuplicateModal} onClose={() => setShowDuplicateModal(false)}>
-        <DialogTitle>Duplicate Questions</DialogTitle>
-        <DialogContent>
-          <Typography>
-            This will create copies of {selectedQuestions.length} selected question{selectedQuestions.length !== 1 ? 's' : ''}. Are you sure you want to continue?
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowDuplicateModal(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setShowDuplicateModal(false)}>Duplicate</Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Export Modal */}
-      <Dialog open={showExportModal} onClose={() => setShowExportModal(false)}>
-        <DialogTitle>Export to XML</DialogTitle>
-        <DialogContent>
-          <Typography mb={2}>
-            Export {selectedQuestions.length} selected question{selectedQuestions.length !== 1 ? 's' : ''} to XML format.
-          </Typography>
-          <Stack spacing={1}>
-            <Box display="flex" alignItems="center">
-              <Checkbox defaultChecked />
-              <Typography>Include question text</Typography>
-            </Box>
-            <Box display="flex" alignItems="center">
-              <Checkbox defaultChecked />
-              <Typography>Include answer choices</Typography>
-            </Box>
-            <Box display="flex" alignItems="center">
-              <Checkbox />
-              <Typography>Include explanations</Typography>
-            </Box>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowExportModal(false)}>Cancel</Button>
-          <Button variant="contained" color="success" onClick={() => setShowExportModal(false)}>Download XML</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Preview Modal */}
-      <Dialog open={showPreviewModal} onClose={() => setShowPreviewModal(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Preview Questions</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Previewing {selectedQuestions.length} selected question{selectedQuestions.length !== 1 ? 's' : ''}
-          </Typography>
-          <Box mt={2} sx={{ maxHeight: 300, overflowY: 'auto' }}>
-            <Typography color="text.secondary">Question preview content will be displayed here...</Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowPreviewModal(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Statistics Modal */}
-      <Dialog open={showStatisticsModal} onClose={() => setShowStatisticsModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Question Statistics</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} mt={1}>
-            <Box display="flex" justifyContent="space-between">
-              <Typography color="text.secondary">Total Questions:</Typography>
-              <Typography fontWeight="medium">{selectedQuestions.length}</Typography>
-            </Box>
-            <Box display="flex" justifyContent="space-between">
-              <Typography color="text.secondary">Draft Status:</Typography>
-              <Typography fontWeight="medium">-</Typography>
-            </Box>
-            <Box display="flex" justifyContent="space-between">
-              <Typography color="text.secondary">Ready Status:</Typography>
-              <Typography fontWeight="medium">-</Typography>
-            </Box>
-            <Box display="flex" justifyContent="space-between">
-              <Typography color="text.secondary">Average Tags:</Typography>
-              <Typography fontWeight="medium">-</Typography>
-            </Box>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowStatisticsModal(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Confirmation Modal for Tag Operations */}
       <Dialog open={showConfirmAddModal} onClose={() => setShowConfirmAddModal(false)} maxWidth="sm" fullWidth>

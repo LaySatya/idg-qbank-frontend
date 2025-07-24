@@ -12,6 +12,7 @@ import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import Chip from '@mui/material/Chip';
 import Autocomplete from '@mui/material/Autocomplete';
@@ -22,6 +23,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
+import CloseIcon from '@mui/icons-material/Close';
 import Quill from 'quill';
 import ReactQuill from 'react-quill';
 
@@ -282,65 +284,181 @@ const TagManagementModal = ({
   };
 
   return (
-    <Dialog open={isOpen} onClose={onRequestClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ pb: 1.5 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <TagIcon color="primary" sx={{ fontSize: 24 }} />
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>Manage Tags</Typography>
+    <Dialog 
+      open={isOpen} 
+      onClose={onRequestClose} 
+      maxWidth="md" 
+      fullWidth
+      sx={{
+        '& .MuiDialog-container': {
+          alignItems: 'flex-start',
+          paddingTop: '80px'
+        }
+      }}
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+          overflow: 'hidden',
+          border: '1px solid #e5e7eb'
+        }
+      }}
+    >
+      {/* Minimal Header */}
+      <DialogTitle 
+        sx={{ 
+          backgroundColor: '#f9fafb',
+          borderBottom: '1px solid #e5e7eb',
+          color: '#111827',
+          p: 3
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 2,
+                backgroundColor: '#e5e7eb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <TagIcon sx={{ fontSize: 20, color: '#6b7280' }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', mb: 0.5 }}>
+                Manage Tags
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                Question #{question?.id}
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton
+            onClick={onRequestClose}
+            sx={{
+              color: '#6b7280',
+              backgroundColor: 'transparent',
+              '&:hover': {
+                backgroundColor: '#e5e7eb',
+                color: '#374151'
+              },
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
         </Box>
       </DialogTitle>
-      <DialogContent sx={{ pt: 2, pb: 1.5 }}>
-        <Typography variant="body1" sx={{ mb: 3 }}>
-          Add or remove tags for <strong>Question #{question?.id}</strong>
-        </Typography>
-        
-        {/* Current Tags Section */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" color="text.primary" sx={{ mb: 1.5, fontWeight: 500 }}>
-            Current tags for this question:
+      {/* Main Content */}
+      <DialogContent sx={{ p: 0 }}>
+        {/* Question Info */}
+        <Box 
+          sx={{ 
+            backgroundColor: 'white',
+            borderBottom: '1px solid #e5e7eb',
+            p: 3
+          }}
+        >
+          <Typography variant="body2" color="#6b7280">
+            {questionTags.length} tag{questionTags.length !== 1 ? 's' : ''} currently assigned
           </Typography>
-          {questionTags.length > 0 ? (
-            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-              {questionTags.map(tag => (
-                <Chip
-                  key={tag.id}
-                  label={tag.name}
-                  color="primary"
-                  variant="filled"
-                  onDelete={() => removeTagFromQuestion(tag)}
-                  deleteIcon={<DeleteIcon />}
-                  sx={{
-                    backgroundColor: '#e3f2fd',
-                    color: '#1976d2',
-                    fontSize: '0.875rem',
-                    height: '32px',
-                    '& .MuiChip-label': {
-                      fontWeight: 500,
-                      px: 1
-                    },
-                    '& .MuiChip-deleteIcon': {
-                      color: '#d32f2f',
-                      fontSize: '18px',
-                      '&:hover': {
-                        color: '#b71c1c'
-                      }
-                    }
-                  }}
-                />
-              ))}
-            </Stack>
-          ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-              No tags assigned to this question.
-            </Typography>
-          )}
         </Box>
-        
-        {/* Add Tags Section */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" color="text.primary" sx={{ mb: 1.5, fontWeight: 500 }}>
-            Search and add tags (tags will be added automatically when selected):
-          </Typography>
+
+        <Box sx={{ p: 4 }}>
+          {/* Current Tags Section */}
+          <Box sx={{ mb: 4 }}>
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                mb: 2,
+                fontWeight: 600,
+                color: '#111827'
+              }}
+            >
+              Current Tags
+            </Typography>
+            
+            {questionTags.length > 0 ? (
+              <Box 
+                sx={{ 
+                  p: 3,
+                  backgroundColor: '#f9fafb',
+                  borderRadius: 1,
+                  border: '1px solid #e5e7eb'
+                }}
+              >
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  {questionTags.map(tag => (
+                    <Chip
+                      key={tag.id}
+                      label={tag.name}
+                      onDelete={() => removeTagFromQuestion(tag)}
+                      deleteIcon={<DeleteIcon />}
+                      sx={{
+                        backgroundColor: '#e5e7eb',
+                        color: '#374151',
+                        fontSize: '0.875rem',
+                        height: '32px',
+                        borderRadius: '6px',
+                        '& .MuiChip-label': {
+                          fontWeight: 500,
+                          px: 1.5
+                        },
+                        '& .MuiChip-deleteIcon': {
+                          color: '#6b7280',
+                          fontSize: '18px',
+                          '&:hover': {
+                            color: '#374151',
+                            backgroundColor: '#d1d5db',
+                            borderRadius: '50%'
+                          }
+                        },
+                        '&:hover': {
+                          backgroundColor: '#d1d5db'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    />
+                  ))}
+                </Stack>
+              </Box>
+            ) : (
+              <Box 
+                sx={{ 
+                  p: 3,
+                  backgroundColor: '#f9fafb',
+                  borderRadius: 1,
+                  border: '1px dashed #d1d5db',
+                  textAlign: 'center'
+                }}
+              >
+                <Typography variant="body2" color="#6b7280" sx={{ fontStyle: 'italic' }}>
+                  No tags assigned to this question
+                </Typography>
+              </Box>
+            )}
+          </Box>
+          
+          {/* Add Tags Section */}
+          <Box>
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                mb: 2,
+                fontWeight: 600,
+                color: '#111827'
+              }}
+            >
+              Add Tags
+            </Typography>
+            
+            <Typography variant="body2" color="#6b7280" sx={{ mb: 3 }}>
+              Search existing tags or create new ones
+            </Typography>
           
           <Autocomplete
             multiple
@@ -363,21 +481,22 @@ const TagManagementModal = ({
                     key={typeof option === 'string' ? option : option.value}
                     label={typeof option === 'string' ? option : option.label}
                     {...tagProps}
-                    color={isNewTag ? "success" : "secondary"}
-                    variant={isNewTag ? "filled" : "outlined"}
-                    size="small"
-                    icon={isNewTag ? <AddIcon /> : <TagIcon />}
                     sx={{
                       m: 0.5,
                       height: '28px',
                       fontSize: '0.8rem',
+                      backgroundColor: isNewTag ? '#111827' : '#e5e7eb',
+                      color: isNewTag ? 'white' : '#374151',
+                      borderRadius: '6px',
                       '& .MuiChip-label': {
                         fontWeight: 500,
                         px: 1
                       },
-                      '& .MuiChip-icon': {
-                        color: isNewTag ? '#fff' : 'inherit',
-                        fontSize: '16px'
+                      '& .MuiChip-deleteIcon': {
+                        color: isNewTag ? 'rgba(255,255,255,0.7)' : '#6b7280',
+                        '&:hover': {
+                          color: isNewTag ? 'white' : '#374151'
+                        }
                       }
                     }}
                   />
@@ -387,14 +506,13 @@ const TagManagementModal = ({
             renderInput={(params) => (
               <TextField
                 {...params}
-                placeholder="Search and select tags (auto-added) or type new tag names..."
+                placeholder="Search or create tags..."
                 variant="outlined"
-                size="small"
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
                     <InputAdornment position="start">
-                      <SearchIcon color="action" sx={{ fontSize: 20 }} />
+                      <SearchIcon sx={{ color: '#9ca3af', fontSize: 20 }} />
                     </InputAdornment>
                   ),
                   endAdornment: (
@@ -406,13 +524,19 @@ const TagManagementModal = ({
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    minHeight: '40px',
+                    minHeight: '48px',
                     fontSize: '0.875rem',
+                    borderRadius: '6px',
+                    backgroundColor: 'white',
+                    '& fieldset': {
+                      borderColor: '#d1d5db'
+                    },
                     '&:hover fieldset': {
-                      borderColor: '#1976d2',
+                      borderColor: '#9ca3af'
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#1976d2',
+                      borderColor: '#6b7280',
+                      borderWidth: '1px'
                     }
                   }
                 }}
@@ -427,23 +551,42 @@ const TagManagementModal = ({
                   <Box sx={{ 
                     display: 'flex', 
                     alignItems: 'center', 
-                    gap: 1,
+                    gap: 2,
                     width: '100%',
-                    py: 0.5
+                    py: 1,
+                    px: 1
                   }}>
-                    {isCreateOption ? (
-                      <>
-                        <AddIcon fontSize="small" color="success" />
-                        <Typography variant="body2" sx={{ fontWeight: 500, color: '#2e7d32' }}>
-                          {option.label}
-                        </Typography>
-                      </>
-                    ) : (
-                      <>
-                        <TagIcon fontSize="small" color="action" />
-                        <Typography variant="body2">{option.label}</Typography>
-                      </>
-                    )}
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '4px',
+                        backgroundColor: isCreateOption ? '#111827' : '#e5e7eb',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      {isCreateOption ? (
+                        <AddIcon fontSize="small" sx={{ color: 'white' }} />
+                      ) : (
+                        <TagIcon fontSize="small" sx={{ color: '#6b7280' }} />
+                      )}
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontWeight: 500,
+                          color: '#374151'
+                        }}
+                      >
+                        {option.label}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#9ca3af' }}>
+                        {isCreateOption ? 'Create new' : 'Existing'}
+                      </Typography>
+                    </Box>
                   </Box>
                 </li>
               );
@@ -472,21 +615,61 @@ const TagManagementModal = ({
             sx={{ mb: 2 }}
           />
         </Box>
-      </DialogContent>
-      <DialogActions sx={{ p: 2 }}>
-        <Button onClick={onRequestClose} color="inherit" sx={{ px: 2, py: 0.5 }}>
-          Cancel
-        </Button>
-        <Button 
-          variant="contained" 
-          onClick={onRequestClose}
-          color="primary"
-          sx={{ px: 2, py: 0.5 }}
-        >
-          Done
-        </Button>
-      </DialogActions>
-    </Dialog>
+      </Box>
+    </DialogContent>
+
+    {/* Minimal Footer */}
+    <DialogActions 
+      sx={{ 
+        backgroundColor: '#f9fafb',
+        borderTop: '1px solid #e5e7eb',
+        p: 3,
+        gap: 2,
+        justifyContent: 'flex-end'
+      }}
+    >
+      <Button 
+        onClick={onRequestClose} 
+        variant="outlined"
+        sx={{ 
+          px: 3,
+          py: 1,
+          borderRadius: '6px',
+          textTransform: 'none',
+          fontWeight: 500,
+          borderColor: '#d1d5db',
+          color: '#6b7280',
+          backgroundColor: 'white',
+          '&:hover': {
+            borderColor: '#9ca3af',
+            backgroundColor: '#f9fafb',
+            color: '#374151'
+          }
+        }}
+      >
+        Cancel
+      </Button>
+      <Button 
+        variant="contained" 
+        onClick={onRequestClose}
+        sx={{ 
+          px: 3,
+          py: 1,
+          borderRadius: '6px',
+          textTransform: 'none',
+          fontWeight: 500,
+          backgroundColor: '#111827',
+          color: 'white',
+          '&:hover': {
+            backgroundColor: '#000000'
+          },
+          transition: 'all 0.2s ease'
+        }}
+      >
+        Done
+      </Button>
+    </DialogActions>
+  </Dialog>
   );
 };
 
@@ -536,6 +719,7 @@ const QuestionsTable = ({
   const [commentsQuestion, setCommentsQuestion] = useState(null);
   const [qtypeIcons, setQtypeIcons] = useState({});
   const [highlightedQuestions, setHighlightedQuestions] = useState(new Set());
+  const [verifiedQuestions, setVerifiedQuestions] = useState(new Set());
   
   useEffect(() => {
     async function fetchQtypeIcons() {
@@ -587,24 +771,54 @@ const QuestionsTable = ({
   };
 
   const renderTags = (question) => {
-    if (!question || !Array.isArray(question.tags) || question.tags.length === 0) {
-      return <span className="italic text-gray-400 text-xs">Tags: None</span>;
+    // Only show loading if:
+    // 1. Question exists and has an ID
+    // 2. Tags property is undefined/null (not fetched yet) or is an empty array AND hasn't been fetched yet
+    // 3. Currently fetching tags
+    const hasUndefinedTags = !question?.tags || (Array.isArray(question.tags) && question.tags.length === 0);
+    const notFetchedYet = question?.id && !fetchedQuestionsRef.current.has(question.id);
+    const isLoadingTags = question && question.id && hasUndefinedTags && notFetchedYet && isFetchingRef.current;
+    
+    if (isLoadingTags) {
+      return (
+        <div className="flex items-center gap-2 mt-1">
+          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+          <span className="italic text-gray-500 text-xs">Loading tags...</span>
+        </div>
+      );
     }
+
+    if (!question || !Array.isArray(question.tags) || question.tags.length === 0) {
+      return <span className="italic text-gray-400 text-xs">No tags</span>;
+    }
+
+    const maxVisibleTags = 3;
+    const visibleTags = question.tags.slice(0, maxVisibleTags);
+    const remainingCount = question.tags.length - maxVisibleTags;
 
     return (
       <div className="flex flex-wrap gap-1 mt-1">
-        {question.tags.map((tag) => {
+        {visibleTags.map((tag) => {
           if (!tag || !tag.id) return null;
           
           return (
             <span
               key={tag.id}
-              className="bg-sky-100 text-gray-800 text-xs px-2 py-1 rounded-full"
+              className="bg-sky-100 text-gray-800 text-xs px-2 py-1 rounded-full whitespace-nowrap"
+              title={tag.name || `Tag ${tag.id}`}
             >
               {tag.name || `Tag ${tag.id}`}
             </span>
           );
         }).filter(Boolean)}
+        {remainingCount > 0 && (
+          <span
+            className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full whitespace-nowrap cursor-help"
+            title={`${remainingCount} more tags: ${question.tags.slice(maxVisibleTags).map(t => t.name || `Tag ${t.id}`).join(', ')}`}
+          >
+            +{remainingCount} more
+          </span>
+        )}
       </div>
     );
   };
@@ -696,6 +910,17 @@ const QuestionsTable = ({
       fetchCommentCounts(questionIds);
     }
   }, [questions?.length]);
+
+  // Mark questions as fetched if they already have tags from initial load
+  useEffect(() => {
+    if (!Array.isArray(questions)) return;
+    
+    questions.forEach(question => {
+      if (question?.id && Array.isArray(question.tags) && question.tags.length > 0) {
+        fetchedQuestionsRef.current.add(question.id);
+      }
+    });
+  }, [questions]);
 
   useEffect(() => {
     if (!Array.isArray(questions) || questions.length === 0 || isFetchingRef.current) return;
@@ -840,6 +1065,17 @@ const QuestionsTable = ({
 
   const getQuestionTypeIcon = (qtype, question) => {
     if (!question) return <span className="w-6 h-6 inline-block">•</span>;
+    
+    // Check if qtypes are still loading (empty qtypeIcons object)
+    const isLoadingQtypes = Object.keys(qtypeIcons).length === 0;
+    
+    if (isLoadingQtypes) {
+      return (
+        <div className="flex items-center justify-center w-6 h-6">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+        </div>
+      );
+    }
     
     const normalizedType = qtype || question.questionType || question.qtype;
     const qtypeInfo = qtypeIcons[normalizedType];
@@ -1119,22 +1355,72 @@ const handleEditMoodle = async (question) => {
     if (!setSelectedQuestions) return;
     
     setSelectedQuestions(prev => {
-      if (!Array.isArray(prev)) return [id];
+      if (!Array.isArray(prev)) prev = [];
       
-      return prev.includes(id)
+      const newSelection = prev.includes(id)
         ? prev.filter(qId => qId !== id)
         : [...prev, id];
+      
+      // Save to localStorage to persist across page refreshes
+      localStorage.setItem('selectedQuestions', JSON.stringify(newSelection));
+      return newSelection;
     });
   };
+
+  const toggleQuestionVerification = (id) => {
+    setVerifiedQuestions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      
+      // Save to localStorage to persist across sessions
+      localStorage.setItem('verifiedQuestions', JSON.stringify(Array.from(newSet)));
+      return newSet;
+    });
+  };
+
+  // Load verified questions from localStorage on component mount
+  useEffect(() => {
+    const savedVerified = localStorage.getItem('verifiedQuestions');
+    if (savedVerified) {
+      try {
+        const verifiedArray = JSON.parse(savedVerified);
+        setVerifiedQuestions(new Set(verifiedArray));
+      } catch (error) {
+        console.error('Error loading verified questions:', error);
+      }
+    }
+  }, []);
+
+  // Load selected questions from localStorage on component mount
+  useEffect(() => {
+    const savedSelected = localStorage.getItem('selectedQuestions');
+    if (savedSelected && setSelectedQuestions) {
+      try {
+        const selectedArray = JSON.parse(savedSelected);
+        if (Array.isArray(selectedArray)) {
+          setSelectedQuestions(selectedArray);
+        }
+      } catch (error) {
+        console.error('Error loading selected questions:', error);
+      }
+    }
+  }, [setSelectedQuestions]);
 
   const handleSelectAll = (e) => {
     if (!setSelectedQuestions || !Array.isArray(filteredQuestions)) return;
     
-    if (e.target.checked) {
-      setSelectedQuestions(filteredQuestions.map(q => q.id).filter(Boolean));
-    } else {
-      setSelectedQuestions([]);
-    }
+    const newSelection = e.target.checked 
+      ? filteredQuestions.map(q => q.id).filter(Boolean)
+      : [];
+    
+    setSelectedQuestions(newSelection);
+    
+    // Save to localStorage to persist across page refreshes
+    localStorage.setItem('selectedQuestions', JSON.stringify(newSelection));
   };
 
   const initiateQuestionSave = async (questionId) => {
@@ -1336,7 +1622,7 @@ const handleEditMoodle = async (question) => {
                           selectedQuestions.length === filteredQuestions.length && 
                           filteredQuestions.length > 0
                         }
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-all duration-200"
                       />
                       <label htmlFor="qbheadercheckbox" className="sr-only">Select all</label>
                     </div>
@@ -1392,26 +1678,59 @@ const handleEditMoodle = async (question) => {
                 }
 
                 return (
-                  <tr key={question.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100 transition-colors`}>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        id={`checkq${question.id}`}
-                        name={`q${question.id}`}
-                        type="checkbox"
-                        value="1"
-                        checked={Array.isArray(selectedQuestions) && selectedQuestions.includes(question.id)}
-                        onChange={() => toggleQuestionSelection(question.id)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor={`checkq${question.id}`} className="sr-only">Select</label>
+                  <tr 
+                    key={question.id} 
+                    className={`group transition-all duration-200 cursor-pointer ${
+                      verifiedQuestions.has(question.id)
+                        ? 'bg-green-50 border-l-4 border-l-green-500 shadow-sm hover:bg-green-100'
+                        : Array.isArray(selectedQuestions) && selectedQuestions.includes(question.id)
+                          ? 'bg-blue-50 border-l-4 border-l-blue-500 shadow-sm hover:bg-blue-100'
+                          : `${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 hover:shadow-md hover:border-l-4 hover:border-l-blue-500`
+                    }`}
+                    onClick={() => handlePreviewMoodle(question)}
+                    title={`Click anywhere to preview in Moodle${verifiedQuestions.has(question.id) ? ' (Verified ✓)' : ''}`}
+                  >
+                    <td className="px-3 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center">
+                        <input
+                          id={`checkq${question.id}`}
+                          name={`q${question.id}`}
+                          type="checkbox"
+                          value="1"
+                          checked={Array.isArray(selectedQuestions) && selectedQuestions.includes(question.id)}
+                          onChange={() => toggleQuestionSelection(question.id)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-all duration-200"
+                        />
+                        <label htmlFor={`checkq${question.id}`} className="sr-only">Select</label>
+                      </div>
                     </td>
 
                     <td className="px-3 py-4">
-                      <div className="flex flex-col items-start w-full">
+                      <div className="flex flex-col items-start w-full relative pr-20 min-h-[60px]">
+                        {/* <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+                          <div className="flex items-center justify-center text-xs text-blue-600 bg-blue-100 w-8 h-8 rounded-full">
+                            <i className="fas fa-eye"></i>
+                          </div>
+                        </div> */}
+                        {/* {Array.isArray(selectedQuestions) && selectedQuestions.includes(question.id) && (
+                          <div className="absolute -top-2 -right-2 z-20">
+                            <div className="flex items-center justify-center text-xs text-white bg-blue-600 w-6 h-6 rounded-full shadow-lg border border-white">
+                              <i className="fas fa-check"></i>
+                            </div>
+                          </div>
+                        )} */}
+                        {verifiedQuestions.has(question.id) && (
+                          <div className="absolute top-0 right-10 z-15">
+                            <div className="flex items-center justify-center text-xs text-white bg-green-600 w-6 h-6 rounded-full shadow-lg border border-white">
+                              <i className="fas fa-check-double"></i>
+                            </div>
+                          </div>
+                        )}
                         <div className="w-full mb-2">
-                          <label htmlFor={`checkq${question.id}`} className="block">
-                            {editingQuestion === question.id ? (
-                              <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              {editingQuestion === question.id ? (
+                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                 <input
                                   type="text"
                                   value={newQuestionTitle}
@@ -1454,7 +1773,8 @@ const handleEditMoodle = async (question) => {
                             ) : (
                               <span
                                 className="inline-flex items-center group cursor-pointer hover:bg-blue-50 rounded px-1 py-1 transition-colors"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   console.log('Editing question:', question.id, question.name);
                                   setEditingQuestion(question.id);
                                   setNewQuestionTitle(question.name || question.title || '');
@@ -1468,7 +1788,22 @@ const handleEditMoodle = async (question) => {
                                 </span>
                               </span>
                             )}
-                          </label>
+                          </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleQuestionVerification(question.id);
+                              }}
+                              className={`ml-2 flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 ${
+                                verifiedQuestions.has(question.id)
+                                  ? 'bg-green-600 text-white shadow-md hover:bg-green-700'
+                                  : 'bg-gray-200 text-gray-500 hover:bg-green-100 hover:text-green-600'
+                              }`}
+                              title={verifiedQuestions.has(question.id) ? 'Mark as unverified' : 'Mark as verified'}
+                            >
+                              <i className={`fas ${verifiedQuestions.has(question.id) ? 'fa-check-double' : 'fa-check'} text-sm`}></i>
+                            </button>
+                          </div>
                           {question.idNumber && (
                             <span className="ml-1">
                               <span className="sr-only">ID number</span>&nbsp;
@@ -1485,7 +1820,7 @@ const handleEditMoodle = async (question) => {
                       </div>
                     </td>
 
-                    <td className="px-3 py-4 whitespace-nowrap w-32 min-w-[110px]">
+                    <td className="px-3 py-4 whitespace-nowrap w-32 min-w-[110px]" onClick={(e) => e.stopPropagation()}>
                       <div className="relative" data-status-dropdown={question.id}>
                         <select
                           id={`question_status_dropdown-${question.id}`}
@@ -1502,7 +1837,7 @@ const handleEditMoodle = async (question) => {
                         </span>
                       </div>
                     </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
+                    <td className="px-3 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <button
                         className="text-blue-600 hover:text-blue-900 underline cursor-pointer"
                         onClick={() => openCommentsModal(question)}
@@ -1513,7 +1848,7 @@ const handleEditMoodle = async (question) => {
 
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">{question.version || 'v1'}</td>
 
-                    <td className="px-3 py-4 whitespace-nowrap">
+                    <td className="px-3 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <a href="#" className="text-blue-600 hover:text-blue-900 cursor-pointer">
                         {question.usage || 0}
                       </a>
@@ -1539,7 +1874,7 @@ const handleEditMoodle = async (question) => {
                       {getQuestionTypeIcon(question.qtype || question.questionType, question)}
                     </td>
 
-                    <td className="px-3 py-4 whitespace-nowrap">
+                    <td className="px-3 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <div className="relative">
                         <div className="flex">
                           <div className="relative" ref={el => {
@@ -1685,6 +2020,24 @@ const handleEditMoodle = async (question) => {
                                   >
                                     <i className="fa fa-tags w-4 text-center mr-2 text-gray-500"></i>
                                     <span>Manage tags</span>
+                                  </a>
+                                  <a
+                                    href="#"
+                                    className={`flex items-center px-4 py-2 text-sm transition-colors cursor-pointer ${
+                                      verifiedQuestions.has(question.id)
+                                        ? 'text-green-700 hover:bg-green-50 hover:text-green-900'
+                                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                    }`}
+                                    role="menuitem"
+                                    tabIndex="-1"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      toggleQuestionVerification(question.id);
+                                      setOpenActionDropdown(null);
+                                    }}
+                                  >
+                                    <i className={`fa ${verifiedQuestions.has(question.id) ? 'fa-check-double text-green-500' : 'fa-check text-gray-500'} w-4 text-center mr-2`}></i>
+                                    <span>{verifiedQuestions.has(question.id) ? 'Mark as unverified' : 'Mark as verified'}</span>
                                   </a>
                                   <a
                                     href="#"
