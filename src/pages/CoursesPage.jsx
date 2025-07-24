@@ -159,11 +159,11 @@ const CoursesPage = () => {
         // Check if URL already has parameters
         const separator = fileurl.includes('?') ? '&' : '?';
         const authenticatedUrl = `${fileurl}${separator}token=${token}`;
-        console.log('🖼️ Course image URL with token:', authenticatedUrl);
+        console.log(' Course image URL with token:', authenticatedUrl);
         return authenticatedUrl;
       }
       
-      console.warn('⚠️ No token available for course image:', fileurl);
+      console.warn(' No token available for course image:', fileurl);
       return fileurl;
     }
     return null;
@@ -174,12 +174,12 @@ const CoursesPage = () => {
     <Card 
       key={course.id}
       sx={{
-        height: 380, // Optimized height for better proportions
+        height: 300, // Reduced height for simpler layout
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
         cursor: 'pointer',
-        borderRadius: 3, // More modern rounded corners
+        borderRadius: 3,
         overflow: 'hidden',
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         border: '1px solid',
@@ -252,46 +252,26 @@ const CoursesPage = () => {
             {(course.fullname || course.shortname || 'C')[0].toUpperCase()}
           </Avatar>
         </Box>
-        
-        {/* Visibility badge */}
-        <Box 
-          sx={{ 
-            position: 'absolute', 
-            top: 12, 
-            right: 12,
-            backgroundColor: course.visible ? 'success.main' : 'error.main',
-            borderRadius: '50%',
-            p: 0.5,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-          }}
-        >
-          {course.visible ? (
-            <VisibilityIcon sx={{ color: 'white', fontSize: 18 }} />
-          ) : (
-            <VisibilityOffIcon sx={{ color: 'white', fontSize: 18 }} />
-          )}
-        </Box>
 
         {/* Category badge */}
         {course.categoryname && (
           <Box
             sx={{
               position: 'absolute',
-              bottom: 12,
+              top: 12,
               left: 12,
-              backgroundColor: 'rgba(255,255,255,0.95)',
-              backdropFilter: 'blur(8px)',
+              backgroundColor: 'primary.main', // Changed from white to primary color
               borderRadius: 2,
               px: 1.5,
               py: 0.5,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
             }}
           >
             <Typography 
               variant="caption" 
               sx={{ 
                 fontWeight: 600,
-                color: 'text.secondary',
+                color: 'white', // Changed to white text for contrast
                 fontSize: '0.75rem'
               }}
             >
@@ -303,106 +283,30 @@ const CoursesPage = () => {
 
       <CardContent sx={{ 
         flexGrow: 1, 
-        p: 3,
+        p: 2,
         display: 'flex',
         flexDirection: 'column',
-        gap: 1.5
+        gap: 1
       }}>
         {/* Course Title */}
         <Typography 
           variant="h6"
           component="h3"
           sx={{ 
-            fontWeight: 700,
+            fontWeight: 400, // Changed from 700 to 400 (not bold)
             lineHeight: 1.3,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
-            minHeight: 48,
             color: 'text.primary',
-            fontSize: '1.1rem'
+            fontSize: '1.1rem',
+            textAlign: 'left' // Changed from 'center' to 'left'
           }}
         >
           {course.fullname || course.displayname}
         </Typography>
-
-        {/* Short name */}
-        {course.shortname && (
-          <Chip 
-            label={course.shortname}
-            size="small"
-            sx={{ 
-              alignSelf: 'flex-start',
-              backgroundColor: 'primary.light',
-              color: 'primary.dark',
-              fontWeight: 600,
-              fontSize: '0.75rem'
-            }}
-          />
-        )}
-
-        {/* Summary */}
-        <Typography 
-          variant="body2" 
-          color="text.secondary"
-          sx={{
-            flexGrow: 1,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            lineHeight: 1.5,
-            minHeight: 40
-          }}
-        >
-          {course.summary ? course.summary.replace(/<[^>]*>/g, '') : 'No description available'}
-        </Typography>
-
-        {/* Bottom section */}
-        <Box sx={{ mt: 'auto', pt: 1 }}>
-          {/* Course format and ID */}
-          <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
-            <Chip 
-              label={(course.format || 'COURSE').toUpperCase()} 
-              size="small" 
-              variant="outlined"
-              sx={{ 
-                fontSize: '0.7rem',
-                fontWeight: 600,
-                borderColor: 'primary.main',
-                color: 'primary.main'
-              }}
-            />
-            {course.idnumber && (
-              <Chip 
-                label={course.idnumber}
-                size="small" 
-                variant="outlined"
-                sx={{ 
-                  fontSize: '0.7rem',
-                  fontWeight: 500
-                }}
-              />
-            )}
-          </Box>
-
-          {/* Dates */}
-          {(course.startdate > 0 || course.enddate > 0) && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <CalendarIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-              <Typography 
-                variant="caption" 
-                color="text.secondary"
-                sx={{ fontSize: '0.75rem' }}
-              >
-                {course.startdate > 0 ? formatDate(course.startdate) : 'Ongoing'} - {course.enddate > 0 ? formatDate(course.enddate) : 'No end'}
-              </Typography>
-            </Box>
-          )}
-        </Box>
       </CardContent>
     </Card>
   );

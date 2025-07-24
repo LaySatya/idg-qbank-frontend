@@ -272,7 +272,7 @@ const CreateQuestionModal = ({
                   ) : null}
                   {/* Fallback large icon */}
                   <div 
-                    className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center text-3xl font-bold text-gray-500 hidden"
+                    className="w-full h-full bg-gray-200 rounded-lg f items-center justify-center text-3xl font-bold text-gray-500 hidden"
                   >
                     {selectedTypeObj.label.charAt(0).toUpperCase()}
                   </div>
