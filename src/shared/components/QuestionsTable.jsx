@@ -1913,8 +1913,6 @@ const handleEditMoodle = async (question) => {
                                   className={`absolute right-0 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1
                                   ${dropdownDirection[question.id] === 'up' ? 'bottom-full mb-2' : 'mt-2'}`}
                                   style={{
-                                    maxHeight: 350,
-                                    overflowY: 'auto',
                                     ...(dropdownDirection[question.id] === 'up' ? { bottom: '100%' } : { top: '100%' })
                                   }}
                                 >
