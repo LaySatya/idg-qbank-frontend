@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import CreateQuestionModal from './CreateQuestionModal';
 import { ChevronDown, Check, Upload, Plus, AlertCircle, CheckCircle, FolderOpen, ArrowLeft, Eye } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -7,7 +8,7 @@ const TopButtonsRow = ({
   setShowQuestionsDropdown,
   questionsDropdownRef,
   handleFileUpload,
-  setShowCreateModal,
+  // setShowCreateModal, // Removed duplicate declaration
   showQuestionText,
   setShowQuestionText,
   questions,
@@ -28,6 +29,9 @@ const TopButtonsRow = ({
   selectedCourseName
 }) => {
   const [isImporting, setIsImporting] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [questionTypes, setQuestionTypes] = useState([]);
+  const [loadingQuestionTypes, setLoadingQuestionTypes] = useState(false);
   const fileInputRef = useRef(null);
 
   // Enhanced navigation handler
@@ -53,9 +57,33 @@ const TopButtonsRow = ({
     }
   };
 
-  // Create question modal
-  const handleCreateQuestion = () => {
+
+  // Show create modal and fetch question types from API
+  const handleCreateQuestion = async () => {
     setShowCreateModal(true);
+    setLoadingQuestionTypes(true);
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/questions/qtypes`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      if (response.ok) {
+        const types = await response.json();
+        setQuestionTypes(types);
+      } else {
+        setQuestionTypes([]);
+        toast.error('Failed to load question types from API');
+      }
+    } catch (error) {
+      setQuestionTypes([]);
+      toast.error('Error loading question types');
+    } finally {
+      setLoadingQuestionTypes(false);
+    }
   };
 
   // File import click - Updated to use real category IDs with correct context
@@ -504,6 +532,46 @@ const TopButtonsRow = ({
     event.target.value = '';
   };
 
+
+
+  // Handle type selection from modal
+  const handleSelectType = async (typeObj) => {
+    setShowCreateModal(false);
+    const token = localStorage.getItem('token');
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+    const categoryId = localStorage.getItem('questionCategoryId');
+    const contextId = localStorage.getItem('CourseID') || '1';
+    const qtype = typeObj.value || typeObj.name;
+
+    if (!categoryId || categoryId === 'All') {
+      toast.error('Please select a category first.');
+      return;
+    }
+
+    try {
+      const url = `${API_BASE_URL}/questions/create?qtype=${qtype}&categoryid=${categoryId}&contextid=${contextId}`;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.create_form_url) {
+          window.open(data.create_form_url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+          toast.success('Question creation form opened!');
+        } else {
+          toast.error('No form URL received from server.');
+        }
+      } else {
+        toast.error(`Failed to get create form: ${response.status}`);
+      }
+    } catch (error) {
+      toast.error(`Error: ${error.message}`);
+    }
+  };
+
   // Show question text change
   const handleQuestionTextChange = (value) => {
     setShowQuestionText(value === "1" || value === "2");
@@ -554,20 +622,28 @@ const TopButtonsRow = ({
                 onClick={handleImportClick}
                 disabled={isImporting}
               >
-                
                 {isImporting ? 'Importing...' : 'Import Questions'}
                 <Upload size={18} />
               </button>
-              
+
               <button
                 type="button"
-               className="text-sky-600 border border-sky-600 inline-flex items-center gap-2 rounded-md bg-transparent px-4 py-2 font-semibold shadow hover:bg-sky-50 hover:text-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-sky-600"
+                className="text-sky-600 border border-sky-600 inline-flex items-center gap-2 rounded-md bg-transparent px-4 py-2 font-semibold shadow hover:bg-sky-50 hover:text-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-sky-600"
                 onClick={handlePreviewClick}
                 title="Preview all questions in selected category"
               >
-                
                 Preview Questions
                 <Eye size={18} />
+              </button>
+
+              <button
+                type="button"
+                className="text-sky-600 border border-sky-600 inline-flex items-center gap-2 rounded-md bg-transparent px-4 py-2 font-semibold shadow hover:bg-sky-50 hover:text-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-sky-600"
+                onClick={handleCreateQuestion}
+                title="Create new question in selected category"
+              >
+                Create New Question
+                <Plus size={18} />
               </button>
             </>
           )}
@@ -582,7 +658,16 @@ const TopButtonsRow = ({
           />
         </div>
       </div>
-    </div>
+    {/* Create Question Modal */}
+    {showCreateModal && (
+      <CreateQuestionModal
+        onClose={() => setShowCreateModal(false)}
+        onSelectType={handleSelectType}
+        availableQuestionTypes={questionTypes}
+        loadingQuestionTypes={loadingQuestionTypes}
+      />
+    )}
+  </div>
   );
 };
 

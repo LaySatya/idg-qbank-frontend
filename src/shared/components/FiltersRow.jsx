@@ -232,8 +232,9 @@ const FiltersRow = ({
 
     const selectedCat = availableCategories.find(cat => String(cat.id) === newCategory);
     const selectedName = selectedCat ? selectedCat.name : '';
+    const selectedContextId = selectedCat ? selectedCat.contextid : '';
 
-    console.log(' Category changing:', { from: filters.category, to: newCategory, name: selectedName });
+    console.log(' Category changing:', { from: filters.category, to: newCategory, name: selectedName, contextid: selectedContextId });
 
     setFilters(prev => ({
       ...prev,
@@ -243,6 +244,11 @@ const FiltersRow = ({
 
     localStorage.setItem('questionCategoryId', newCategory);
     localStorage.setItem('questionCategoryName', selectedName);
+    if (selectedContextId) {
+      localStorage.setItem('questionCategoryContextId', selectedContextId);
+    } else {
+      localStorage.removeItem('questionCategoryContextId');
+    }
   }, [setFilters, availableCategories, filters.category]);
 
   const handleStatusChange = useCallback((e) => {
