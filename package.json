@@ -19,7 +19,7 @@
     "@mantine/core": "^8.1.2",
     "@mantine/hooks": "^8.1.2",
     "@mui/icons-material": "^7.1.2",
-    "@mui/material": "^7.1.2",
+    "@mui/material": "^7.2.0",
     "@tailwindcss/vite": "^4.1.7",
     "antd": "^5.26.2",
     "axios": "^1.9.0",

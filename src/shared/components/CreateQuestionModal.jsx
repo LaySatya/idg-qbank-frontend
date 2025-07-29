@@ -222,7 +222,7 @@ const CreateQuestionModal = ({
                         {renderIcon(type)}
                         {/* Fallback text icon */}
                         <span 
-                          className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center text-xs hidden"
+                          className="w-6 h-6 bg-gray-200 rounded flex-1 items-center justify-center text-xs hidden"
                         >
                           {type.label.charAt(0).toUpperCase()}
                         </span>

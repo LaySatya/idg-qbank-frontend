@@ -35,8 +35,8 @@ import QuestionHistoryView from './QuestionHistoryView';
 import ReactModal from 'react-modal';
 import QuestionCommentsModal from './preview/comments/QuestionCommentsModal';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-import CreateMultipleChoiceQuestion from '../../features/questions/components/forms/CreateMultipleChoiceQuestion';
-import CreateTrueFalseQuestion from '../../features/questions/components/forms/CreateTrueFalseQuestion';
+// import CreateMultipleChoiceQuestion from '../../features/questions/components/forms/CreateMultipleChoiceQuestion';
+// import CreateTrueFalseQuestion from '../../features/questions/components/forms/CreateTrueFalseQuestion';
 
 // Enhanced Tag Management Modal Component with styling from BulkActionsRow
 const TagManagementModal = ({

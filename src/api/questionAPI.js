@@ -1092,63 +1092,63 @@ processImageURLs(htmlContent) {
   },
 
   // Create True/False Question
-  async createTrueFalseQuestion(questionData) {
-    const payload = {
-      name: questionData.title,
-      questiontext: questionData.questionText,
-      qtype: 'truefalse',
-      status: questionData.status || 'draft',
-      defaultmark: questionData.defaultMark || 1,
-      generalfeedback: questionData.generalFeedback || '',
-      correctanswer: questionData.correctAnswer,
-      feedbacktrue: questionData.feedbackTrue || '',
-      feedbackfalse: questionData.feedbackFalse || '',
-      penalty: questionData.penalty || 0,
-      tags: questionData.tags || []
-    };
-    try {
-      const response = await fetch(`${API_BASE_URL}/questions`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload)
-      });
-      return await handleAPIResponse(response);
-    } catch (error) {
-      console.error('Failed to create True/False question:', error);
-      throw error;
-    }
-  },
+  // async createTrueFalseQuestion(questionData) {
+  //   const payload = {
+  //     name: questionData.title,
+  //     questiontext: questionData.questionText,
+  //     qtype: 'truefalse',
+  //     status: questionData.status || 'draft',
+  //     defaultmark: questionData.defaultMark || 1,
+  //     generalfeedback: questionData.generalFeedback || '',
+  //     correctanswer: questionData.correctAnswer,
+  //     feedbacktrue: questionData.feedbackTrue || '',
+  //     feedbackfalse: questionData.feedbackFalse || '',
+  //     penalty: questionData.penalty || 0,
+  //     tags: questionData.tags || []
+  //   };
+  //   try {
+  //     const response = await fetch(`${API_BASE_URL}/questions`, {
+  //       method: 'POST',
+  //       headers: getAuthHeaders(),
+  //       body: JSON.stringify(payload)
+  //     });
+  //     return await handleAPIResponse(response);
+  //   } catch (error) {
+  //     console.error('Failed to create True/False question:', error);
+  //     throw error;
+  //   }
+  // },
 
   // Create Multiple Choice Question
-  async createMultipleChoiceQuestion(questionData) {
-    const payload = {
-      name: questionData.title,
-      questiontext: questionData.questionText,
-      qtype: 'multichoice',
-      status: questionData.questionStatus || 'Ready',
-      defaultmark: questionData.defaultMark || 100,
-      generalfeedback: questionData.generalFeedback || '',
-      multipleAnswers: questionData.multipleAnswers || false,
-      shuffleAnswers: questionData.shuffleAnswers || true,
-      choices: questionData.choices.map(choice => ({
-        text: choice.text,
-        grade: choice.grade,
-        feedback: choice.feedback || ''
-      })),
-      tags: questionData.tags || []
-    };
-    try {
-      const response = await fetch(`${API_BASE_URL}/questions`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload)
-      });
-      return await handleAPIResponse(response);
-    } catch (error) {
-      console.error('Failed to create Multiple Choice question:', error);
-      throw error;
-    }
-  }
+  // async createMultipleChoiceQuestion(questionData) {
+  //   const payload = {
+  //     name: questionData.title,
+  //     questiontext: questionData.questionText,
+  //     qtype: 'multichoice',
+  //     status: questionData.questionStatus || 'Ready',
+  //     defaultmark: questionData.defaultMark || 100,
+  //     generalfeedback: questionData.generalFeedback || '',
+  //     multipleAnswers: questionData.multipleAnswers || false,
+  //     shuffleAnswers: questionData.shuffleAnswers || true,
+  //     choices: questionData.choices.map(choice => ({
+  //       text: choice.text,
+  //       grade: choice.grade,
+  //       feedback: choice.feedback || ''
+  //     })),
+  //     tags: questionData.tags || []
+  //   };
+  //   try {
+  //     const response = await fetch(`${API_BASE_URL}/questions`, {
+  //       method: 'POST',
+  //       headers: getAuthHeaders(),
+  //       body: JSON.stringify(payload)
+  //     });
+  //     return await handleAPIResponse(response);
+  //   } catch (error) {
+  //     console.error('Failed to create Multiple Choice question:', error);
+  //     throw error;
+  //   }
+  // }
 };
 
 // Enhanced normalization helper for question objects

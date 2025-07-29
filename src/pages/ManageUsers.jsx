@@ -79,6 +79,17 @@ const ManageUsers = () => {
     };
   }, []);
 
+  // Debug effect to log pagination changes
+  useEffect(() => {
+    console.log(` Pagination state changed:`, {
+      usersPerPage,
+      currentPage,
+      totalAvailableUsers,
+      filterRole,
+      usersCount: users.length
+    });
+  }, [usersPerPage, currentPage, totalAvailableUsers, filterRole, users.length]);
+
   // Load roles only (optimized initial load)
   const loadRolesOnly = async () => {
     if (roles.length > 0) {
@@ -88,9 +99,9 @@ const ManageUsers = () => {
     
     try {
       setInitialLoading(true);
-      console.log('🔧 Loading roles...');
+      console.log(' Loading roles...');
       const rolesData = await userAPI.getRoles();
-      console.log('✅ Loaded roles:', rolesData);
+      console.log(' Loaded roles:', rolesData);
       
       let normalizedRoles = [];
       if (rolesData.roles && Array.isArray(rolesData.roles)) {
@@ -100,7 +111,7 @@ const ManageUsers = () => {
       }
       setRoles(normalizedRoles);
     } catch (error) {
-      console.error('❌ Failed to load roles:', error);
+      console.error(' Failed to load roles:', error);
       setRoles([]);
     } finally {
       setInitialLoading(false);
@@ -108,7 +119,7 @@ const ManageUsers = () => {
   };
 
   // Load users by specific role with server-side pagination support
-  const loadUsersByRole = async (rolename, loadAll = false, specificPage = null) => {
+  const loadUsersByRole = async (rolename, loadAll = false, specificPage = null, customPerPage = null) => {
     if (rolename === 'all') {
       return loadUsersAndRoles();
     }
@@ -123,11 +134,11 @@ const ManageUsers = () => {
         setUsers([]);
       }
       
-      console.log(`🔍 Loading users with role: ${rolename}`);
+      console.log(` Loading users with role: ${rolename}`);
       
       let allUsers = [];
       let totalCount = 0;
-      const perPage = usersPerPage;
+      const perPage = customPerPage || usersPerPage;
       
       if (loadAll) {
         // Load all users by paginating through all pages
@@ -135,7 +146,7 @@ const ManageUsers = () => {
         let hasMorePages = true;
         
         while (hasMorePages) {
-          console.log(`📄 Loading page ${currentPageNum} for role: ${rolename}`);
+          console.log(` Loading page ${currentPageNum} for role: ${rolename}`);
           const usersData = await userAPI.getUsersByRole(rolename, currentPageNum, perPage);
           
           if (usersData.users && Array.isArray(usersData.users)) {
@@ -145,7 +156,7 @@ const ManageUsers = () => {
             hasMorePages = usersData.users.length === perPage && allUsers.length < totalCount;
             currentPageNum++;
             
-            console.log(`📈 Progress: ${allUsers.length} / ${totalCount} users loaded`);
+            console.log(` Progress: ${allUsers.length} / ${totalCount} users loaded`);
             
             if (hasMorePages) {
               await new Promise(resolve => setTimeout(resolve, 200));
@@ -155,11 +166,11 @@ const ManageUsers = () => {
           }
         }
         
-        console.log(`✅ Loaded ${allUsers.length} of ${totalCount} total users for role: ${rolename}`);
+        console.log(` Loaded ${allUsers.length} of ${totalCount} total users for role: ${rolename}`);
       } else {
         // Load specific page for server-side pagination
         const pageToLoad = specificPage || currentPage;
-        console.log(`📄 Loading page ${pageToLoad} for role: ${rolename} (server-side pagination)`);
+        console.log(` Loading page ${pageToLoad} for role: ${rolename} (server-side pagination, ${perPage} per page)`);
         const usersData = await userAPI.getUsersByRole(rolename, pageToLoad, perPage);
         
         if (usersData.users && Array.isArray(usersData.users)) {
@@ -167,7 +178,7 @@ const ManageUsers = () => {
           totalCount = usersData.totalcount || 0;
         }
         
-        console.log(`📊 Loaded ${allUsers.length} users from page ${pageToLoad} (${totalCount} total available)`);
+        console.log(` Loaded ${allUsers.length} users from page ${pageToLoad} (${totalCount} total available, ${perPage} per page)`);
       }
 
       // Process users
@@ -216,7 +227,7 @@ const ManageUsers = () => {
         toast.success(`Loaded ${processedUsers.length} users for role: ${rolename}${pageInfo} (${totalCount} total available)`);
       }
     } catch (error) {
-      console.error(`❌ Failed to load users for role ${rolename}:`, error);
+      console.error(` Failed to load users for role ${rolename}:`, error);
       toast.error(`Failed to load users for role: ${rolename}`);
       setUsers([]);
     } finally {
@@ -229,9 +240,9 @@ const ManageUsers = () => {
     try {
       setLoading(true);
       
-      console.log('🔧 Loading roles...');
+      console.log(' Loading roles...');
       const rolesData = await userAPI.getRoles();
-      console.log('✅ Loaded roles:', rolesData);
+      console.log(' Loaded roles:', rolesData);
       
       let normalizedRoles = [];
       if (rolesData.roles && Array.isArray(rolesData.roles)) {
@@ -241,9 +252,9 @@ const ManageUsers = () => {
       }
       setRoles(normalizedRoles);
       
-      console.log('🔧 Loading users with roles...');
+      console.log(' Loading users with roles...');
       const usersData = await userAPI.getUsersWithRoles();
-      console.log('✅ Loaded users:', usersData);
+      console.log(' Loaded users:', usersData);
       
       let normalizedUsers = [];
       if (usersData.users && Array.isArray(usersData.users)) {
@@ -285,7 +296,7 @@ const ManageUsers = () => {
       setUsers(processedUsers);
       setTotalAvailableUsers(processedUsers.length);
     } catch (error) {
-      console.error('❌ Failed to load users and roles:', error);
+      console.error(' Failed to load users and roles:', error);
       setUsers([]);
       setRoles([]);
     } finally {
@@ -303,6 +314,14 @@ const ManageUsers = () => {
     filteredAndSortedUsers = users;
     paginatedUsers = users;
     totalPages = Math.ceil(totalAvailableUsers / usersPerPage);
+    
+    console.log(` Server-side pagination:`, {
+      totalAvailableUsers,
+      usersPerPage,
+      totalPages,
+      currentUsers: users.length,
+      filterRole
+    });
   } else {
     // Client-side pagination for "all roles" view
     const allFilteredUsers = users
@@ -339,25 +358,41 @@ const ManageUsers = () => {
 
   // Handle page change with server-side pagination support
   const handlePageChange = (page) => {
-    console.log(`🔄 Page change requested: ${currentPage} → ${page}`);
+    console.log(` Page change requested: ${currentPage} → ${page}`);
     setCurrentPage(page);
     setSelectedUsers([]);
     
     if (filterRole !== 'all') {
-      loadUsersByRole(filterRole, false, page);
+      loadUsersByRole(filterRole, false, page, usersPerPage);
     }
   };
 
   // Handle items per page change  
-  const handleItemsPerPageChange = (newItemsPerPage) => {
-    console.log(`📝 Items per page change: ${usersPerPage} → ${newItemsPerPage}`);
-    setUsersPerPage(newItemsPerPage);
-    setCurrentPage(1);
+  const handleItemsPerPageChange = async (newItemsPerPage) => {
+    console.log(` Items per page change: ${usersPerPage} → ${newItemsPerPage}`);
+    
+    // Use functional updates to ensure state is updated correctly
+    setUsersPerPage(prevUsersPerPage => {
+      console.log(`Updating usersPerPage: ${prevUsersPerPage} → ${newItemsPerPage}`);
+      return newItemsPerPage;
+    });
+    
+    setCurrentPage(prevPage => {
+      console.log(` Resetting currentPage: ${prevPage} → 1`);
+      return 1;
+    });
+    
     setSelectedUsers([]);
     
     // If we're in server-side pagination mode, reload with new page size
     if (filterRole !== 'all') {
-      loadUsersByRole(filterRole, false, 1);
+      console.log(` Reloading server-side data with ${newItemsPerPage} items per page...`);
+      // Use setTimeout to ensure state updates have been applied
+      setTimeout(async () => {
+        await loadUsersByRole(filterRole, false, 1, newItemsPerPage);
+      }, 10);
+    } else {
+      console.log(` Client-side pagination: will apply ${newItemsPerPage} items per page on next render`);
     }
   };
 
@@ -529,7 +564,7 @@ const ManageUsers = () => {
                   if (selectedRole === 'all') {
                     await loadUsersAndRoles();
                   } else {
-                    await loadUsersByRole(selectedRole, false, 1);
+                    await loadUsersByRole(selectedRole, false, 1, usersPerPage);
                   }
                 }}
                 label="Role"
@@ -578,7 +613,7 @@ const ManageUsers = () => {
                 if (filterRole === 'all') {
                   await loadUsersAndRoles();
                 } else {
-                  await loadUsersByRole(filterRole, false, currentPage);
+                  await loadUsersByRole(filterRole, false, currentPage, usersPerPage);
                 }
               }}
               disabled={loading}
@@ -586,7 +621,7 @@ const ManageUsers = () => {
               Refresh
             </Button>
             
-            {filterRole !== 'all' && users.length > 0 && totalAvailableUsers > users.length && (
+            {/* {filterRole !== 'all' && users.length > 0 && totalAvailableUsers > users.length && (
               <Button
                 variant="outlined"
                 color="secondary"
@@ -605,7 +640,7 @@ const ManageUsers = () => {
               >
                 {isLoadingAll ? 'Loading All Users...' : `Load All Users (${totalAvailableUsers})`}
               </Button>
-            )}
+            )} */}
           </Box>
           
           {selectedUsers.length > 0 && (
@@ -665,15 +700,6 @@ const ManageUsers = () => {
                     Role
                   </TableSortLabel>
                 </TableCell>
-                <TableCell>
-                  <TableSortLabel
-                    active={sortBy === 'status'}
-                    direction={sortBy === 'status' ? sortOrder : 'asc'}
-                    onClick={() => handleSort('status')}
-                  >
-                    Status
-                  </TableSortLabel>
-                </TableCell>
                 <TableCell>Last Access</TableCell>
                 <TableCell>Actions</TableCell>
               </TableRow>
@@ -681,7 +707,7 @@ const ManageUsers = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                     <CircularProgress />
                     <Typography variant="body2" sx={{ mt: 2 }}>
                       Loading users for {filterRole === 'all' ? 'all roles' : `role: ${filterRole}`}...
@@ -690,7 +716,7 @@ const ManageUsers = () => {
                 </TableRow>
               ) : filterRole === 'all' && users.length === 0 && !searchQuery && filterStatus === 'all' ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                     <Typography variant="h6" color="text.secondary" gutterBottom>
                       Select a role to view users
                     </Typography>
@@ -701,7 +727,7 @@ const ManageUsers = () => {
                 </TableRow>
               ) : paginatedUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                     <Typography variant="body1" color="text.secondary">
                       {searchQuery || filterRole !== 'all' || filterStatus !== 'all' 
                         ? 'No users found matching your criteria.' 
@@ -769,24 +795,6 @@ const ManageUsers = () => {
                         variant="outlined" 
                         size="small"
                       />
-                    </TableCell>
-                    <TableCell>
-                      <Stack spacing={0.5}>
-                        <Chip 
-                          label={user.status} 
-                          color={user.status === 'Active' ? 'success' : 'error'} 
-                          variant="outlined" 
-                          size="small"
-                        />
-                        {user.confirmed === false && (
-                          <Chip 
-                            label="Unconfirmed" 
-                            color="warning" 
-                            variant="outlined" 
-                            size="small"
-                          />
-                        )}
-                      </Stack>
                     </TableCell>
                     <TableCell>
                       <Box>

@@ -3,10 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { X, Edit, Clock, User, FileText, Save, Send, CheckSquare } from 'lucide-react';
 
 // FIXED: Correct paths (go up 3 levels from pages/QuestionBank/components/)
-import CreateQuestionModal from "./CreateQuestionModal";  // This one stays the same
-import CreateTrueFalseQuestion from "../../features/questions/components/forms/CreateTrueFalseQuestion";
-import CreateMultipleChoiceQuestion from "../../features/questions/components/forms/CreateMultipleChoiceQuestion";
-import BulkEditQuestionsModal from "../../features/questions/components/forms/BulkEditModal";
+// import CreateQuestionModal from "./CreateQuestionModal";  // This one stays the same
+// import CreateTrueFalseQuestion from "../../features/questions/components/forms/CreateTrueFalseQuestion";
+// import CreateMultipleChoiceQuestion from "../../features/questions/components/forms/CreateMultipleChoiceQuestion";
+// import BulkEditQuestionsModal from "../../features/questions/components/forms/BulkEditModal";
 
 // Save Confirmation Modal
 const SaveConfirmationModal = ({ questionId, onConfirm, onCancel }) => {
@@ -833,7 +833,7 @@ const Modals = ({
       )}
 
       {/*  FIXED: True/False Question Modal */}
-      {showTrueFalseModal && (
+      {/* {showTrueFalseModal && (
         <CreateTrueFalseQuestion
           onClose={() => setShowTrueFalseModal(false)}
           onSave={(questionData) => {
@@ -863,10 +863,10 @@ const Modals = ({
             handleQuestionSave(processedData);
           }}
         />
-      )}
+      )} */}
 
       {/*  FIXED: Multiple Choice Question Modal */}
-      {showMultipleChoiceModal && (
+      {/* {showMultipleChoiceModal && (
         <CreateMultipleChoiceQuestion
           onClose={() => setShowMultipleChoiceModal(false)}
           onSave={(questionData) => {
@@ -914,7 +914,7 @@ const Modals = ({
             handleQuestionSave(processedData);
           }}
         />
-      )}
+      )} */}
 
       {/* FIXED: Bulk Edit Modal */}
       {showBulkEditModal && (() => {
