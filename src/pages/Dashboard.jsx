@@ -518,16 +518,16 @@ const Dashboard = () => {
   // Function to expand categories that have matching search results
   const expandCategoriesWithMatches = (categories, searchTerm) => {
     if (!searchTerm.trim()) return;
-    
-    const newExpanded = new Set(expandedCategories);
-    
+
+    const newExpanded = new Set();
+
     const checkAndExpand = (nodes) => {
       nodes.forEach(node => {
         if (node.children && node.children.length > 0) {
           const hasMatchingChildren = node.children.some(child => {
             const searchableText = [
               child.fullname,
-              child.displayname, 
+              child.displayname,
               child.name,
               child.shortname,
               child.description,
@@ -535,18 +535,23 @@ const Dashboard = () => {
             ].join(' ').toLowerCase();
             return searchableText.includes(searchTerm.toLowerCase());
           });
-          
+
           if (hasMatchingChildren) {
             newExpanded.add(node.id);
           }
-          
+
           checkAndExpand(node.children);
         }
       });
     };
-    
+
     checkAndExpand(categories);
-    setExpandedCategories(newExpanded);
+
+    // Only update state if the expanded set actually changed
+    const isSame = expandedCategories.size === newExpanded.size && [...expandedCategories].every(id => newExpanded.has(id));
+    if (!isSame) {
+      setExpandedCategories(newExpanded);
+    }
   };
 
   // Handle expand/collapse
@@ -562,7 +567,14 @@ const Dashboard = () => {
 
   const SearchAndFilterBar = ({ itemCount, itemType }) => {
     const searchInputRef = useRef(null);
-    
+
+    // Ensure input stays focused after typing
+    useEffect(() => {
+      if (searchInputRef.current && document.activeElement !== searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, [searchTerm]);
+
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6 shadow-sm">
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -583,57 +595,7 @@ const Dashboard = () => {
               {itemCount} {itemType}
             </div>
           </div>
-          
-          {/* <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors duration-200"
-              title={`Switch to ${viewMode === 'grid' ? 'list' : 'grid'} view`}
-            >
-              {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
-            </button>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`p-2 rounded-lg border transition-colors duration-200 ${
-                showFilters ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-gray-200 hover:bg-gray-50'
-              }`}
-            >
-              <Filter className="h-4 w-4" />
-            </button>
-          </div> */}
         </div>
-        
-        {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <select className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option>All Types</option>
-                <option>Active</option>
-                <option>Draft</option>
-                <option>Archived</option>
-              </select>
-              <select className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option>Sort by Name</option>
-                <option>Sort by Date</option>
-                <option>Sort by Type</option>
-              </select>
-              <button 
-                onClick={() => {
-                  setSearchTerm('');
-                  // Refocus the search input after clearing
-                  setTimeout(() => {
-                    if (searchInputRef.current) {
-                      searchInputRef.current.focus();
-                    }
-                  }, 0);
-                }}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Clear Filters
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     );
   };
@@ -704,27 +666,27 @@ const Dashboard = () => {
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => {
-                const allIds = new Set();
-                const collectIds = (categories) => {
-                  categories.forEach(cat => {
-                    if (cat.children && cat.children.length > 0) {
-                      allIds.add(cat.id);
-                      collectIds(cat.children);
-                    }
-                  });
-                };
-                collectIds(courseCategories);
-                setExpandedCategories(allIds);
+                if (expandedCategories.size === 0) {
+                  // Expand all
+                  const allIds = new Set();
+                  const collectIds = (categories) => {
+                    categories.forEach(cat => {
+                      if (cat.children && cat.children.length > 0) {
+                        allIds.add(cat.id);
+                        collectIds(cat.children);
+                      }
+                    });
+                  };
+                  collectIds(courseCategories);
+                  setExpandedCategories(allIds);
+                } else {
+                  // Collapse all
+                  setExpandedCategories(new Set());
+                }
               }}
-              className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+              className={`px-3 py-1 text-sm rounded-lg transition-colors ${expandedCategories.size === 0 ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
             >
-              Expand All
-            </button>
-            <button
-              onClick={() => setExpandedCategories(new Set())}
-              className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              Collapse All
+              {expandedCategories.size === 0 ? 'Expand All' : 'Collapse All'}
             </button>
           </div>
         )}
@@ -905,7 +867,7 @@ const Dashboard = () => {
   const QuestionOverviewPanel = () => {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        {/* <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold text-gray-900">Question Overview</h2>
             <p className="text-gray-600 mt-1">
@@ -928,7 +890,7 @@ const Dashboard = () => {
               Create Question
             </button>
           </div>
-        </div>
+        </div> */}
         
         {loading ? (
           <div className="flex justify-center items-center h-64">
@@ -981,7 +943,7 @@ const Dashboard = () => {
                     const name = typeof data === 'object' ? data.name : type.replace(/([A-Z])/g, ' $1').trim();
                     const icon = typeof data === 'object' ? data.icon : null;
                     
-                    console.log(`🎨 Rendering question type: ${type}`, { count, name, icon }); // Debug log
+                    console.log(` Rendering question type: ${type}`, { count, name, icon }); // Debug log
                     
                     return (
                       <div key={type} className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200">
@@ -992,11 +954,11 @@ const Dashboard = () => {
                               alt={name}
                               className="h-6 w-6"
                               onError={(e) => {
-                                console.error(`❌ Failed to load icon for ${type}:`, icon);
+                                console.error(`Failed to load icon for ${type}:`, icon);
                                 e.target.style.display = 'none';
                               }}
                               onLoad={() => {
-                                console.log(`✅ Successfully loaded icon for ${type}:`, icon);
+                                console.log(`Successfully loaded icon for ${type}:`, icon);
                               }}
                             />
                           ) : (
@@ -1013,7 +975,7 @@ const Dashboard = () => {
                         </div>
                         <div className="text-right">
                           <span className="text-lg font-bold text-blue-600">{count}</span>
-                          <p className="text-xs text-gray-500">questions</p>
+                         
                         </div>
                       </div>
                     );
@@ -1040,17 +1002,16 @@ const Dashboard = () => {
                   {questionOverview.tags.map((tag, index) => {
                     const tagData = typeof tag === 'object' ? tag : { name: tag, count: 1 };
                     const intensity = Math.min(Math.max(tagData.count / 10, 0.3), 1);
-                    
-                    console.log(` Rendering tag: ${tagData.name}`, { count: tagData.count, intensity }); // Debug log
-                    
+
+                    // Use blue/sky colors instead of purple
                     return (
                       <div
                         key={index}
                         className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm transition-all duration-200 hover:shadow-md cursor-pointer"
                         style={{
-                          backgroundColor: `rgba(99, 102, 241, ${0.1 + intensity * 0.2})`,
-                          border: `1px solid rgba(99, 102, 241, ${0.2 + intensity * 0.3})`,
-                          color: `rgba(55, 48, 163, ${0.7 + intensity * 0.3})`
+                          backgroundColor: `rgba(14, 165, 233, ${0.1 + intensity * 0.2})`, // sky-400
+                          border: `1px solid rgba(14, 165, 233, ${0.2 + intensity * 0.3})`,
+                          color: `rgba(30, 64, 175, ${0.7 + intensity * 0.3})` // blue-800
                         }}
                         title={`${tagData.count} question(s) with this tag`}
                       >
@@ -1105,55 +1066,7 @@ const Dashboard = () => {
               </div>
             )}
 
-            {/* Performance Summary */}
-            {/* <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                    Category Summary
-                  </h3>
-                  {questionOverview.totalQuestions === 0 ? (
-                    <div>
-                      <p className="text-blue-800 mb-2">No questions found in this category yet.</p>
-                      <p className="text-sm text-blue-600">Start by creating your first question!</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-blue-800">
-                        Found <strong>{questionOverview.totalQuestions}</strong> questions in this category
-                      </p>
-                      <p className="text-blue-700">
-                        <strong>{questionOverview.activeQuestions}</strong> questions are ready for use
-                      </p>
-                      {questionOverview.draftQuestions > 0 && (
-                        <p className="text-blue-700">
-                          <strong>{questionOverview.draftQuestions}</strong> questions are in draft status
-                        </p>
-                      )}
-                      {questionOverview.executionTime && (
-                        <p className="text-sm text-blue-600">
-                          Data loaded in {questionOverview.executionTime}ms
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <button
-                    onClick={() => navigate('/questions', { state: { categoryId: selectedQuestionCategory?.id } })}
-                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                  >
-                    View All Questions
-                  </button>
-                  <button
-                    onClick={() => navigate('/questions/create', { state: { categoryId: selectedQuestionCategory?.id } })}
-                    className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors duration-200"
-                  >
-                    Create New Question
-                  </button>
-                </div>
-              </div>
-            </div> */}
+       
           </div>
         ) : (
           <div className="text-center py-16">

@@ -34,8 +34,10 @@ const TopButtonsRow = ({
   const [loadingQuestionTypes, setLoadingQuestionTypes] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Enhanced navigation handler
-  const handleNavigation = (value) => {
+// Enhanced navigation handler
+const handleNavigation = (value) => {
+// ...existing code...
+
     if (value.includes('import')) {
       handleImportClick();
       return;
@@ -577,6 +579,42 @@ const TopButtonsRow = ({
     setShowQuestionText(value === "1" || value === "2");
   };
 
+  // Export questions handler
+  const handleExportClick = async () => {
+    const token = localStorage.getItem('token');
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+    const categoryId = localStorage.getItem('questionCategoryId');
+    const contextId = localStorage.getItem('questionCategoryContextId');
+
+    if (!categoryId || categoryId === 'All' || !contextId) {
+      toast.error('Please select a valid category first.');
+      return;
+    }
+
+    try {
+      const url = `${API_BASE_URL}/questions/export?categoryid=${categoryId}&contextid=${contextId}`;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.export_form_url) {
+          window.open(data.export_form_url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+          toast.success('Export form opened!');
+        } else {
+          toast.error('No export form URL received from server.');
+        }
+      } else {
+        toast.error(`Failed to get export form: ${response.status}`);
+      }
+    } catch (error) {
+      toast.error(`Error: ${error.message}`);
+    }
+  };
+
   return (
     <div className="w-full border-2 border-white shadow-sm mb-4">
       <div className="py-3 px-5 flex flex-col justify-between md:flex-row md:items-center md:justify-between gap-4">
@@ -626,6 +664,7 @@ const TopButtonsRow = ({
                 <Upload size={18} />
               </button>
 
+
               <button
                 type="button"
                 className="text-sky-600 border border-sky-600 inline-flex items-center gap-2 rounded-md bg-transparent px-4 py-2 font-semibold shadow hover:bg-sky-50 hover:text-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-sky-600"
@@ -634,6 +673,16 @@ const TopButtonsRow = ({
               >
                 Preview Questions
                 <Eye size={18} />
+              </button>
+
+              <button
+                type="button"
+                className="text-sky-600 border border-sky-600 inline-flex items-center gap-2 rounded-md bg-transparent px-4 py-2 font-semibold shadow hover:bg-sky-50 hover:text-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-sky-600"
+                onClick={handleExportClick}
+                title="Export questions in selected category"
+              >
+                Export Questions
+                <FolderOpen size={18} />
               </button>
 
               <button
