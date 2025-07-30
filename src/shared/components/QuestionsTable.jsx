@@ -720,6 +720,8 @@ const QuestionsTable = ({
   const [qtypeIcons, setQtypeIcons] = useState({});
   const [highlightedQuestions, setHighlightedQuestions] = useState(new Set());
   const [verifiedQuestions, setVerifiedQuestions] = useState(new Set());
+  const [lastActionedQuestionId, setLastActionedQuestionId] = useState(null);
+  const [lastActionType, setLastActionType] = useState(null);
   
   useEffect(() => {
     async function fetchQtypeIcons() {
@@ -1326,9 +1328,10 @@ const handleEditMoodle = async (question) => {
       console.error('No question provided to handlePreview');
       return;
     }
-    console.log('Opening preview for question:', question);
     setPreviewQuestion(question);
     setPreviewModalOpen(true);
+    setLastActionedQuestionId(question.id);
+    setLastActionType('preview');
   };
 
   const handleHistory = (question) => {
@@ -1336,35 +1339,35 @@ const handleEditMoodle = async (question) => {
       console.error('No question provided to handleHistory');
       return;
     }
-
     const questionWithQbankEntry = {
       ...question,
       qbankentryid: question.qbankentryid || question.qbank_entry_id || question.entryid,
     };
-
     setHistoryQuestion(questionWithQbankEntry);
     setShowHistoryView(true);
+    setLastActionedQuestionId(question.id);
+    setLastActionType('history');
   };
 
   const handleBackFromHistory = () => {
     setShowHistoryView(false);
     setHistoryQuestion(null);
+    setLastActionedQuestionId(null);
+    setLastActionType(null);
   };
 
   const toggleQuestionSelection = (id) => {
     if (!setSelectedQuestions) return;
-    
     setSelectedQuestions(prev => {
       if (!Array.isArray(prev)) prev = [];
-      
       const newSelection = prev.includes(id)
         ? prev.filter(qId => qId !== id)
         : [...prev, id];
-      
-      // Save to localStorage to persist across page refreshes
       localStorage.setItem('selectedQuestions', JSON.stringify(newSelection));
       return newSelection;
     });
+    setLastActionedQuestionId(id);
+    setLastActionType('select');
   };
 
   const toggleQuestionVerification = (id) => {
@@ -1380,6 +1383,8 @@ const handleEditMoodle = async (question) => {
       localStorage.setItem('verifiedQuestions', JSON.stringify(Array.from(newSet)));
       return newSet;
     });
+    setLastActionedQuestionId(id);
+    setLastActionType('verify');
   };
 
   // Load verified questions from localStorage on component mount
@@ -1639,8 +1644,7 @@ const handleEditMoodle = async (question) => {
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 w-20" scope="col">Comments</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 w-20" scope="col">Version</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 w-20" scope="col">Usage</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 w-24" scope="col">Last used</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 min-w-[140px]" scope="col">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 w-24" scope="col">
                   <div className="font-semibold">Created by</div>
                   <div className="mt-1 space-x-1">
                     <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by First name ascending">First name</a>
@@ -1677,20 +1681,30 @@ const handleEditMoodle = async (question) => {
                   return null;
                 }
 
+                // Highlight last actioned question with a distinct color, but keep verified color for verified questions
+                let rowClass = '';
+                if (verifiedQuestions.has(question.id)) {
+                  rowClass = 'bg-green-50 border-l-4 border-l-green-500 shadow-sm hover:bg-green-100';
+                } else if (lastActionedQuestionId === question.id) {
+                  rowClass = 'bg-sky-100 border-l-4 border-l-sky-400 shadow-sm hover:bg-sky-200'; // highlight color for last actioned
+                } else if (Array.isArray(selectedQuestions) && selectedQuestions.includes(question.id)) {
+                  rowClass = 'bg-blue-50 border-l-4 border-l-blue-500 shadow-sm hover:bg-blue-100';
+                } else {
+                  rowClass = `${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 hover:shadow-md hover:border-l-4 hover:border-l-blue-500`;
+                }
+
                 return (
                   <tr 
                     key={question.id} 
-                    className={`group transition-all duration-200 cursor-pointer ${
-                      verifiedQuestions.has(question.id)
-                        ? 'bg-green-50 border-l-4 border-l-green-500 shadow-sm hover:bg-green-100'
-                        : Array.isArray(selectedQuestions) && selectedQuestions.includes(question.id)
-                          ? 'bg-blue-50 border-l-4 border-l-blue-500 shadow-sm hover:bg-blue-100'
-                          : `${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 hover:shadow-md hover:border-l-4 hover:border-l-blue-500`
-                    }`}
-                    onClick={() => handlePreviewMoodle(question)}
+                    className={`group transition-all duration-200 cursor-pointer ${rowClass}`}
+                    onClick={() => {
+                      handlePreviewMoodle(question);
+                      setLastActionedQuestionId(question.id);
+                      setLastActionType('rowClick');
+                    }}
                     title={`Click anywhere to preview in Moodle${verifiedQuestions.has(question.id) ? ' (Verified ✓)' : ''}`}
                   >
-                    <td className="px-3 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <td className={`px-3 py-4 whitespace-nowrap${lastActionedQuestionId === question.id ? ' bg-sky-100 border-l-4 border-l-sky-400' : ''}`} onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center">
                         <input
                           id={`checkq${question.id}`}
@@ -1839,8 +1853,12 @@ const handleEditMoodle = async (question) => {
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <button
-                        className="text-blue-600 hover:text-blue-900 underline cursor-pointer"
-                        onClick={() => openCommentsModal(question)}
+                        className={`text-blue-600 hover:text-blue-900 underline cursor-pointer${lastActionedQuestionId === question.id ? ' bg-sky-100 border-l-4 border-l-sky-400' : ''}`}
+                        onClick={() => {
+                          openCommentsModal(question);
+                          setLastActionedQuestionId(question.id);
+                          setLastActionType('comments');
+                        }}
                       >
                         {question.comments || 0}
                       </button>
@@ -1874,7 +1892,7 @@ const handleEditMoodle = async (question) => {
                       {getQuestionTypeIcon(question.qtype || question.questionType, question)}
                     </td>
 
-                    <td className="px-3 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <td className={`px-3 py-4 whitespace-nowrap${lastActionedQuestionId === question.id ? ' bg-sky-100 border-l-4 border-l-sky-400' : ''}`} onClick={(e) => e.stopPropagation()}>
                       <div className="relative">
                         <div className="flex">
                           <div className="relative" ref={el => {
@@ -1925,6 +1943,8 @@ const handleEditMoodle = async (question) => {
                                       e.preventDefault();
                                       if (!loadingMoodlePreview) {
                                         await handlePreviewMoodle(question);
+                                        setLastActionedQuestionId(question.id);
+                                        setLastActionType('preview');
                                         setOpenActionDropdown(null);
                                       }
                                     }}
@@ -1940,6 +1960,8 @@ const handleEditMoodle = async (question) => {
                                     onClick={async (e) => {
                                       e.preventDefault();
                                       await handleEditMoodle(question);
+                                      setLastActionedQuestionId(question.id);
+                                      setLastActionType('editMoodle');
                                       setOpenActionDropdown(null);
                                     }}
                                   >
@@ -1954,6 +1976,8 @@ const handleEditMoodle = async (question) => {
                                     onClick={async (e) => {
                                       e.preventDefault();
                                       await handleDuplicateMoodle(question);
+                                      setLastActionedQuestionId(question.id);
+                                      setLastActionType('duplicate');
                                       setOpenActionDropdown(null);
                                     }}
                                   >
@@ -1985,6 +2009,8 @@ const handleEditMoodle = async (question) => {
                                       e.preventDefault();
                                       setEditingQuestion(question.id);
                                       setNewQuestionTitle(question.name || question.title || '');
+                                      setLastActionedQuestionId(question.id);
+                                      setLastActionType('editName');
                                       setOpenActionDropdown(null);
                                     }}
                                   >
@@ -2013,6 +2039,8 @@ const handleEditMoodle = async (question) => {
                                     onClick={(e) => {
                                       e.preventDefault();
                                       openTagModal(question);
+                                      setLastActionedQuestionId(question.id);
+                                      setLastActionType('tags');
                                       setOpenActionDropdown(null);
                                     }}
                                   >
@@ -2031,6 +2059,8 @@ const handleEditMoodle = async (question) => {
                                     onClick={(e) => {
                                       e.preventDefault();
                                       toggleQuestionVerification(question.id);
+                                      setLastActionedQuestionId(question.id);
+                                      setLastActionType('verify');
                                       setOpenActionDropdown(null);
                                     }}
                                   >
@@ -2045,6 +2075,8 @@ const handleEditMoodle = async (question) => {
                                     onClick={(e) => {
                                       e.preventDefault();
                                       handlePreview(question);
+                                      setLastActionedQuestionId(question.id);
+                                      setLastActionType('preview');
                                       setOpenActionDropdown(null);
                                     }}
                                   >
@@ -2059,6 +2091,8 @@ const handleEditMoodle = async (question) => {
                                     onClick={(e) => {
                                       e.preventDefault();
                                       handleHistory(question);
+                                      setLastActionedQuestionId(question.id);
+                                      setLastActionType('history');
                                       setOpenActionDropdown(null);
                                     }}
                                   >
@@ -2073,6 +2107,8 @@ const handleEditMoodle = async (question) => {
                                     onClick={(e) => {
                                       e.preventDefault();
                                       onDelete(question.id);
+                                      setLastActionedQuestionId(question.id);
+                                      setLastActionType('delete');
                                       setOpenActionDropdown(null);
                                     }}
                                   >
@@ -2087,6 +2123,8 @@ const handleEditMoodle = async (question) => {
                                     onClick={(e) => {
                                       e.preventDefault();
                                       setOpenActionDropdown(null);
+                                      setLastActionedQuestionId(question.id);
+                                      setLastActionType('export');
                                     }}
                                   >
                                     <i className="fa fa-download w-4 text-center mr-2 text-gray-500"></i>

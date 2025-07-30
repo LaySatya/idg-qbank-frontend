@@ -209,17 +209,17 @@ const Dashboard = () => {
                 };
               }
             });
-            console.log('✅ Transformed Question Types:', transformedData.questionTypes); // Debug log
+            console.log(' Transformed Question Types:', transformedData.questionTypes); // Debug log
           }
           
           // Transform tags array if available
           if (apiData.tags && Array.isArray(apiData.tags)) {
-            console.log('🏷️ Tags Raw:', apiData.tags); // Debug log
+            console.log(' Tags Raw:', apiData.tags); // Debug log
             transformedData.tags = apiData.tags.map(tag => ({
               name: tag.name,
               count: tag.count || 1
             }));
-            console.log('✅ Transformed Tags:', transformedData.tags); // Debug log
+            console.log(' Transformed Tags:', transformedData.tags); // Debug log
           }
           
           // If there are recent questions in the API response, transform them
