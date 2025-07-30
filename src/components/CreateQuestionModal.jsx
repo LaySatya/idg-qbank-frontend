@@ -158,7 +158,7 @@ const CreateQuestionModal = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-25">
       <div className="bg-white rounded-lg shadow-xl w-[90%] max-w-5xl h-[80vh] flex">
         {/* Left Panel - Question Types */}
-        <div className="w-1/3 border-r bg-gray-50 flex flex-col">
+        <div className="w-1/3 border-r bg-sky-50 flex flex-col">
           <div className="p-4 border-b flex justify-between items-center">
             <h2 className="text-xl font-semibold">QUESTIONS</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -222,7 +222,7 @@ const CreateQuestionModal = ({
                         {renderIcon(type)}
                         {/* Fallback text icon */}
                         <span 
-                          className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center text-xs hidden"
+                          className="w-6 h-6 bg-gray-200 rounded flex-1 items-center justify-center text-xs hidden"
                         >
                           {type.label.charAt(0).toUpperCase()}
                         </span>
@@ -272,7 +272,7 @@ const CreateQuestionModal = ({
                   ) : null}
                   {/* Fallback large icon */}
                   <div 
-                    className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center text-3xl font-bold text-gray-500 hidden"
+                    className="w-full h-full bg-sky-200 rounded-lg flex-1 items-center justify-center text-3xl font-bold text-sky-500 hidden"
                   >
                     {selectedTypeObj.label.charAt(0).toUpperCase()}
                   </div>

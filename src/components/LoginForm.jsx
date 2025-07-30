@@ -252,11 +252,11 @@ const openMoodleWithSession = (targetUrl = null) => {
     if (activeEnvString) {
       const activeEnv = JSON.parse(activeEnvString);
       moodleUrl = targetUrl || `${activeEnv.baseUrl}/my/`;
-      console.log(`🔗 Opening ${activeEnv.name}: ${moodleUrl}`);
+      console.log(` Opening ${activeEnv.name}: ${moodleUrl}`);
     } else {
       // Fallback to environment variable if no active environment stored
       moodleUrl = targetUrl || `${import.meta.env.VITE_MOODLE_BASE_URL}/my/`;
-      console.log('🔗 Opening fallback Moodle URL:', moodleUrl);
+      console.log(' Opening fallback Moodle URL:', moodleUrl);
     }
     
     window.open(moodleUrl, '_blank', 'noopener,noreferrer');
@@ -386,14 +386,15 @@ const openMoodleWithSession = (targetUrl = null) => {
         <div className="text-center space-y-8">
           <div className="mx-auto">
             <img
-              src="/src/assets/CADT-IDG-Logos-Navy_CADT-IDG-Lockup-1-Khmer-English.png"
-              alt="CADT Logo"
+              src="/CADT-IDG-Logos-Navy_CADT-IDG-Lockup-1-Khmer-English.png"
+              alt="IDG Logo"
               className="h-20 w-auto mx-auto object-contain"
             />
           </div>
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-3">Welcome Back</h1>
-            <p className="text-gray-600 text-xl">Sign in to your CADT account</p>
+            <h1 className="text-4xl font-bold text-gray-900 mb-3">Welcome</h1>
+            
+            {/* <p className="text-gray-600 text-xl">Sign in to your CADT account</p> */}
           </div>
         </div>
 

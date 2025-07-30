@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, BookOpen, User, BarChart3, Tags } from 'lucide-react';
-import Logo from '../../assets/CADT-IDG-Logos-Navy_CADT-IDG-Lockup-1-Khmer-English.png';
+// ...existing code...
 
 const Sidebar = ({ collapsed }) => {
   // Navigation items
@@ -40,7 +40,7 @@ const Sidebar = ({ collapsed }) => {
           <div className="w-full flex justify-center">
             <div className="h-8 w-8 rounded-md bg-white flex items-center justify-center">
               <img
-                src={Logo}
+                src="/CADT-IDG-Logos-Navy_CADT-IDG-Lockup-1-Khmer-English.png"
                 alt="CADT IDG Logo"
                 className="h-8 w-auto object-contain"
               />
@@ -49,7 +49,7 @@ const Sidebar = ({ collapsed }) => {
         ) : (
           <div className="w-full flex items-center">
             <img
-              src={Logo}
+              src="/CADT-IDG-Logos-Navy_CADT-IDG-Lockup-1-Khmer-English.png"
               alt="CADT IDG Logo"
               className="h-12 w-full object-contain"
               style={{ maxHeight: '48px' }}

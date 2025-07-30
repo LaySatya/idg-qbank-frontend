@@ -33,6 +33,21 @@ const TopButtonsRow = ({
   const [questionTypes, setQuestionTypes] = useState([]);
   const [loadingQuestionTypes, setLoadingQuestionTypes] = useState(false);
   const fileInputRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    if (!showQuestionsDropdown) return;
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowQuestionsDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showQuestionsDropdown, setShowQuestionsDropdown]);
 
 // Enhanced navigation handler
 const handleNavigation = (value) => {
@@ -542,7 +557,7 @@ const handleNavigation = (value) => {
     const token = localStorage.getItem('token');
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
     const categoryId = localStorage.getItem('questionCategoryId');
-    const contextId = localStorage.getItem('CourseID') || '1';
+    const contextId = localStorage.getItem('questionCategoryContextId') || '1';
     const qtype = typeObj.value || typeObj.name;
 
     if (!categoryId || categoryId === 'All') {
@@ -552,6 +567,7 @@ const handleNavigation = (value) => {
 
     try {
       const url = `${API_BASE_URL}/questions/create?qtype=${qtype}&categoryid=${categoryId}&contextid=${contextId}`;
+      console.log('Question creation API URL:', url);
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -561,6 +577,7 @@ const handleNavigation = (value) => {
       if (response.ok) {
         const data = await response.json();
         if (data.create_form_url) {
+          console.log('Question creation form URL:', data.create_form_url);
           window.open(data.create_form_url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
           toast.success('Question creation form opened!');
         } else {
@@ -651,19 +668,58 @@ const handleNavigation = (value) => {
   
         {/* Main Actions */}
         <div className="flex items-center gap-4 justify-start flex-1">
-          {/* Import from File Button - show in questions view */}
+          {/* Import/Export Dropdown and other actions */}
           {(currentView === 'questions' || !currentView) && (
             <>
-              <button
-                type="button"
-                className="text-sky-600 border border-sky-600 inline-flex items-center gap-2 rounded-md bg-transparent px-4 py-2 font-semibold shadow hover:bg-sky-50 hover:text-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-sky-600"
-                onClick={handleImportClick}
-                disabled={isImporting}
-              >
-                {isImporting ? 'Importing...' : 'Import Questions'}
-                <Upload size={18} />
-              </button>
-
+              <div className="relative inline-block text-left" ref={dropdownRef}>
+                <button
+                  type="button"
+                  className="text-sky-600 border border-sky-600 inline-flex items-center gap-2 rounded-md bg-transparent px-4 py-2 font-semibold shadow hover:bg-sky-50 hover:text-sky-700 transition-colors duration-200"
+                  onClick={() => setShowQuestionsDropdown(prev => !prev)}
+                  aria-haspopup="true"
+                  aria-expanded={showQuestionsDropdown}
+                >
+                  Import/Export
+                  <ChevronDown size={18} />
+                </button>
+                {showQuestionsDropdown && (
+                  <div className="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-sky-400 ring-opacity-60 z-10">
+                    <div className="py-1">
+                      <button
+                        type="button"
+                        className="w-full text-left px-4 py-2 text-sm text-sky-700 hover:bg-sky-50 hover:text-sky-900"
+                        onClick={() => {
+                          setShowQuestionsDropdown(false);
+                          handleImportClick();
+                        }}
+                        disabled={isImporting}
+                      >
+                        {isImporting ? 'Importing...' : 'Import Questions'}
+                        <Upload size={16} className="ml-2 inline" />
+                      </button>
+                      <button
+                        type="button"
+                        className="w-full text-left px-4 py-2 text-sm text-sky-700 hover:bg-sky-50 hover:text-sky-900"
+                        onClick={() => {
+                          setShowQuestionsDropdown(false);
+                          handleExportClick();
+                        }}
+                      >
+                        Export Questions
+                        <FolderOpen size={16} className="ml-2 inline" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".xml,.json"
+                  onChange={handleFileChange}
+                />
+              </div>
 
               <button
                 type="button"
@@ -678,16 +734,6 @@ const handleNavigation = (value) => {
               <button
                 type="button"
                 className="text-sky-600 border border-sky-600 inline-flex items-center gap-2 rounded-md bg-transparent px-4 py-2 font-semibold shadow hover:bg-sky-50 hover:text-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-sky-600"
-                onClick={handleExportClick}
-                title="Export questions in selected category"
-              >
-                Export Questions
-                <FolderOpen size={18} />
-              </button>
-
-              <button
-                type="button"
-                className="text-sky-600 border border-sky-600 inline-flex items-center gap-2 rounded-md bg-transparent px-4 py-2 font-semibold shadow hover:bg-sky-50 hover:text-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-sky-600"
                 onClick={handleCreateQuestion}
                 title="Create new question in selected category"
               >
@@ -696,15 +742,6 @@ const handleNavigation = (value) => {
               </button>
             </>
           )}
-        
-          {/* Hidden file input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            accept=".xml,.json"
-            onChange={handleFileChange}
-          />
         </div>
       </div>
     {/* Create Question Modal */}

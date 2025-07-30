@@ -25,24 +25,10 @@ const CreateQuestionModal = ({
         description: type.description || '',
         originalValue: type.pluginname || type.name,
       }))
-    : [
-      // ...existing code for fallback types...
-      { value: 'multichoice', label: 'Multiple choice', icon: '/src/assets/icon/Multiple-choice.svg', description: 'Select one or multiple correct answers from a list of options.' },
-      { value: 'truefalse', label: 'True/False', icon: '/src/assets/icon/True-False.svg', description: 'Choose between true or false as the answer.' },
-      { value: 'matching', label: 'Matching', icon: '/src/assets/icon/Matching.svg', description: 'Match items from one column to another.' },
-      { value: 'shortanswer', label: 'Short answer', icon: '/src/assets/icon/Short-answer.svg', description: 'Provide a brief written response.' },
-      { value: 'numerical', label: 'Numerical', icon: '/src/assets/icon/Numerical.svg', description: 'Answer with a numeric value.' },
-      { value: 'essay', label: 'Essay', icon: '/src/assets/icon/Essay.svg', description: 'Write a comprehensive written response.' },
-      { value: 'calculated', label: 'Calculated', icon: '/src/assets/icon/Calculated.svg', description: 'Solve mathematical problems with generated values.' },
-      { value: 'calculatedmulti', label: 'Calculated multichoice', icon: '/src/assets/icon/Calculated-multichoice.svg', description: 'Multiple choice with calculated values.' },
-      { value: 'calculatedsimple', label: 'Calculated simple', icon: '/src/assets/icon/Calculated simple.svg', description: 'Simple calculated questions.' },
-      { value: 'ddimageortext', label: 'Drag and drop onto image', icon: '/src/assets/icon/Drag and drop onto image.svg', description: 'Place items on a specific image.' },
-      { value: 'ddmarker', label: 'Drag and drop markers', icon: '/src/assets/icon/Drag and drop markers.svg', description: 'Position markers on an image or diagram.' },
-      { value: 'ddwtos', label: 'Drag and drop into text', icon: '/src/assets/icon/Drag and drop into text.svg', description: 'Place items into specific locations in text.' },
-      { value: 'multianswer', label: 'Embedded answers (Cloze)', icon: '/src/assets/icon/Embedded answers (Cloze).svg', description: 'Insert answers directly into text.' },
-      { value: 'randomsamatch', label: 'Random short-answer matching', icon: '/src/assets/icon/Random short-answer matching.svg', description: 'Randomly match short answers.' },
-      { value: 'gapselect', label: 'Select missing words', icon: '/src/assets/icon/Select-missing words.svg', description: 'Choose the correct words to complete a text.' }
-    ];
+    : [];
+
+  // If no API types, fallback to empty (or optionally static minimal types)
+  // This ensures icons are always loaded from API for hosted environments
 
   // Filter question types based on search
   const filteredQuestionTypes = questionTypes.filter(type => 
