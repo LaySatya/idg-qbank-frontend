@@ -1,3 +1,5 @@
+import CheckCircleTwoToneIcon from '@mui/icons-material/CheckCircleTwoTone';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 // ============================================================================
 // components/QuestionsTable.jsx - COMPLETE FIXED VERSION
 // ============================================================================
@@ -1683,9 +1685,9 @@ const handleEditMoodle = async (question) => {
                 // Highlight last actioned question with a distinct color, but keep verified color for verified questions
                 let rowClass = '';
                 if (verifiedQuestions.has(question.id)) {
-                  rowClass = 'bg-green-50 border-l-4 border-l-green-500 shadow-sm hover:bg-green-100';
+                  rowClass = 'bg-blue-50 border-l-4 border-l-blue-500 shadow-sm hover:bg-blue-100';
                 } else if (lastActionedQuestionId === question.id) {
-                  rowClass = 'bg-sky-100 border-l-4 border-l-sky-400 shadow-sm hover:bg-sky-200'; // highlight color for last actioned
+                  rowClass = 'bg-blue-100 border-l-4 border-l-blue-400 shadow-sm hover:bg-blue-200'; // highlight color for last actioned
                 } else if (Array.isArray(selectedQuestions) && selectedQuestions.includes(question.id)) {
                   rowClass = 'bg-blue-50 border-l-4 border-l-blue-500 shadow-sm hover:bg-blue-100';
                 } else {
@@ -1703,7 +1705,7 @@ const handleEditMoodle = async (question) => {
                     }}
                     title={`Click anywhere to preview in Moodle${verifiedQuestions.has(question.id) ? ' (Verified ✓)' : ''}`}
                   >
-                    <td className={`px-3 py-4 whitespace-nowrap${lastActionedQuestionId === question.id ? ' bg-sky-100 border-l-4 border-l-sky-400' : ''}`} onClick={(e) => e.stopPropagation()}>
+                    <td className={`px-3 py-4 whitespace-nowrap${lastActionedQuestionId === question.id ? ' bg-blue-100 border-l-4 border-l-blue-400' : ''}`} onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center">
                         <input
                           id={`checkq${question.id}`}
@@ -1734,8 +1736,8 @@ const handleEditMoodle = async (question) => {
                         )} */}
                         {verifiedQuestions.has(question.id) && (
                           <div className="absolute top-0 right-10 z-15">
-                            <div className="flex items-center justify-center text-xs text-white bg-green-600 w-6 h-6 rounded-full shadow-lg border border-white">
-                              <i className="fas fa-check-double"></i>
+                            <div className="flex items-center justify-center text-xs text-white bg-blue-600 w-6 h-6 rounded-full shadow-lg border border-white">
+                              <CheckCircleTwoToneIcon style={{ fontSize: 18, color: 'white' }} />
                             </div>
                           </div>
                         )}
@@ -1762,7 +1764,7 @@ const handleEditMoodle = async (question) => {
                                       }
                                     }}
                                   />
-                                  <button
+                                  {/* <button
                                     onClick={(e) => {
                                       e.preventDefault();
                                       setPendingSaveQuestionId(question.id);
@@ -1771,38 +1773,47 @@ const handleEditMoodle = async (question) => {
                                     className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
                                   >
                                     Save
-                                  </button>
-      {/* Save Confirmation Modal (MUI) */}
-      <Dialog open={showSaveConfirmModal} onClose={() => setShowSaveConfirmModal(false)}>
-        <DialogTitle>Confirm Save</DialogTitle>
-        <DialogContent>
-          Are you sure you want to save this question name?
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowSaveConfirmModal(false)} color="inherit">Cancel</Button>
-          <Button
-            onClick={async () => {
-              setShowSaveConfirmModal(false);
-              if (pendingSaveQuestionId) {
-                await initiateQuestionSave(pendingSaveQuestionId);
-                setPendingSaveQuestionId(null);
-              }
-            }}
-            color="primary"
-            variant="contained"
-          >
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
-                                  <button
+                                  </button> */}
+                            {/* Save Confirmation Modal (MUI) */}
+                            <Dialog open={showSaveConfirmModal} onClose={() => {
+                              setShowSaveConfirmModal(false);
+                              setEditingQuestion(null);
+                              setPendingSaveQuestionId(null);
+                            }}>
+                              <DialogTitle>Confirm Save</DialogTitle>
+                              <DialogContent>
+                                Are you sure you want to save this question name?
+                              </DialogContent>
+                              <DialogActions>
+                                <Button onClick={() => {
+                                  setShowSaveConfirmModal(false);
+                                  setEditingQuestion(null);
+                                  setPendingSaveQuestionId(null);
+                                }} color="inherit">Cancel</Button>
+                                <Button
+                                  onClick={async () => {
+                                    setShowSaveConfirmModal(false);
+                                    if (pendingSaveQuestionId) {
+                                      await initiateQuestionSave(pendingSaveQuestionId);
+                                      setEditingQuestion(null);
+                                      setPendingSaveQuestionId(null);
+                                    }
+                                  }}
+                                  color="primary"
+                                  variant="contained"
+                                >
+                                  Confirm
+                                </Button>
+                              </DialogActions>
+                            </Dialog>
+                          {/* <button
                                     onClick={() => {
                                       setEditingQuestion(null);
                                     }}
                                     className="px-3 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400 transition-colors"
                                   >
                                     Cancel
-                                  </button>
+                                  </button> */}
                                 </div>
                             ) : (
                               <span
@@ -1830,12 +1841,14 @@ const handleEditMoodle = async (question) => {
                               }}
                               className={`ml-2 flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 ${
                                 verifiedQuestions.has(question.id)
-                                  ? 'bg-green-600 text-white shadow-md hover:bg-green-700'
-                                  : 'bg-gray-200 text-gray-500 hover:bg-green-100 hover:text-green-600'
+                                  ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
+                                  : 'bg-gray-200 text-gray-500 hover:bg-blue-100 hover:text-blue-600'
                               }`}
                               title={verifiedQuestions.has(question.id) ? 'Mark as unverified' : 'Mark as verified'}
                             >
-                              <i className={`fas ${verifiedQuestions.has(question.id) ? 'fa-check-double' : 'fa-check'} text-sm`}></i>
+                              {verifiedQuestions.has(question.id)
+                                ? <CheckCircleTwoToneIcon style={{ fontSize: 20, color: 'white' }} />
+                                : <CheckCircleOutlineIcon style={{ fontSize: 20, color: '#22c55e' }} />}
                             </button>
                           </div>
                           {question.idNumber && (
@@ -1873,7 +1886,7 @@ const handleEditMoodle = async (question) => {
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <button
-                        className={`text-blue-600 hover:text-blue-900 underline cursor-pointer${lastActionedQuestionId === question.id ? ' bg-sky-100 border-l-4 border-l-sky-400' : ''}`}
+                        className={`text-blue-600 hover:text-blue-900 underline cursor-pointer${lastActionedQuestionId === question.id ? ' bg-sky-100 border-l-4 border-l-blue-400' : ''}`}
                         onClick={() => {
                           openCommentsModal(question);
                           setLastActionedQuestionId(question.id);
@@ -1908,7 +1921,7 @@ const handleEditMoodle = async (question) => {
                       {getQuestionTypeIcon(question.qtype || question.questionType, question)}
                     </td>
 
-                    <td className={`px-3 py-4 whitespace-nowrap${lastActionedQuestionId === question.id ? ' bg-sky-100 border-l-4 border-l-sky-400' : ''}`} onClick={(e) => e.stopPropagation()}>
+                    <td className={`px-3 py-4 whitespace-nowrap${lastActionedQuestionId === question.id ? ' bg-blue-100 border-l-4 border-l-blue-400' : ''}`} onClick={(e) => e.stopPropagation()}>
                       <div className="relative">
                         <div className="flex">
                           <div className="relative" ref={el => {
@@ -2080,7 +2093,7 @@ const handleEditMoodle = async (question) => {
                                       setOpenActionDropdown(null);
                                     }}
                                   >
-                                    <i className={`fa ${verifiedQuestions.has(question.id) ? 'fa-check-double text-green-500' : 'fa-check text-gray-500'} w-4 text-center mr-2`}></i>
+                                    <i className={`fa ${verifiedQuestions.has(question.id) ? 'fa-check-double text-blue-500' : 'fa-check text-gray-500'} w-4 text-center mr-2`}></i>
                                     <span>{verifiedQuestions.has(question.id) ? 'Mark as unverified' : 'Mark as verified'}</span>
                                   </a>
                                   <a

@@ -650,10 +650,10 @@ const Dashboard = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold text-gray-900">Course Categories</h2>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+          {/* <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
             <Plus className="h-4 w-4" />
             Add Category
-          </button>
+          </button> */}
         </div>
         
         <SearchAndFilterBar 
@@ -741,10 +741,10 @@ const Dashboard = () => {
               in {selectedCategory?.fullname || selectedCategory?.displayname || selectedCategory?.name || selectedCategory?.shortname || 'Unknown Category'}
             </p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">
+          {/* <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">
             <Plus className="h-4 w-4" />
             Add Course
-          </button>
+          </button> */}
         </div>
         
         <SearchAndFilterBar 
@@ -810,10 +810,10 @@ const Dashboard = () => {
               in {selectedCourse?.fullname || selectedCourse?.displayname || selectedCourse?.name || selectedCourse?.shortname || 'Unknown Course'}
             </p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors duration-200">
+          {/* <button className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors duration-200">
             <Plus className="h-4 w-4" />
             Add Question Category
-          </button>
+          </button> */}
         </div>
         
         <SearchAndFilterBar 
@@ -1109,9 +1109,9 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard</h1>
-              <p className="text-lg text-gray-600">Manage your courses, categories, and questions</p>
+              {/* <p className="text-lg text-gray-600">Manage your courses, categories, and questions</p> */}
             </div>
-            <div className="flex items-center gap-3">
+            {/* <div className="flex items-center gap-3">
               <button className="p-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors duration-200">
                 <Settings className="h-5 w-5 text-gray-600" />
               </button>
@@ -1119,12 +1119,12 @@ const Dashboard = () => {
                 <Plus className="h-4 w-4" />
                 Quick Add
               </button>
-            </div>
+            </div> */}
           </div>
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             title="Total Users"
             value={stats.totalUsers}
@@ -1153,7 +1153,7 @@ const Dashboard = () => {
             color="text-orange-600"
             loading={statsLoading}
           />
-        </div>
+        </div> */}
 
         {/* Breadcrumb Navigation */}
         <div className="mb-6">
