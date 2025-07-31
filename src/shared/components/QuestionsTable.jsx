@@ -4,11 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { questionAPI } from '../../api/questionAPI';
 import { toast } from 'react-hot-toast';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import Button from '@mui/material/Button';
+// ...existing code...
 import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -33,6 +29,11 @@ import 'react-quill/dist/quill.snow.css';
 import QuestionPreviewModal from './QuestionPreviewModal';
 import QuestionHistoryView from './QuestionHistoryView';
 import ReactModal from 'react-modal';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
 import QuestionCommentsModal from './preview/comments/QuestionCommentsModal';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 // import CreateMultipleChoiceQuestion from '../../features/questions/components/forms/CreateMultipleChoiceQuestion';
@@ -701,6 +702,8 @@ const QuestionsTable = ({
   setQuestions = () => {},
   onBack = null,
 }) => {
+  const [showSaveConfirmModal, setShowSaveConfirmModal] = React.useState(false);
+  const [pendingSaveQuestionId, setPendingSaveQuestionId] = React.useState(null);
   const [dropdownDirection, setDropdownDirection] = useState({});
   const [showMoodlePreview, setShowMoodlePreview] = useState(false);
   const [moodlePreviewUrl, setMoodlePreviewUrl] = useState('');
@@ -1142,7 +1145,7 @@ const QuestionsTable = ({
         if (!previewWindow) {
           toast.error('Please allow popups for this site to view the preview');
         } else {
-          toast.success('Opening Moodle preview in new window...');
+          // toast.success('Opening Moodle preview in new window...');
         }
       } else {
         toast.error(data.message || 'Failed to get preview URL');
@@ -1216,7 +1219,7 @@ const handleDuplicateMoodle = async (question) => {
       if (!duplicateWindow) {
         toast.error('Please allow popups for this site to open the duplicate form');
       } else {
-        toast.success('Opening Moodle duplicate form in new window...');
+        // toast.success('Opening Moodle duplicate form in new window...');
       }
     } else {
       console.warn('No duplicate form URL in response:', data);
@@ -1302,7 +1305,7 @@ const handleEditMoodle = async (question) => {
       if (!editWindow) {
         toast.error('Please allow popups for this site to open the edit form');
       } else {
-        toast.success('Opening Moodle edit form in new window...');
+        // toast.success('Opening Moodle edit form in new window...');
       }
     } else {
       toast.error(data.message || 'Failed to get edit form URL');
@@ -1613,66 +1616,62 @@ const handleEditMoodle = async (question) => {
             <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 w-12" scope="col">
-                    <div className="flex items-center justify-center">
-                      <input
-                        id="qbheadercheckbox"
-                        name="qbheadercheckbox"
-                        type="checkbox"
-                        value="1"
-                        onChange={handleSelectAll}
-                        checked={
-                          Array.isArray(selectedQuestions) && 
-                          Array.isArray(filteredQuestions) && 
-                          selectedQuestions.length === filteredQuestions.length && 
-                          filteredQuestions.length > 0
-                        }
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-all duration-200"
-                      />
-                      <label htmlFor="qbheadercheckbox" className="sr-only">Select all</label>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase border-b border-gray-200 w-12" scope="col">
+                    <input
+                      id="qbheadercheckbox"
+                      name="qbheadercheckbox"
+                      type="checkbox"
+                      value="1"
+                      onChange={handleSelectAll}
+                      checked={
+                        Array.isArray(selectedQuestions) && 
+                        Array.isArray(filteredQuestions) && 
+                        selectedQuestions.length === filteredQuestions.length && 
+                        filteredQuestions.length > 0
+                      }
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-all duration-200 mx-auto"
+                    />
+                    <label htmlFor="qbheadercheckbox" className="sr-only">Select all</label>
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 min-w-[300px]" scope="col">
+                    <div className="flex flex-col gap-1">
+                      <span>Question</span>
+                      <div className="flex flex-row gap-2 text-xs text-gray-500 font-normal">
+                        <span>Question name</span>
+                        <span className="text-gray-300">|</span>
+                        <span>TAGS</span>
+                      </div>
                     </div>
                   </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 min-w-[300px]" scope="col">
-                  <div className="font-semibold">Question</div>
-                  <div className="mt-1 space-x-1">
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by Question name ascending">Question name</a>
-                    <span className="text-gray-400">/</span>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by ID number ascending">ID number</a>
-                  </div>
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 w-24" scope="col">Status</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 w-20" scope="col">Comments</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 w-20" scope="col">Version</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 w-20" scope="col">Usage</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 w-24" scope="col">
-                  <div className="font-semibold">Created by</div>
-                  <div className="mt-1 space-x-1">
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by First name ascending">First name</a>
-                    <span className="text-gray-400">/</span>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by Last name ascending">Last name</a>
-                    <span className="text-gray-400">/</span>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by Date ascending">Date</a>
-                  </div>
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 min-w-[140px]" scope="col">
-                  <div className="font-semibold">Modified by</div>
-                  <div className="mt-1 space-x-1">
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by First name ascending">First name</a>
-                    <span className="text-gray-400">/</span>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by Last name ascending">Last name</a>
-                    <span className="text-gray-400">/</span>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by Date ascending">Date</a>
-                  </div>
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 w-16" scope="col">
-                  <div>
-                    <a href="#" className="text-gray-700 hover:text-gray-900 no-underline focus:outline-none focus:text-gray-900 cursor-pointer" title="Sort by Question type descending">
-                      T<i className="fa fa-sort-asc fa-fw ml-1 text-gray-500" title="Ascending" role="img" aria-label="Ascending"></i>
-                    </a>
-                  </div>
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 w-20" scope="col">Actions</th>
-              </tr>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 w-24" scope="col">Status</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 w-20" scope="col">Comments</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 w-20" scope="col">Version</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 w-24" scope="col">
+                    <span>Created by</span>
+                    <div className="flex flex-row gap-2 text-xs text-gray-500 font-normal justify-center mt-1">
+                      <span>First name</span>
+                      <span className="text-gray-300">|</span>
+                      <span>Last name</span>
+                      <span className="text-gray-300">|</span>
+                      <span>Date</span>
+                    </div>
+                  </th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 min-w-[100px]" scope="col">
+                    <span>Modified by</span>
+                    <div className="flex flex-row gap-2 text-xs text-gray-500 font-normal justify-center mt-1">
+                      <span>First name</span>
+                      <span className="text-gray-300">|</span>
+                      <span>Last name</span>
+                      <span className="text-gray-300">|</span>
+                      <span>Date</span>
+                    </div>
+                  </th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 w-20" scope="col">Usage</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 w-16" scope="col">
+                    <span className="flex items-center justify-center gap-1">Type <i className="fa fa-sort-asc fa-fw text-gray-500" title="Ascending" role="img" aria-label="Ascending"></i></span>
+                  </th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 w-20" scope="col">Actions</th>
+                </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {questions.map((question, index) => {
@@ -1745,45 +1744,66 @@ const handleEditMoodle = async (question) => {
                             <div className="flex-1">
                               {editingQuestion === question.id ? (
                                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                <input
-                                  type="text"
-                                  value={newQuestionTitle}
-                                  onChange={(e) => setNewQuestionTitle(e.target.value)}
-                                  className="flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                                  autoFocus
-                                  onKeyDown={async (e) => {
-                                    if (e.key === 'Enter') {
-                                      e.preventDefault(); // Prevent form submission and button clicks
-                                      console.log('Enter pressed - saving directly');
-                                      await initiateQuestionSave(question.id);
-                                    }
-                                    if (e.key === 'Escape') {
+                                  <input
+                                    type="text"
+                                    value={newQuestionTitle}
+                                    onChange={(e) => setNewQuestionTitle(e.target.value)}
+                                    className="flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                                    autoFocus
+                                    onKeyDown={async (e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        setPendingSaveQuestionId(question.id);
+                                        setShowSaveConfirmModal(true);
+                                      }
+                                      if (e.key === 'Escape') {
+                                        e.preventDefault();
+                                        setEditingQuestion(null);
+                                      }
+                                    }}
+                                  />
+                                  <button
+                                    onClick={(e) => {
                                       e.preventDefault();
-                                      console.log('Escape pressed - canceling edit');
+                                      setPendingSaveQuestionId(question.id);
+                                      setShowSaveConfirmModal(true);
+                                    }}
+                                    className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                                  >
+                                    Save
+                                  </button>
+      {/* Save Confirmation Modal (MUI) */}
+      <Dialog open={showSaveConfirmModal} onClose={() => setShowSaveConfirmModal(false)}>
+        <DialogTitle>Confirm Save</DialogTitle>
+        <DialogContent>
+          Are you sure you want to save this question name?
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowSaveConfirmModal(false)} color="inherit">Cancel</Button>
+          <Button
+            onClick={async () => {
+              setShowSaveConfirmModal(false);
+              if (pendingSaveQuestionId) {
+                await initiateQuestionSave(pendingSaveQuestionId);
+                setPendingSaveQuestionId(null);
+              }
+            }}
+            color="primary"
+            variant="contained"
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
+                                  <button
+                                    onClick={() => {
                                       setEditingQuestion(null);
-                                    }
-                                  }}
-                                />
-                                <button
-                                  onClick={async (e) => {
-                                    e.preventDefault(); // Prevent any form submission
-                                    console.log('Save button clicked - saving directly');
-                                    await initiateQuestionSave(question.id);
-                                  }}
-                                  className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    console.log('Cancel button clicked');
-                                    setEditingQuestion(null);
-                                  }}
-                                  className="px-3 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400 transition-colors"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
+                                    }}
+                                    className="px-3 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
                             ) : (
                               <span
                                 className="inline-flex items-center group cursor-pointer hover:bg-blue-50 rounded px-1 py-1 transition-colors"
@@ -1866,16 +1886,6 @@ const handleEditMoodle = async (question) => {
 
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">{question.version || 'v1'}</td>
 
-                    <td className="px-3 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <a href="#" className="text-blue-600 hover:text-blue-900 cursor-pointer">
-                        {question.usage || 0}
-                      </a>
-                    </td>
-
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{question.lastUsed || 'Never'}</span>
-                    </td>
-
                     <td className="px-3 py-4 whitespace-nowrap">
                       <span className="text-sm text-gray-900">{question.createdBy?.name || ''}</span>
                       <br />
@@ -1886,6 +1896,12 @@ const handleEditMoodle = async (question) => {
                       <span className="text-sm text-gray-900">{question.modifiedBy?.name || ''}</span>
                       <br />
                       <span className="text-xs text-gray-500">{question.modifiedBy?.date || ''}</span>
+                    </td>
+
+                    <td className="px-3 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <a href="#" className="text-blue-600 hover:text-blue-900 cursor-pointer">
+                        {question.usage || 0}
+                      </a>
                     </td>
 
                     <td className="px-3 py-4 whitespace-nowrap">

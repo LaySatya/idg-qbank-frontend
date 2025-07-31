@@ -5,6 +5,8 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHandPointer } from '@fortawesome/free-solid-svg-icons';
+import Modal from '@mui/material/Modal';
+import Box from '@mui/material/Box';
 
 const CreateQuestionModal = ({ 
   onClose, 
@@ -75,27 +77,50 @@ const CreateQuestionModal = ({
   }, [filteredQuestionTypes, selectedType]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-25">
-      <div className="bg-white rounded-lg shadow-xl w-[90%] max-w-5xl h-[80vh] flex">
+    <Modal open={true} onClose={onClose} aria-labelledby="create-question-modal-title" aria-describedby="create-question-modal-description" sx={{ zIndex: 1300 }}>
+      <Box sx={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        bgcolor: 'background.paper',
+        borderRadius: 4,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+        border: 'none',
+        outline: 'none',
+        p: { xs: 2, sm: 4, md: 6 },
+        width: { xs: '95vw', sm: 500, md: 900 },
+        maxWidth: 1000,
+        minWidth: 320,
+        minHeight: 400,
+        display: 'flex',
+        flexDirection: 'row',
+        height: { xs: '90vh', sm: '80vh', md: '80vh' },
+      }}>
         {/* Left Panel - Question Types */}
-        <div className="w-1/3 border-r bg-gray-50 flex flex-col">
-          <div className="p-4 border-b flex justify-between items-center">
-            <h2 className="text-xl font-semibold">QUESTIONS</h2>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-              <X size={24} />
+        <div className="w-1/3 bg-gradient-to-b from-gray-50 to-white flex flex-col" style={{ minWidth: 260, maxWidth: 340 }}>
+          {/* Header */}
+          <div className="px-6 pt-6 pb-3 flex justify-between items-center">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-800">Questions</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-blue-600 transition-colors">
+              <X size={28} />
             </button>
           </div>
-          
+          {/* Divider */}
+          <div className="w-full h-px bg-gray-200 mb-2"></div>
+
           {/* Search Input */}
-          <div className="p-3 border-b">
+          <div className="px-6 pb-4">
             <input 
               type="text" 
               placeholder="Search question types..." 
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 bg-gray-100 rounded-2xl text-base border-2 border-blue-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow placeholder-gray-400 shadow-sm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          {/* Divider */}
+          <div className="w-full h-px bg-gray-100 mb-2"></div>
 
           {/* Loading State */}
           {loadingQuestionTypes && (
@@ -105,13 +130,17 @@ const CreateQuestionModal = ({
             </div>
           )}
 
-          {/* Question Types List */}
+          {/* Question Types List - modern seamless look */}
           {!loadingQuestionTypes && (
-            <div className="flex-grow overflow-y-auto">
-              <div className="p-2">
+            <div className="flex-grow overflow-y-auto" style={{
+              background: 'transparent',
+              margin: '0 0 8px 0',
+              padding: '0 12px',
+            }}>
+              <div className="space-y-3">
                 {filteredQuestionTypes.length === 0 ? (
                   <div className="p-4 text-center text-gray-500">
-                    <p className="text-sm">
+                    <p className="text-base">
                       {searchQuery ? 'No question types match your search.' : 'No question types available.'}
                     </p>
                     {searchQuery && (
@@ -127,8 +156,8 @@ const CreateQuestionModal = ({
                   filteredQuestionTypes.map((type, index) => (
                     <label 
                       key={`${type.value}-${index}`}
-                      className={`w-full flex items-center p-3 hover:bg-gray-200 rounded cursor-pointer transition-colors duration-150 ${
-                        selectedType === type.value ? 'bg-blue-100 border-l-4 border-blue-500' : ''
+                      className={`w-full flex items-center px-5 py-4 bg-white hover:bg-blue-50 rounded-xl cursor-pointer transition-colors duration-150 shadow-sm ${
+                        selectedType === type.value ? 'ring-2 ring-blue-400' : ''
                       }`}
                     >
                       <input 
@@ -148,7 +177,7 @@ const CreateQuestionModal = ({
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium text-sm">{type.label}</div>
+                        <div className="font-semibold text-base">{type.label}</div>
                         {type.originalValue && type.originalValue !== type.value && (
                           <div className="text-xs text-gray-500">
                             API: {type.originalValue}
@@ -163,17 +192,17 @@ const CreateQuestionModal = ({
           )}
 
           {/* Other Section */}
-          <div className="p-3 border-t bg-gray-100">
+          {/* <div className="p-3 border-t bg-gray-100">
             <h3 className="text-sm font-semibold text-gray-700 mb-2">OTHER</h3>
             <div className="flex items-center gap-2 py-1 px-2 hover:bg-gray-200 rounded cursor-pointer text-sm">
               <img src="/src/assets/icon/Description.svg" className="w-5 h-5" alt="Description icon" />
               <span>Description</span>
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Right Panel - Description */}
-        <div className="w-2/3 p-6 flex flex-col">
+        <div className="w-2/3 p-6 flex flex-col" style={{ minWidth: 350 }}>
           {selectedTypeObj ? (
             <div className="flex-grow flex flex-col">
               {/* Question Type Icon (Large) */}
@@ -211,14 +240,14 @@ const CreateQuestionModal = ({
               
               {/* Description */}
               <div className="flex-grow">
-                <p className="text-gray-600 text-center leading-relaxed mb-6">
+                {/* <p className="text-gray-600 text-center leading-relaxed mb-6">
                   {selectedTypeObj.description || 'No description available for this question type.'}
                 </p>
-                
+                 */}
                 {/* Additional Info */}
-                {availableQuestionTypes.length > 0 && (
+                {/* {availableQuestionTypes.length > 0 && (
                   <div className="bg-blue-50 p-4 rounded-lg mb-6">
-                    <h4 className="font-semibold text-blue-800 mb-2">✨ Loaded from API</h4>
+                    <h4 className="font-semibold text-blue-800 mb-2"> Loaded from API</h4>
                     <p className="text-sm text-blue-700">
                       This question type was loaded from your Laravel API. 
                       {selectedTypeObj.originalValue && selectedTypeObj.originalValue !== selectedTypeObj.value && (
@@ -226,7 +255,7 @@ const CreateQuestionModal = ({
                       )}
                     </p>
                   </div>
-                )}
+                )} */}
               </div>
               
               {/* Action Buttons */}
@@ -294,10 +323,8 @@ const CreateQuestionModal = ({
             </div>
           )}
         </div>
-      </div>
-      
-  
-    </div>
+      </Box>
+    </Modal>
   );
 };
 

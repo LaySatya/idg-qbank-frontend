@@ -642,8 +642,9 @@ const handleNavigation = (value) => {
             <button
               type="button"
               onClick={onBack}
-              className="inline-flex items-center gap-2 rounded-md bg-gray-100 text-gray-700 border border-gray-300 px-3 py-2 text-sm font-medium shadow-sm hover:bg-gray-200 transition-colors duration-200"
+              className="inline-flex items-center gap-2 rounded-md bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-200 transition-colors duration-200"
               title={backButtonText}
+              style={{ minWidth: 180 }}
             >
               <ArrowLeft size={16} />
               {backButtonText}
@@ -674,36 +675,39 @@ const handleNavigation = (value) => {
               <div className="relative inline-block text-left" ref={dropdownRef}>
                 <button
                   type="button"
-                  className="text-sky-600 border border-sky-600 inline-flex items-center gap-2 rounded-md bg-transparent px-4 py-2 font-semibold shadow hover:bg-sky-50 hover:text-sky-700 transition-colors duration-200"
+                  className="inline-flex items-center gap-2 rounded-md bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-200 transition-colors duration-200"
                   onClick={() => setShowQuestionsDropdown(prev => !prev)}
                   aria-haspopup="true"
                   aria-expanded={showQuestionsDropdown}
+                  style={{ minWidth: 180 }}
                 >
                   Import/Export
                   <ChevronDown size={18} />
                 </button>
                 {showQuestionsDropdown && (
-                  <div className="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-sky-400 ring-opacity-60 z-10">
+                  <div className="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-gray-100 ring-opacity-60 z-10">
                     <div className="py-1">
                       <button
                         type="button"
-                        className="w-full text-left px-4 py-2 text-sm text-sky-700 hover:bg-sky-50 hover:text-sky-900"
+                        className="w-full text-left px-4 py-2 text-sm bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 hover:text-gray-900 rounded-md"
                         onClick={() => {
                           setShowQuestionsDropdown(false);
                           handleImportClick();
                         }}
                         disabled={isImporting}
+                        style={{ minWidth: 180 }}
                       >
                         {isImporting ? 'Importing...' : 'Import Questions'}
                         <Upload size={16} className="ml-2 inline" />
                       </button>
                       <button
                         type="button"
-                        className="w-full text-left px-4 py-2 text-sm text-sky-700 hover:bg-sky-50 hover:text-sky-900"
+                        className="w-full text-left px-4 py-2 text-sm bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 hover:text-gray-900 rounded-md"
                         onClick={() => {
                           setShowQuestionsDropdown(false);
                           handleExportClick();
                         }}
+                        style={{ minWidth: 180 }}
                       >
                         Export Questions
                         <FolderOpen size={16} className="ml-2 inline" />
@@ -723,9 +727,10 @@ const handleNavigation = (value) => {
 
               <button
                 type="button"
-                className="text-sky-600 border border-sky-600 inline-flex items-center gap-2 rounded-md bg-transparent px-4 py-2 font-semibold shadow hover:bg-sky-50 hover:text-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-sky-600"
+                className="inline-flex items-center gap-2 rounded-md bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handlePreviewClick}
                 title="Preview all questions in selected category"
+                style={{ minWidth: 180 }}
               >
                 Preview Questions
                 <Eye size={18} />
@@ -733,9 +738,10 @@ const handleNavigation = (value) => {
 
               <button
                 type="button"
-                className="text-sky-600 border border-sky-600 inline-flex items-center gap-2 rounded-md bg-transparent px-4 py-2 font-semibold shadow hover:bg-sky-50 hover:text-sky-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-sky-600"
+                className="inline-flex items-center gap-2 rounded-md bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleCreateQuestion}
                 title="Create new question in selected category"
+                style={{ minWidth: 180 }}
               >
                 Create New Question
                 <Plus size={18} />

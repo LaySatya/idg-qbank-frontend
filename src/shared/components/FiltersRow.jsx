@@ -330,13 +330,13 @@ const FiltersRow = ({
         } else {
           displayName = `Top for Context ${node.contextid}`;
         }
-        // iconPrefix = '📁 ';
+        // iconPrefix = ' ';
       } else if (node.name.toLowerCase().startsWith('default for ')) {
         // For "Default for X" categories, KEEP the "Default for" prefix
         displayName = node.name; // Keep the original name with "Default for"
-        // iconPrefix = '📂 ';
+        // iconPrefix = ' ';
       } else if (level > 0) {
-        // iconPrefix = '📄 ';
+        // iconPrefix = ' ';
       }
       
       // Get question count with fallback
