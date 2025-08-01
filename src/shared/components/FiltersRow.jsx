@@ -688,7 +688,7 @@ const FiltersRow = ({
 
 
         {/* Clear Button */}
-        <Grid item xs={10}>
+        {/* <Grid item xs={10}>
           {hasActiveFilters && (
             <Button
               variant="outlined"
@@ -702,7 +702,7 @@ const FiltersRow = ({
               Clear
             </Button>
           )}
-        </Grid>
+        </Grid> */}
       </Grid>
 
       {/* Tag filter status and clear button */}

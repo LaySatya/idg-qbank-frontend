@@ -32,9 +32,9 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Search as SearchIcon,
-  Tag as TagIcon,
   Refresh as RefreshIcon,
   CheckBox as CheckBoxIcon,
+  Sell as SellIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-hot-toast';
 import PaginationControls from '../shared/components/PaginationControls';
@@ -316,7 +316,7 @@ const ManageTags = () => {
       {/* Header */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <TagIcon color="primary" />
+          <SellIcon color="primary" />
           Manage Tags
         </Typography>
         <Typography variant="body1" color="text.secondary">
@@ -329,16 +329,16 @@ const ManageTags = () => {
         <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
           <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{ 
-                p: 1, 
-                borderRadius: 1.5, 
-                bgcolor: 'primary.50',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <TagIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-              </Box>
+            <Box sx={{ 
+              p: 1, 
+              borderRadius: 1.5, 
+              bgcolor: 'primary.50',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <SellIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+            </Box>
               <Box>
                 <Typography variant="h6" component="div" sx={{ fontSize: '1.5rem', fontWeight: 700 }}>
                   {tags.length}
@@ -606,25 +606,23 @@ const ManageTags = () => {
                         </Typography>
                       </TableCell>
                       <TableCell sx={{ py: 1.5 }}>
-                        <Chip 
-                          label={tag.name} 
-                          color="primary" 
-                          variant="outlined" 
-                          size="small"
-                          sx={{
-                            maxWidth: '280px',
-                            height: '26px',
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            borderRadius: '13px',
-                            '& .MuiChip-label': {
-                              px: 1.5,
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <SellIcon sx={{ color: 'primary.main', fontSize: 18 }} />
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              maxWidth: '250px',
+                              fontSize: '0.8rem',
+                              fontWeight: 500,
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
-                              textOverflow: 'ellipsis'
-                            }
-                          }}
-                        />
+                              textOverflow: 'ellipsis',
+                              color: 'primary.main',
+                            }}
+                          >
+                            {tag.name}
+                          </Typography>
+                        </Box>
                       </TableCell>
                       <TableCell sx={{ py: 1.5 }}>
                         <Typography 
@@ -732,7 +730,7 @@ const ManageTags = () => {
           bgcolor: '#f8fafc'
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <TagIcon sx={{ color: '#64748b', fontSize: 22 }} />
+            <SellIcon sx={{ color: '#64748b', fontSize: 22 }} />
             <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 700, color: '#334155', margin: 0 }}>
               {editingTag ? 'Edit Tag' : 'Create New Tag'}
             </Typography>

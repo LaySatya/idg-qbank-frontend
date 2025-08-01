@@ -789,7 +789,7 @@ const QuestionsTable = ({
     if (isLoadingTags) {
       return (
         <div className="flex items-center gap-2 mt-1">
-          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-sky-500"></div>
           <span className="italic text-gray-500 text-xs">Loading tags...</span>
         </div>
       );
@@ -1079,7 +1079,7 @@ const QuestionsTable = ({
     if (isLoadingQtypes) {
       return (
         <div className="flex items-center justify-center w-6 h-6">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-sky-500"></div>
         </div>
       );
     }

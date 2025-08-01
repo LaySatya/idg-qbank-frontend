@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { questionAPI } from '../api/questionAPI';
-import { Users, BookOpen, FileQuestion, FolderOpen, BarChart3, Folder, ChevronRight, Home, Search, Filter, Grid, List, Plus, Eye, Settings } from 'lucide-react';
+import { Users, BookOpen, FileQuestion, FolderOpen, Folder, ChevronRight, Home, Search, Filter, Grid, List, Plus, Eye, Settings } from 'lucide-react';
+import TitleIcon from '@mui/icons-material/Title';
+import SellIcon from '@mui/icons-material/Sell';
 import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -922,9 +924,9 @@ const Dashboard = () => {
                 color="text-yellow-600"
               />
               <StatCard
-                title="Other Status"
-                value={questionOverview.archivedQuestions || 0}
-                icon={FileQuestion}
+                title="Total Tags"
+                value={questionOverview.tags ? questionOverview.tags.length : 0}
+                icon={SellIcon}
                 color="text-gray-600"
               />
             </div>
@@ -933,7 +935,7 @@ const Dashboard = () => {
             {questionOverview.questionTypes && Object.keys(questionOverview.questionTypes).length > 0 ? (
               <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                 <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-blue-600" />
+                  <TitleIcon className="h-5 w-5 text-blue-600" />
                   Question Types Distribution ({Object.keys(questionOverview.questionTypes).length} types)
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -995,24 +997,16 @@ const Dashboard = () => {
             {questionOverview.tags && questionOverview.tags.length > 0 ? (
               <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                 <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
-                  <Settings className="h-5 w-5 text-blue-600" />
+                  <SellIcon className="h-5 w-5 text-blue-600" />
                   Question Tags ({questionOverview.tags.length} tags)
                 </h3>
                 <div className="flex flex-wrap gap-3">
                   {questionOverview.tags.map((tag, index) => {
                     const tagData = typeof tag === 'object' ? tag : { name: tag, count: 1 };
-                    const intensity = Math.min(Math.max(tagData.count / 10, 0.3), 1);
-
-                    // Use blue/sky colors instead of purple
                     return (
                       <div
                         key={index}
-                        className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm transition-all duration-200 hover:shadow-md cursor-pointer"
-                        style={{
-                          backgroundColor: `rgba(14, 165, 233, ${0.1 + intensity * 0.2})`, // sky-400
-                          border: `1px solid rgba(14, 165, 233, ${0.2 + intensity * 0.3})`,
-                          color: `rgba(30, 64, 175, ${0.7 + intensity * 0.3})` // blue-800
-                        }}
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm border border-gray-300 bg-gray-50 text-gray-800 cursor-pointer"
                         title={`${tagData.count} question(s) with this tag`}
                       >
                         <span className="font-medium">{tagData.name}</span>
