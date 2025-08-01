@@ -1,3 +1,31 @@
+import React, { useState, useRef } from 'react';
+import CreateQuestionModal from './CreateQuestionModal';
+import { ChevronDown, Check, Upload, Plus, AlertCircle, CheckCircle, FolderOpen, ArrowLeft, Eye } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+
+const TopButtonsRow = ({
+  showQuestionsDropdown,
+  setShowQuestionsDropdown,
+  questionsDropdownRef,
+  handleFileUpload,
+  showQuestionText,
+  setShowQuestionText,
+  questions,
+  setCurrentPage,
+  questionsPerPage,
+  setQuestions,
+  totalQuestions,
+  setTotalQuestions,
+  setShowCategoriesModal,
+  currentView = 'questions', // default to questions view
+  setCurrentView,
+  onNavigate,
+  showBackButton = false,
+  backButtonText = 'Back to Courses',
+  onBack,
+  selectedCourseName
+}) => {
+  const [showTestModal, setShowTestModal] = useState(false);
   // Export questions handler
   const handleExportClick = async () => {
     const token = localStorage.getItem('token');
@@ -27,36 +55,6 @@
       toast.error(`Error: ${error.message}`);
     }
   };
-import React, { useState, useRef } from 'react';
-import CreateQuestionModal from './CreateQuestionModal';
-import { ChevronDown, Check, Upload, Plus, AlertCircle, CheckCircle, FolderOpen, ArrowLeft, Eye } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-const TopButtonsRow = ({
-  // Define handlePreviewClick to fix ReferenceError
-  showQuestionsDropdown,
-  setShowQuestionsDropdown,
-  questionsDropdownRef,
-  handleFileUpload,
-  // setShowCreateModal, // Removed duplicate declaration
-  showQuestionText,
-  setShowQuestionText,
-  questions,
-  setCurrentPage,
-  questionsPerPage,
-  setQuestions,
-  totalQuestions,
-  setTotalQuestions,
-   setShowCategoriesModal,
-  // Add these new props for navigation
-  currentView = 'questions', // default to questions view
-  setCurrentView,
-  onNavigate,
-  // New props for back navigation
-  showBackButton = false,
-  backButtonText = 'Back to Courses',
-  onBack,
-  selectedCourseName
-}) => {
   // Define handlePreviewClick inside the component after props
   // Define handlePreviewClick inside the component
   const handlePreviewClick = async () => {
@@ -267,7 +265,6 @@ const handleNavigation = (value) => {
     }
   };
 
-  // ...existing code...
 
   // Handle type selection from modal
   const handleSelectType = async (typeObj) => {
@@ -331,16 +328,62 @@ const handleNavigation = (value) => {
               <ArrowLeft size={16} />
               {backButtonText}
             </button>
-            {selectedCourseName && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">Selected Course:</span>
-                <span className="text-sm font-medium text-gray-900 bg-blue-50 px-2 py-1 rounded border">
-                  {selectedCourseName}
-                </span>
-              </div>
-            )}
           </div>
         )}
+
+        {/* Test Button always visible */}
+        <div className="flex items-center gap-4 mb-2 md:mb-0">
+          <button
+            type="button"
+            className="w-full md:w-auto flex items-center gap-2 rounded-md bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Test preview in modal"
+            style={{ minWidth: 120 }}
+            onClick={() => setShowTestModal(true)}
+          >
+            Test
+          </button>
+
+          {showTestModal && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}>
+              <div style={{
+                background: '#fff',
+                padding: 16,
+                borderRadius: 8,
+                position: 'relative',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+              }}>
+                <button onClick={() => setShowTestModal(false)} style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: 24,
+                  cursor: 'pointer'
+                }}>&times;</button>
+                <iframe
+                  src="https://elearning.cadt.edu.kh/local/idg_qbank_editform/multi_preview.php?categoryid=5331"
+                  width="1000"
+                  height="800"
+                  frameBorder="0"
+                  title="Preview"
+                  style={{ display: 'block', maxWidth: '90vw', maxHeight: '80vh' }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
         {/* Navigation Dropdown */}
         <div className="flex items-center gap-3 ">
           <label htmlFor="url_select" className="sr-only">
@@ -427,6 +470,17 @@ const handleNavigation = (value) => {
                 Create New Question
                 <Plus size={18} />
               </button>
+
+               <button
+                type="button"
+                className="w-full md:w-auto flex items-center gap-2 rounded-md bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={setShowTestModal}
+                title="Create new question in selected category"
+                style={{ minWidth: 120 }}
+              >
+                Test
+              
+              </button>
             </>
           )}
         </div>
@@ -442,7 +496,7 @@ const handleNavigation = (value) => {
     )}
   </div>
   );
-// ...existing code...
+
 }
 
 export default TopButtonsRow;
