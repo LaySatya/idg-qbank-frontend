@@ -1,3 +1,15 @@
+// Top-level export: must be before all code and imports
+export const openMoodlePreview = (questionId) => {
+  const activeEnvString = localStorage.getItem('activeMoodleEnvironment');
+  let moodleUrl = '';
+  if (activeEnvString) {
+    const activeEnv = JSON.parse(activeEnvString);
+    moodleUrl = `${activeEnv.baseUrl}/local/idg_qbank_editform/preview.php?questionid=${questionId}`;
+  } else {
+    moodleUrl = `${import.meta.env.VITE_LOCAL_MOODLE_URL}/local/idg_qbank_editform/preview.php?questionid=${questionId}`;
+  }
+  window.open(moodleUrl, '_blank');
+};
 import React, { useState } from 'react';
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
@@ -46,62 +58,41 @@ const LoginForm = ({ onLogin }) => {
 //   document.body.removeChild(a);
 // };
 
-const silentMoodleLogin = async (token) => {
-  try {
-    // Define both Moodle environments from environment variables
-    const moodleEnvironments = [
-      {
-        name: 'Local Moodle',
-        baseUrl: import.meta.env.VITE_LOCAL_MOODLE_URL,
-        token: import.meta.env.VITE_LOCAL_MOODLE_TOKEN,
-        service: import.meta.env.VITE_LOCAL_MOODLE_SERVICE
-      },
-      {
-        name: 'Production Moodle',
-        baseUrl: import.meta.env.VITE_PRODUCTION_MOODLE_URL,
-        token: import.meta.env.VITE_PRODUCTION_MOODLE_TOKEN,
-        service: import.meta.env.VITE_PRODUCTION_MOODLE_SERVICE
-      }
-    ];
 
-    // Try auto-login with both environments
-    for (const env of moodleEnvironments) {
-      console.log(` Trying auto-login with ${env.name}...`);
-      
-      const autoLoginUrl = `${env.baseUrl}/${autoLogin}?token=${token}`;
-      console.log(' Auto-login URL:', autoLoginUrl);
-      
-      // Test if the endpoint exists for this environment
-      try {
-        const testResponse = await fetch(autoLoginUrl, { 
-          method: 'HEAD',
-          mode: 'no-cors'
-        });
-        console.log(` ${env.name} endpoint test:`, testResponse.status);
-      } catch (testError) {
-        console.warn(` Could not test ${env.name} endpoint:`, testError.message);
+// Simple silent Moodle login for SSO
+const silentMoodleLogin = (token, baseUrl, autoLoginPath = 'local/autologin/login.php') => {
+  return new Promise((resolve, reject) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = `${baseUrl}/${autoLoginPath}?token=${token}`;
+    document.body.appendChild(iframe);
+
+    let resolved = false;
+
+    iframe.onload = () => {
+      if (!resolved) {
+        resolved = true;
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+        resolve(true);
       }
-      
-      // Try to establish session with this environment
-      const sessionSuccess = await tryEnvironmentLogin(autoLoginUrl, env.name);
-      
-      if (sessionSuccess) {
-        console.log(` ${env.name} session established successfully!`);
-        // Store which environment worked
-        localStorage.setItem('activeMoodleEnvironment', JSON.stringify(env));
-        return true;
-      } else {
-        console.warn(` ${env.name} auto-login failed, trying next environment...`);
+    };
+
+    iframe.onerror = () => {
+      if (!resolved) {
+        resolved = true;
+        document.body.removeChild(iframe);
+        reject(new Error('Iframe load error'));
       }
-    }
-    
-    console.warn(' Auto-login failed for all environments');
-    return false;
-    
-  } catch (error) {
-    console.error(' Silent login failed:', error);
-    return false;
-  }
+    };
+
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        document.body.removeChild(iframe);
+        reject(new Error('Iframe load timeout'));
+      }
+    }, 5000);
+  });
 };
 
 // Helper function to try login with a specific environment
@@ -290,45 +281,19 @@ const openMoodleWithSession = (targetUrl = null) => {
       // Debug log to verify response
       // console.log(' Enhanced login response:', response);
 
-      // Establish Moodle session silently in background
-      console.log(' Establishing Moodle session silently...');
-      console.log(' Environment variables check:', {
-        AUTO_LOGIN: import.meta.env.VITE_AUTO_LOGIN,
-        LOCAL_MOODLE_URL: import.meta.env.VITE_LOCAL_MOODLE_URL,
-        LOCAL_MOODLE_SERVICE: import.meta.env.VITE_LOCAL_MOODLE_SERVICE,
-        PRODUCTION_MOODLE_URL: import.meta.env.VITE_PRODUCTION_MOODLE_URL,
-        PRODUCTION_MOODLE_SERVICE: import.meta.env.VITE_PRODUCTION_MOODLE_SERVICE,
-        LOCAL_TOKEN: import.meta.env.VITE_LOCAL_MOODLE_TOKEN ? 'Set' : 'Not set',
-        PRODUCTION_TOKEN: import.meta.env.VITE_PRODUCTION_MOODLE_TOKEN ? 'Set' : 'Not set'
-      });
-      
-      const sessionEstablished = await silentMoodleLogin(response.token);
-      
-      if (sessionEstablished) {
+
+      // SSO: Establish Moodle session silently in background
+      const moodleBaseUrl = import.meta.env.VITE_LOCAL_MOODLE_URL;
+      const autoLoginPath = import.meta.env.VITE_AUTO_LOGIN || 'local/autologin/login.php';
+      try {
+        await silentMoodleLogin(response.token, moodleBaseUrl, autoLoginPath);
         console.log(' Moodle session ready! Users can now access Moodle without login.');
-        
-        // Store session status for later use
         localStorage.setItem('moodleSessionReady', 'true');
         localStorage.setItem('moodleSessionTime', Date.now().toString());
-        localStorage.setItem('moodleLoginMethod', 'autologin');
-      } else {
-        console.warn(' Auto-login failed, trying alternative web service method...');
-        
-        // Try alternative login method
-        const altLoginSuccess = await alternativeMoodleLogin(username, password);
-        
-        if (altLoginSuccess) {
-          console.log('Alternative Moodle session established!');
-          localStorage.setItem('moodleSessionReady', 'true');
-          localStorage.setItem('moodleSessionTime', Date.now().toString());
-          localStorage.setItem('moodleLoginMethod', 'webservice');
-        } else {
-          console.warn(' All Moodle login methods failed');
-          console.warn(' Possible solutions:');
-          console.warn('   1. Install auto-login plugin: https://github.com/catalyst/moodle-local_autologin');
-          console.warn('   2. Enable web services in Moodle');
-          console.warn('   3. Check Moodle URL and credentials');
-        }
+        localStorage.setItem('activeMoodleEnvironment', JSON.stringify({ baseUrl: moodleBaseUrl }));
+      } catch (err) {
+        console.warn(' Silent Moodle SSO failed:', err);
+        setError('Could not establish Moodle session. Please contact admin.');
       }
 
       // Make sure we have all required data before proceeding
@@ -346,6 +311,7 @@ const openMoodleWithSession = (targetUrl = null) => {
       //   currentUser: localStorage.getItem('currentUser')
       // });
 
+
       // Call the onLogin handler with all data
       if (onLogin) {
         onLogin(
@@ -357,6 +323,12 @@ const openMoodleWithSession = (targetUrl = null) => {
       } else {
         window.location.href = '/question-bank'; // Fallback redirect
       }
+// ...existing code...
+
+// Place this at the very end, outside any function/component!
+
+
+
 
       console.log(' Login successful! User data stored for comments.');
       

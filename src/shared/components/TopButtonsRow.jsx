@@ -1,3 +1,32 @@
+  // Export questions handler
+  const handleExportClick = async () => {
+    const token = localStorage.getItem('token');
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+    const categoryId = localStorage.getItem('questionCategoryId');
+    const contextId = localStorage.getItem('questionCategoryContextId') || '1';
+    if (!categoryId || categoryId === 'All') {
+      toast.error('Please select a category first.');
+      return;
+    }
+    try {
+      const url = `${API_BASE_URL}/questions/export?categoryid=${categoryId}&contextid=${contextId}`;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      const data = await response.json();
+      if (data.export_form_url) {
+        window.open(data.export_form_url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+        toast.success('Export form opened!');
+      } else {
+        toast.error('No export URL received from server.');
+      }
+    } catch (error) {
+      toast.error(`Error: ${error.message}`);
+    }
+  };
 import React, { useState, useRef } from 'react';
 import CreateQuestionModal from './CreateQuestionModal';
 import { ChevronDown, Check, Upload, Plus, AlertCircle, CheckCircle, FolderOpen, ArrowLeft, Eye } from 'lucide-react';
@@ -30,8 +59,32 @@ const TopButtonsRow = ({
 }) => {
   // Define handlePreviewClick inside the component after props
   // Define handlePreviewClick inside the component
-  const handlePreviewClick = () => {
-    toast('Preview feature not implemented yet');
+  const handlePreviewClick = async () => {
+    const token = localStorage.getItem('token');
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+    const categoryId = localStorage.getItem('questionCategoryId');
+    if (!categoryId || categoryId === 'All') {
+      toast.error('Please select a category first.');
+      return;
+    }
+    try {
+      const url = `${API_BASE_URL}/questions/multi_preview?categoryid=${categoryId}`;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      const data = await response.json();
+      if (data.multi_preview_url) {
+        window.open(data.multi_preview_url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+        toast.success('Preview opened!');
+      } else {
+        toast.error('No preview URL received from server.');
+      }
+    } catch (error) {
+      toast.error(`Error: ${error.message}`);
+    }
   };
   const [isImporting, setIsImporting] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -215,6 +268,52 @@ const handleNavigation = (value) => {
   };
 
   // ...existing code...
+
+  // Handle type selection from modal
+  const handleSelectType = async (typeObj) => {
+    setShowCreateModal(false);
+    const token = localStorage.getItem('token');
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+    const categoryId = localStorage.getItem('questionCategoryId');
+    const contextId = localStorage.getItem('questionCategoryContextId') || '1';
+    const qtype = typeObj.value || typeObj.name;
+
+    if (!categoryId || categoryId === 'All') {
+      toast.error('Please select a category first.');
+      return;
+    }
+
+    try {
+      const url = `${API_BASE_URL}/questions/create?qtype=${qtype}&categoryid=${categoryId}&contextid=${contextId}`;
+      console.log('[CreateQuestion] Request URL:', url);
+      console.log('[CreateQuestion] Token:', token);
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        data = text;
+      }
+      console.log('[CreateQuestion] Response:', data);
+      if (response.ok && data.create_form_url) {
+        window.open(data.create_form_url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+        toast.success('Question creation form opened!');
+      } else {
+        toast.error('No form URL received from server.');
+        if (data && data.message) {
+          toast.error(`Server message: ${data.message}`);
+        }
+      }
+    } catch (error) {
+      toast.error(`Error: ${error.message}`);
+    }
+  };
 
   return (
     <div className="w-full border-2 border-white shadow-sm mb-4">

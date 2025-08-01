@@ -2144,7 +2144,7 @@ const handleEditMoodle = async (question) => {
                                     <i className="fa fa-trash w-4 text-center mr-2 text-red-500"></i>
                                     <span>Delete</span>
                                   </a>
-                                  <a
+                                  {/* <a
                                     href="#"
                                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
                                     role="menuitem"
@@ -2158,7 +2158,7 @@ const handleEditMoodle = async (question) => {
                                   >
                                     <i className="fa fa-download w-4 text-center mr-2 text-gray-500"></i>
                                     <span>Export as Moodle XML</span>
-                                  </a>
+                                  </a> */}
                                 </div>
                               )}
                             </div>
