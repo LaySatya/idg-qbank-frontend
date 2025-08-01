@@ -326,6 +326,41 @@ const handleNavigation = (value) => {
     }
   };
 
+  // Loader-enhanced iframe component
+function IframeWithLoader({ src, title }) {
+  const [loading, setLoading] = React.useState(true);
+  return (
+    <div style={{ position: 'relative', width: 1400, height: 1000 }}>
+      {loading && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'rgba(255,255,255,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2
+        }}>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
+          <span style={{ marginLeft: 16, fontSize: 18, color: '#2563eb' }}>Loading...</span>
+        </div>
+      )}
+      <iframe
+        src={src}
+        width="1400"
+        height="1000"
+        frameBorder="0"
+        title={title}
+        style={{ display: 'block', maxWidth: '98vw', maxHeight: '95vh', zIndex: 1 }}
+        onLoad={() => setLoading(false)}
+      />
+    </div>
+  );
+}
+
   return (
     <div className="w-full border-2 border-white shadow-sm mb-4">
       <div className="py-3 px-5 flex flex-col justify-between md:flex-row md:items-center md:justify-between gap-4">
@@ -672,14 +707,7 @@ const handleNavigation = (value) => {
             {importLoading ? (
               <div style={{ padding: 40, textAlign: 'center', fontSize: 18 }}>Loading import form...</div>
             ) : importUrl ? (
-              <iframe
-                src={importUrl}
-                width="1400"
-                height="1000"
-                frameBorder="0"
-                title="Import Questions"
-                style={{ display: 'block', maxWidth: '98vw', maxHeight: '95vh' }}
-              />
+              <IframeWithLoader src={importUrl} title="Import Questions" />
             ) : (
               <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>No import form available.</div>
             )}
@@ -720,14 +748,7 @@ const handleNavigation = (value) => {
             {exportLoading ? (
               <div style={{ padding: 40, textAlign: 'center', fontSize: 18 }}>Loading export form...</div>
             ) : exportUrl ? (
-              <iframe
-                src={exportUrl}
-                width="1400"
-                height="1000"
-                frameBorder="0"
-                title="Export Questions"
-                style={{ display: 'block', maxWidth: '98vw', maxHeight: '95vh' }}
-              />
+              <IframeWithLoader src={exportUrl} title="Export Questions" />
             ) : (
               <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>No export form available.</div>
             )}
@@ -768,14 +789,7 @@ const handleNavigation = (value) => {
             {createLoading ? (
               <div style={{ padding: 40, textAlign: 'center', fontSize: 18 }}>Loading create form...</div>
             ) : createUrl ? (
-              <iframe
-                src={createUrl}
-                width="1400"
-                height="1000"
-                frameBorder="0"
-                title="Create New Question"
-                style={{ display: 'block', maxWidth: '98vw', maxHeight: '95vh' }}
-              />
+              <IframeWithLoader src={createUrl} title="Create New Question" />
             ) : (
               <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>No create form available.</div>
             )}
