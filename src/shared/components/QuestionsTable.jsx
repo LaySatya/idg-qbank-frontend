@@ -1136,19 +1136,9 @@ const QuestionsTable = ({
 
       const data = await res.json();
       if (data.status && data.previewurl) {
-        // Open in new window with proper dimensions
-        console.log('Opening preview URL in new window:', data.previewurl);
-        const previewWindow = window.open(
-          data.previewurl, 
-          '_blank',
-          'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no'
-        );
-        
-        if (!previewWindow) {
-          toast.error('Please allow popups for this site to view the preview');
-        } else {
-          // toast.success('Opening Moodle preview in new window...');
-        }
+        setMoodlePreviewUrl(data.previewurl);
+        setShowMoodlePreview(true);
+        setMoodleFormLoading(false);
       } else {
         toast.error(data.message || 'Failed to get preview URL');
       }
@@ -1211,18 +1201,9 @@ const handleDuplicateMoodle = async (question) => {
     console.log('Duplicate form response:', data);
 
     if (data.duplicate_form_url) {
-      console.log('Opening duplicate form URL in new window:', data.duplicate_form_url);
-      const duplicateWindow = window.open(
-        data.duplicate_form_url, 
-        '_blank',
-        'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no'
-      );
-      
-      if (!duplicateWindow) {
-        toast.error('Please allow popups for this site to open the duplicate form');
-      } else {
-        // toast.success('Opening Moodle duplicate form in new window...');
-      }
+      setMoodlePreviewUrl(data.duplicate_form_url);
+      setShowMoodlePreview(true);
+      setMoodleFormLoading(false);
     } else {
       console.warn('No duplicate form URL in response:', data);
       toast.error('No duplicate form URL available for this question');
@@ -1252,7 +1233,9 @@ const handleEditClick = (questionId, courseIdParam) => {
   const editFormUrl = `${baseMoodleUrl}/question/bank/editquestion/question.php?courseid=${courseId}&id=${questionId}&returnurl=${returnUrl}`;
 
   console.log('Opening Moodle edit with:', editFormUrl);
-  window.open(editFormUrl, '_blank');
+  setMoodlePreviewUrl(editFormUrl);
+  setShowMoodlePreview(true);
+  setMoodleFormLoading(false);
 };
 
 
@@ -1297,18 +1280,9 @@ const handleEditMoodle = async (question) => {
     const data = await res.json();
 
     if (data.edit_form_url) {
-      console.log('Opening Moodle edit form in new window:', data.edit_form_url);
-      const editWindow = window.open(
-        data.edit_form_url, 
-        '_blank',
-        'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no'
-      );
-      
-      if (!editWindow) {
-        toast.error('Please allow popups for this site to open the edit form');
-      } else {
-        // toast.success('Opening Moodle edit form in new window...');
-      }
+      setMoodlePreviewUrl(data.edit_form_url);
+      setShowMoodlePreview(true);
+      setMoodleFormLoading(false);
     } else {
       toast.error(data.message || 'Failed to get edit form URL');
     }
@@ -1519,6 +1493,8 @@ const handleEditMoodle = async (question) => {
 
   return (
     <>
+
+
       <ReactModal
         isOpen={showMoodlePreview}
         onRequestClose={() => {
@@ -1528,65 +1504,58 @@ const handleEditMoodle = async (question) => {
         }}
         contentLabel="Moodle Form"
         style={{
-          overlay: { zIndex: 1000 },
+          overlay: { zIndex: 1000, background: 'rgba(0,0,0,0.5)' },
           content: {
-            maxWidth: '90%',
-            height: '90%',
+            width: '1400px',
+            height: '1000px',
             margin: 'auto',
             padding: 0,
             overflow: 'hidden',
-            borderRadius: '12px'
+            borderRadius: '0',
+            background: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
           }
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div className="flex items-center justify-between p-4 border-b">
-            <h3 className="text-lg font-semibold">
-              {moodlePreviewUrl.includes('editquestion') ? 'Edit in Real Moodle' : 
-               moodlePreviewUrl.includes('duplicate') ? 'Duplicate in Moodle' : 
-               'Moodle Form'}
-            </h3>
-            <button 
-              onClick={() => {
-                setShowMoodlePreview(false);
-                setMoodlePreviewUrl('');
-                setMoodleFormLoading(false);
-              }}
-              className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-            >
-              &times;
-            </button>
-          </div>
-          
-          {/* Loading overlay */}
-          {moodleFormLoading && (
-            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading Moodle form...</p>
-                <p className="text-sm text-gray-500 mt-2">This may take a moment due to server processing</p>
-              </div>
-            </div>
-          )}
-          
-          <iframe
-            src={moodlePreviewUrl}
-            style={{ flexGrow: 1, border: 'none' }}
-            width="100%"
-            height="100%"
-            title="Moodle Form"
-            onLoad={(e) => {
-              // Form has loaded successfully
-              console.log('Moodle form loaded successfully');
+        <div style={{ position: 'absolute', top: 16, right: 24, zIndex: 10 }}>
+          <button
+            onClick={() => {
+              setShowMoodlePreview(false);
+              setMoodlePreviewUrl('');
               setMoodleFormLoading(false);
             }}
-            onError={(e) => {
-              console.error('Moodle form failed to load:', e);
-              setMoodleFormLoading(false);
-              toast.error('Failed to load Moodle form. Please try again.');
+            style={{
+              background: 'rgba(255,255,255,0.85)',
+              border: 'none',
+              borderRadius: '50%',
+              width: 40,
+              height: 40,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+              cursor: 'pointer',
+              fontSize: 24,
+              color: '#333',
+              transition: 'background 0.2s',
             }}
-          />
+            title="Close"
+            aria-label="Close"
+          >
+            <span style={{ fontSize: 24, lineHeight: 1 }}>&#10005;</span>
+          </button>
         </div>
+        <iframe
+          src={moodlePreviewUrl}
+          width="1400"
+          height="1000"
+          frameBorder="0"
+          title="Moodle Form"
+          style={{ display: 'block', border: 'none' }}
+        />
       </ReactModal>
 
       <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col">
@@ -1988,6 +1957,7 @@ const handleEditMoodle = async (question) => {
                                     tabIndex="-1"
                                     onClick={async (e) => {
                                       e.preventDefault();
+                                      // Use the same iframe modal for Edit in Moodle
                                       await handleEditMoodle(question);
                                       setLastActionedQuestionId(question.id);
                                       setLastActionType('editMoodle');
@@ -2004,6 +1974,7 @@ const handleEditMoodle = async (question) => {
                                     tabIndex="-1"
                                     onClick={async (e) => {
                                       e.preventDefault();
+                                      // Use the same iframe modal for Duplicate in Moodle
                                       await handleDuplicateMoodle(question);
                                       setLastActionedQuestionId(question.id);
                                       setLastActionType('duplicate');

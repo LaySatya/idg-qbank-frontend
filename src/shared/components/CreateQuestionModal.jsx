@@ -89,16 +89,16 @@ const CreateQuestionModal = ({
         border: 'none',
         outline: 'none',
         p: { xs: 2, sm: 4, md: 6 },
-        width: { xs: '95vw', sm: 500, md: 900 },
-        maxWidth: 1000,
-        minWidth: 320,
+        width: { xs: '99vw', sm: 900, md: 1400 },
+        maxWidth: 1600,
+        minWidth: 400,
         minHeight: 400,
         display: 'flex',
         flexDirection: 'row',
-        height: { xs: '90vh', sm: '80vh', md: '80vh' },
+        height: { xs: '95vh', sm: '90vh', md: '90vh' },
       }}>
         {/* Left Panel - Question Types */}
-        <div className="w-1/3 bg-gradient-to-b from-gray-50 to-white flex flex-col" style={{ minWidth: 260, maxWidth: 340 }}>
+        <div className="w-1/3 bg-gradient-to-b from-gray-50 to-white flex flex-col" style={{ minWidth: 340, maxWidth: 500 }}>
           {/* Header */}
           <div className="px-6 pt-6 pb-3 flex justify-between items-center">
             <h2 className="text-2xl font-bold tracking-tight text-gray-800">Questions</h2>

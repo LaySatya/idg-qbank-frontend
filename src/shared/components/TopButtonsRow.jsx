@@ -26,7 +26,21 @@ const TopButtonsRow = ({
   selectedCourseName
 }) => {
   const [showTestModal, setShowTestModal] = useState(false);
-  // Export questions handler
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+  // Modal states for Import/Export/Create
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importUrl, setImportUrl] = useState("");
+  const [importLoading, setImportLoading] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportUrl, setExportUrl] = useState("");
+  const [exportLoading, setExportLoading] = useState(false);
+  const [showCreateModalIframe, setShowCreateModalIframe] = useState(false);
+  const [createUrl, setCreateUrl] = useState("");
+  const [createLoading, setCreateLoading] = useState(false);
+  const [showTypeSelectModal, setShowTypeSelectModal] = useState(false);
+  const [selectedQType, setSelectedQType] = useState("");
   const handleExportClick = async () => {
     const token = localStorage.getItem('token');
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -331,59 +345,7 @@ const handleNavigation = (value) => {
           </div>
         )}
 
-        {/* Test Button always visible */}
-        <div className="flex items-center gap-4 mb-2 md:mb-0">
-          <button
-            type="button"
-            className="w-full md:w-auto flex items-center gap-2 rounded-md bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Test preview in modal"
-            style={{ minWidth: 120 }}
-            onClick={() => setShowTestModal(true)}
-          >
-            Test
-          </button>
-
-          {showTestModal && (
-            <div style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              width: '100vw',
-              height: '100vh',
-              background: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000
-            }}>
-              <div style={{
-                background: '#fff',
-                padding: 16,
-                borderRadius: 8,
-                position: 'relative',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-              }}>
-                <button onClick={() => setShowTestModal(false)} style={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  background: 'transparent',
-                  border: 'none',
-                  fontSize: 24,
-                  cursor: 'pointer'
-                }}>&times;</button>
-                <iframe
-                  src="https://elearning.cadt.edu.kh/local/idg_qbank_editform/multi_preview.php?categoryid=5331"
-                  width="1000"
-                  height="800"
-                  frameBorder="0"
-                  title="Preview"
-                  style={{ display: 'block', maxWidth: '90vw', maxHeight: '80vh' }}
-                />
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Removed Test Button and its modal as requested */}
         {/* Navigation Dropdown */}
         <div className="flex items-center gap-3 ">
           <label htmlFor="url_select" className="sr-only">
@@ -414,22 +376,82 @@ const handleNavigation = (value) => {
                       <button
                         type="button"
                         className="w-full flex items-center gap-2 text-left px-4 py-2 text-sm bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 hover:text-gray-900 rounded-md"
-                        onClick={() => {
+                        onClick={async () => {
                           setShowQuestionsDropdown(false);
-                          handleImportClick();
+                          setImportLoading(true);
+                          setShowImportModal(true);
+                          setImportUrl("");
+                          const token = localStorage.getItem('token');
+                          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+                          const courseId = localStorage.getItem('CourseID');
+                          const categoryId = localStorage.getItem('questionCategoryId');
+                          const contextId = localStorage.getItem('questionCategoryContextId') || '1';
+                          if (!categoryId || categoryId === 'All') {
+                            toast.error('Please select a category first.');
+                            setImportLoading(false);
+                            return;
+                          }
+                          try {
+                            const url = `${API_BASE_URL}/questions/import?categoryid=${categoryId}&contextid=${contextId}&courseid=${courseId}`;
+                            const response = await fetch(url, {
+                              headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Accept': 'application/json'
+                              }
+                            });
+                            const data = await response.json();
+                            if (data.import_form_url) {
+                              setImportUrl(data.import_form_url);
+                            } else {
+                              toast.error('No import URL received from server.');
+                            }
+                          } catch (error) {
+                            toast.error(`Error: ${error.message}`);
+                          } finally {
+                            setImportLoading(false);
+                          }
                         }}
-                        disabled={isImporting}
                         style={{ minWidth: 120 }}
                       >
-                        {isImporting ? 'Importing...' : 'Import Questions'}
+                        Import Questions
                         <Upload size={16} className="ml-2 inline" />
                       </button>
                       <button
                         type="button"
                         className="w-full flex items-center gap-2 text-left px-4 py-2 text-sm bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 hover:text-gray-900 rounded-md"
-                        onClick={() => {
+                        onClick={async () => {
                           setShowQuestionsDropdown(false);
-                          handleExportClick();
+                          setExportLoading(true);
+                          setShowExportModal(true);
+                          setExportUrl("");
+                          const token = localStorage.getItem('token');
+                          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+                          const categoryId = localStorage.getItem('questionCategoryId');
+                          const contextId = localStorage.getItem('questionCategoryContextId') || '1';
+                          if (!categoryId || categoryId === 'All') {
+                            toast.error('Please select a category first.');
+                            setExportLoading(false);
+                            return;
+                          }
+                          try {
+                            const url = `${API_BASE_URL}/questions/export?categoryid=${categoryId}&contextid=${contextId}`;
+                            const response = await fetch(url, {
+                              headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Accept': 'application/json'
+                              }
+                            });
+                            const data = await response.json();
+                            if (data.export_form_url) {
+                              setExportUrl(data.export_form_url);
+                            } else {
+                              toast.error('No export URL received from server.');
+                            }
+                          } catch (error) {
+                            toast.error(`Error: ${error.message}`);
+                          } finally {
+                            setExportLoading(false);
+                          }
                         }}
                         style={{ minWidth: 120 }}
                       >
@@ -452,26 +474,316 @@ const handleNavigation = (value) => {
               <button
                 type="button"
                 className="w-full md:w-auto flex items-center gap-2 rounded-md bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handlePreviewClick}
+                onClick={async () => {
+                  setPreviewLoading(true);
+                  setShowPreviewModal(true);
+                  setPreviewUrl("");
+                  const token = localStorage.getItem('token');
+                  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+                  const categoryId = localStorage.getItem('questionCategoryId');
+                  if (!categoryId || categoryId === 'All') {
+                    toast.error('Please select a category first.');
+                    setPreviewLoading(false);
+                    return;
+                  }
+                  try {
+                    const url = `${API_BASE_URL}/questions/multi_preview?categoryid=${categoryId}`;
+                    const response = await fetch(url, {
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                      }
+                    });
+                    const data = await response.json();
+                    if (data.multi_preview_url) {
+                      setPreviewUrl(data.multi_preview_url);
+                    } else {
+                      toast.error('No preview URL received from server.');
+                    }
+                  } catch (error) {
+                    toast.error(`Error: ${error.message}`);
+                  } finally {
+                    setPreviewLoading(false);
+                  }
+                }}
                 title="Preview all questions in selected category"
                 style={{ minWidth: 120 }}
               >
                 Preview Questions
                 <Eye size={18} />
               </button>
+      {/* Preview Questions Modal */}
+      {showPreviewModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: '#fff',
+            padding: 16,
+            borderRadius: 8,
+            position: 'relative',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+          }}>
+            <button onClick={() => setShowPreviewModal(false)} style={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              background: 'transparent',
+              border: 'none',
+              fontSize: 24,
+              cursor: 'pointer'
+            }}>&times;</button>
+            {previewLoading ? (
+              <div style={{ padding: 40, textAlign: 'center', fontSize: 18 }}>Loading preview...</div>
+            ) : previewUrl ? (
+                <iframe
+                  src={previewUrl}
+                  width="1400"
+                  height="1000"
+                  frameBorder="0"
+                  title="Preview Questions"
+                  style={{ display: 'block', maxWidth: '98vw', maxHeight: '95vh' }}
+                />
+            ) : (
+              <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>No preview available.</div>
+            )}
+          </div>
+        </div>
+      )}
 
               <button
                 type="button"
                 className="w-full md:w-auto flex items-center gap-2 rounded-md bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handleCreateQuestion}
+                onClick={async () => {
+                  setLoadingQuestionTypes(true);
+                  setShowTypeSelectModal(true);
+                  try {
+                    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(`${API_BASE_URL}/questions/qtypes`, {
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                      }
+                    });
+                    if (response.ok) {
+                      const types = await response.json();
+                      setQuestionTypes(types);
+                    } else {
+                      setQuestionTypes([]);
+                      toast.error('Failed to load question types from API');
+                    }
+                  } catch (error) {
+                    setQuestionTypes([]);
+                    toast.error('Error loading question types');
+                  } finally {
+                    setLoadingQuestionTypes(false);
+                  }
+                }}
                 title="Create new question in selected category"
                 style={{ minWidth: 120 }}
               >
                 Create New Question
                 <Plus size={18} />
               </button>
+      {/* Type Selection Modal (use CreateQuestionModal for better UI) */}
+      {showTypeSelectModal && (
+        <CreateQuestionModal
+          onClose={() => setShowTypeSelectModal(false)}
+          onSelectType={async (typeObj) => {
+            setShowTypeSelectModal(false);
+            setCreateLoading(true);
+            setShowCreateModalIframe(true);
+            setCreateUrl("");
+            const token = localStorage.getItem('token');
+            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+            const categoryId = localStorage.getItem('questionCategoryId');
+            const contextId = localStorage.getItem('questionCategoryContextId') || '1';
+            const courseId = localStorage.getItem('CourseID');
+            const qtype = typeObj.value || typeObj.name;
+            if (!categoryId || categoryId === 'All') {
+              toast.error('Please select a category first.');
+              setCreateLoading(false);
+              return;
+            }
+            try {
+              const url = `${API_BASE_URL}/questions/create?qtype=${qtype}&categoryid=${categoryId}&contextid=${contextId}&courseid=${courseId}`;
+              const response = await fetch(url, {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Accept': 'application/json'
+                }
+              });
+              const data = await response.json();
+              if (data.create_form_url) {
+                setCreateUrl(data.create_form_url);
+              } else {
+                toast.error('No create form URL received from server.');
+              }
+            } catch (error) {
+              toast.error(`Error: ${error.message}`);
+            } finally {
+              setCreateLoading(false);
+            }
+          }}
+          availableQuestionTypes={questionTypes}
+          loadingQuestionTypes={loadingQuestionTypes}
+        />
+      )}
+      {/* Import Modal */}
+      {showImportModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: '#fff',
+            padding: 16,
+            borderRadius: 8,
+            position: 'relative',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+          }}>
+            <button onClick={() => setShowImportModal(false)} style={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              background: 'transparent',
+              border: 'none',
+              fontSize: 24,
+              cursor: 'pointer'
+            }}>&times;</button>
+            {importLoading ? (
+              <div style={{ padding: 40, textAlign: 'center', fontSize: 18 }}>Loading import form...</div>
+            ) : importUrl ? (
+              <iframe
+                src={importUrl}
+                width="1400"
+                height="1000"
+                frameBorder="0"
+                title="Import Questions"
+                style={{ display: 'block', maxWidth: '98vw', maxHeight: '95vh' }}
+              />
+            ) : (
+              <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>No import form available.</div>
+            )}
+          </div>
+        </div>
+      )}
 
-               <button
+      {/* Export Modal */}
+      {showExportModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: '#fff',
+            padding: 16,
+            borderRadius: 8,
+            position: 'relative',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+          }}>
+            <button onClick={() => setShowExportModal(false)} style={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              background: 'transparent',
+              border: 'none',
+              fontSize: 24,
+              cursor: 'pointer'
+            }}>&times;</button>
+            {exportLoading ? (
+              <div style={{ padding: 40, textAlign: 'center', fontSize: 18 }}>Loading export form...</div>
+            ) : exportUrl ? (
+              <iframe
+                src={exportUrl}
+                width="1400"
+                height="1000"
+                frameBorder="0"
+                title="Export Questions"
+                style={{ display: 'block', maxWidth: '98vw', maxHeight: '95vh' }}
+              />
+            ) : (
+              <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>No export form available.</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Create New Question Modal (iframe) */}
+      {showCreateModalIframe && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: '#fff',
+            padding: 16,
+            borderRadius: 8,
+            position: 'relative',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+          }}>
+            <button onClick={() => setShowCreateModalIframe(false)} style={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              background: 'transparent',
+              border: 'none',
+              fontSize: 24,
+              cursor: 'pointer'
+            }}>&times;</button>
+            {createLoading ? (
+              <div style={{ padding: 40, textAlign: 'center', fontSize: 18 }}>Loading create form...</div>
+            ) : createUrl ? (
+              <iframe
+                src={createUrl}
+                width="1400"
+                height="1000"
+                frameBorder="0"
+                title="Create New Question"
+                style={{ display: 'block', maxWidth: '98vw', maxHeight: '95vh' }}
+              />
+            ) : (
+              <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>No create form available.</div>
+            )}
+          </div>
+        </div>
+      )}
+
+               {/* <button
                 type="button"
                 className="w-full md:w-auto flex items-center gap-2 rounded-md bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={setShowTestModal}
@@ -480,7 +792,7 @@ const handleNavigation = (value) => {
               >
                 Test
               
-              </button>
+              </button> */}
             </>
           )}
         </div>
