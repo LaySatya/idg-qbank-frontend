@@ -19,6 +19,7 @@ import {
   Autocomplete,
   CircularProgress,
 } from '@mui/material';
+import DriveFileMoveOutlineIcon from '@mui/icons-material/DriveFileMoveOutline';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -31,6 +32,11 @@ import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import { toast } from 'react-hot-toast';
+import {
+  buildGroupedCategoryTree,
+  flattenCategoryTree,
+  generateCategoryPath
+} from '../../shared/utils/categoryUtils';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -42,9 +48,19 @@ const BulkActionsRow = ({
   onBulkStatusChange,
   questions,
   setQuestions,
-  fetchQuestions 
-
+  fetchQuestions,
+  availableCategories // <-- pass this prop from parent if you have the full list
 }) => {
+  // Clear selection when category filter changes (e.g., after move or filter change)
+  useEffect(() => {
+    const handleCategoryChange = () => {
+      setSelectedQuestions([]);
+    };
+    window.addEventListener('questionCategoryChanged', handleCategoryChange);
+    return () => {
+      window.removeEventListener('questionCategoryChanged', handleCategoryChange);
+    };
+  }, [setSelectedQuestions]);
   const [anchorEl, setAnchorEl] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
@@ -663,6 +679,140 @@ const handleConfirmRemoveTag = async () => {
   // Menu and modal handlers
   const handleMenuClick = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
+  // --- Move Questions State ---
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [moveTargetCategory, setMoveTargetCategory] = useState('');
+  const [moveLoading, setMoveLoading] = useState(false);
+  const [moveResult, setMoveResult] = useState(null);
+  const [moveError, setMoveError] = useState(null);
+
+  // --- Category List for Move Modal ---
+  const [courseCategories, setCourseCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+  // Fetch categories for the current course when move modal opens
+  useEffect(() => {
+    if (showMoveModal) {
+      const courseId = localStorage.getItem('CourseID');
+      if (!courseId) return;
+      setCategoriesLoading(true);
+      fetch(`${API_BASE_URL}/questions/question_categories?courseid=${courseId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data.categories)) {
+            // Use the full category object, not just id and name, to preserve contextid and parent
+            setCourseCategories(data.categories);
+          } else {
+            setCourseCategories([]);
+          }
+        })
+        .catch(() => setCourseCategories([]))
+        .finally(() => setCategoriesLoading(false));
+    }
+  }, [showMoveModal]);
+
+  // Use fetched categories for move modal, fallback to uniqueCategories from questions if not loaded
+  const uniqueCategories = courseCategories.length > 0
+    ? courseCategories
+    : (questions || [])
+      .map(q => ({
+        id: q.categoryid || q.category || q.catId || q.categoryId,
+        name: q.categoryname || q.categoryName || q.category || q.catName || ''
+      }))
+      .filter(cat => cat.id)
+      .reduce((acc, cat) => {
+        if (!acc.some(c => c.id === cat.id)) acc.push(cat);
+        return acc;
+      }, []);
+
+  // Get source category from first selected question
+  const sourceCategoryId = (() => {
+    if (!selectedQuestions || selectedQuestions.length === 0) return '';
+    const q = questions.find(q => q.id === selectedQuestions[0]);
+    return q ? (q.categoryid || q.category || q.catId || q.categoryId) : '';
+  })();
+
+  const handleOpenMoveModal = () => {
+    setMoveTargetCategory(''); // Always reset target category when opening modal
+    setMoveResult(null);
+    setMoveError(null);
+    setShowMoveModal(true);
+  };
+
+  const handleMoveQuestions = async () => {
+    setMoveLoading(true);
+    setMoveResult(null);
+    setMoveError(null);
+    try {
+      const validQuestionIds = selectedQuestions
+        .map(id => parseInt(id))
+        .filter(id => !isNaN(id) && id > 0);
+      if (validQuestionIds.length === 0) {
+        setMoveError('No valid question IDs selected');
+        setMoveLoading(false);
+        return;
+      }
+      if (!sourceCategoryId) {
+        setMoveError('Source category not found');
+        setMoveLoading(false);
+        return;
+      }
+      if (!moveTargetCategory) {
+        setMoveError('Please select a target category');
+        setMoveLoading(false);
+        return;
+      }
+      const params = new URLSearchParams();
+      validQuestionIds.forEach((id) => {
+        params.append('questionids[]', id.toString());
+      });
+      params.append('sourcecategoryid', sourceCategoryId);
+      params.append('targetcategoryid', moveTargetCategory);
+      const url = `${API_BASE_URL}/questions/move?${params.toString()}`;
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        }
+      });
+      const data = await res.json();
+      setMoveResult(data);
+      if (data.success) {
+        toast.success(`Moved to: ${data.targetcategoryname}`);
+        setQuestions(prev => prev.map(q =>
+          validQuestionIds.includes(q.id)
+            ? { ...q, categoryid: moveTargetCategory, categoryname: data.targetcategoryname }
+            : q
+        ));
+        setSelectedQuestions([]);
+        setMoveTargetCategory(''); // Reset after move
+        setShowMoveModal(false);
+        // Set filter to show only the new target category in QuestionBank
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('questionCategoryId', moveTargetCategory);
+          localStorage.setItem('questionCategoryName', data.targetcategoryname || '');
+          // Optionally, trigger a custom event to notify QuestionBank to update filters
+          window.dispatchEvent(new CustomEvent('questionCategoryChanged', { detail: { id: moveTargetCategory, name: data.targetcategoryname } }));
+        }
+        if (fetchQuestions) fetchQuestions();
+      } else {
+        setMoveError(data.errors?.map(e => e.error).join(', ') || 'Move failed');
+        toast.error('Move failed');
+      }
+    } catch (err) {
+      setMoveError(err.message);
+      toast.error('Move failed: ' + err.message);
+    } finally {
+      setMoveLoading(false);
+    }
+  };
+
   const handleAction = (action) => {
     setAnchorEl(null);
     switch (action) {
@@ -670,11 +820,18 @@ const handleConfirmRemoveTag = async () => {
         setShowStatusModal(true); break;
       case 'tags':
         setShowTagModal(true); break;
+      case 'move':
+        handleOpenMoveModal(); break;
       default: break;
     }
   };
 
   if (selectedQuestions.length === 0) return null;
+
+  // Remove selectedQuestions from localStorage on mount and when selection changes
+  useEffect(() => {
+    localStorage.removeItem('selectedQuestions');
+  }, [selectedQuestions]);
 
   return (
     <>
@@ -705,19 +862,240 @@ const handleConfirmRemoveTag = async () => {
             <MenuItem onClick={() => handleAction('tags')}>
               <TagIcon sx={{ mr: 1 }} /> Manage Tags
             </MenuItem>
+            <MenuItem onClick={() => handleAction('move')}>
+              <DriveFileMoveOutlineIcon sx={{ mr: 1 }} /> Move to ...
+            </MenuItem>
           </Menu>
+         
           <Button
-            variant="contained"
+            variant="outlined"
             color="error"
             onClick={onBulkDelete}
           >
             Delete
             <DeleteIcon />
           </Button>
+           
         </Stack>
       </Paper>
 
       {/* Status Modal */}
+      {/* Move Questions Modal */}
+      <Dialog 
+        open={showMoveModal} 
+        onClose={() => setShowMoveModal(false)} 
+        maxWidth="md" 
+        fullWidth
+        sx={{
+          '& .MuiDialog-container': {
+            alignItems: 'flex-start',
+            paddingTop: '80px'
+          }
+        }}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+            overflow: 'hidden',
+            border: '1px solid #e5e7eb'
+          }
+        }}
+      >
+        {/* Header */}
+        <DialogTitle 
+          sx={{ 
+            backgroundColor: '#f9fafb',
+            borderBottom: '1px solid #e5e7eb',
+            color: '#111827',
+            p: 3
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 2,
+                  backgroundColor: '#e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <DriveFileMoveOutlineIcon sx={{ fontSize: 20, color: '#6b7280' }} />
+              </Box>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', mb: 0.5 }}>
+                  Move Questions to Another Category
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                  {selectedQuestions.length} question{selectedQuestions.length !== 1 ? 's' : ''} selected
+                </Typography>
+              </Box>
+            </Box>
+            <IconButton
+              onClick={() => setShowMoveModal(false)}
+              sx={{
+                color: '#6b7280',
+                backgroundColor: 'transparent',
+                '&:hover': {
+                  backgroundColor: '#e5e7eb',
+                  color: '#374151'
+                },
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        {/* Main Content */}
+        <DialogContent sx={{ p: 0 }}>
+          <Box 
+            sx={{ 
+              backgroundColor: 'white',
+              borderBottom: '1px solid #e5e7eb',
+              p: 3
+            }}
+          >
+            <Typography variant="body2" color="#6b7280">
+              Select a target category to move the selected questions
+            </Typography>
+          </Box>
+          <Box sx={{ p: 4 }}>
+            <Box sx={{ mb: 3 }}>
+              <strong>Source Category:</strong> {sourceCategoryId || 'N/A'}
+            </Box>
+            <TextField
+              select
+              label="Target Category"
+              value={moveTargetCategory}
+              onChange={e => setMoveTargetCategory(e.target.value)}
+              fullWidth
+              margin="normal"
+              disabled={categoriesLoading}
+            >
+              <MenuItem value="" disabled>
+                {categoriesLoading ? 'Loading categories...' : 'Select category'}
+              </MenuItem>
+              {/* Render hierarchical category tree with parent/child indentation and full path as tooltip */}
+              {(() => {
+                // Use courseCategories if loaded, else fallback to uniqueCategories (flat)
+                let grouped = [];
+                if (courseCategories && courseCategories.length > 0) {
+                  grouped = buildGroupedCategoryTree(courseCategories);
+                } else if (uniqueCategories && uniqueCategories.length > 0) {
+                  grouped = [{ contextid: 0, label: 'Categories', tree: uniqueCategories }];
+                }
+
+                // Use the real total count from the category object (from API)
+                return grouped.flatMap(group => {
+                  const flat = flattenCategoryTree(group.tree);
+                  return flat
+                    .filter(cat => cat.id && cat.id !== sourceCategoryId)
+                    .map(cat => {
+                      // Use totalQuestionCount or questioncount from the category object
+                      const count = cat.totalQuestionCount ?? cat.questioncount ?? 0;
+                      return (
+                        <MenuItem
+                          key={`cat-${cat.id}`}
+                          value={cat.id}
+                          title={cat.path || generateCategoryPath(cat, cat.level)}
+                          style={{ paddingLeft: 16 + (cat.level || 0) * 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                        >
+                          <span>
+                            {cat.level > 0 && (
+                              <span style={{ opacity: 0.5, marginRight: 4 }}>{'— '.repeat(cat.level)}</span>
+                            )}
+                            {cat.name || cat.id}
+                            {group.label && group.label !== 'Categories' && cat.level === 0 && (
+                              <span style={{ color: '#888', marginLeft: 8, fontSize: 12 }}>({group.label})</span>
+                            )}
+                          </span>
+                          <span style={{ color: '#6b7280', fontSize: 13, marginLeft: 12, minWidth: 32, textAlign: 'right' }}>
+                            {count}
+                          </span>
+                        </MenuItem>
+                      );
+                    });
+                });
+              })()}
+            </TextField>
+            {moveError && <div style={{ color: 'red', marginTop: 8 }}>{moveError}</div>}
+            {moveResult && (
+              <div style={{ marginTop: 16 }}>
+                <div><strong>Result:</strong></div>
+                <div>Success: {moveResult.success ? 'Yes' : 'No'}</div>
+                <div>New Category: {moveResult.targetcategoryname || moveResult.targetcategoryid}</div>
+                {moveResult.errors && moveResult.errors.length > 0 && (
+                  <div style={{ color: 'red' }}>
+                    Errors:
+                    <ul>
+                      {moveResult.errors.map((err, idx) => (
+                        <li key={idx}>{err.questionid}: {err.error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </Box>
+        </DialogContent>
+        {/* Footer */}
+        <DialogActions 
+          sx={{ 
+            backgroundColor: '#f9fafb',
+            borderTop: '1px solid #e5e7eb',
+            p: 3,
+            gap: 2,
+            justifyContent: 'flex-end'
+          }}
+        >
+          <Button 
+            onClick={() => setShowMoveModal(false)} 
+            variant="outlined"
+            sx={{ 
+              px: 3,
+              py: 1,
+              borderRadius: '6px',
+              textTransform: 'none',
+              fontWeight: 500,
+              borderColor: '#d1d5db',
+              color: '#6b7280',
+              backgroundColor: 'white',
+              '&:hover': {
+                borderColor: '#9ca3af',
+                backgroundColor: '#f9fafb',
+                color: '#374151'
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleMoveQuestions} 
+            variant="contained" 
+            color="primary" 
+            disabled={moveLoading || !moveTargetCategory}
+            sx={{ 
+              px: 3,
+              py: 1,
+              borderRadius: '6px',
+              textTransform: 'none',
+              fontWeight: 500,
+              backgroundColor: '#111827',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: '#000000'
+              },
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {moveLoading ? 'Moving...' : 'Move'}
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Dialog open={showStatusModal} onClose={() => setShowStatusModal(false)}>
         <DialogTitle>Change Status</DialogTitle>
         <DialogContent>

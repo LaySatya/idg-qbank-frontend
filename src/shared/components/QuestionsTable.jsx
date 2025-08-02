@@ -1493,8 +1493,6 @@ const handleEditMoodle = async (question) => {
 
   return (
     <>
-
-
       <ReactModal
         isOpen={showMoodlePreview}
         onRequestClose={() => {
@@ -1574,7 +1572,7 @@ const handleEditMoodle = async (question) => {
             </div>
           </div>
         )}
-        
+
         {questions.length === 0 ? (
           <div className="flex items-center justify-center text-gray-500 py-12">
             <div className="text-center">
@@ -1583,11 +1581,11 @@ const handleEditMoodle = async (question) => {
             </div>
           </div>
         ) : (
-          <div>
-            <table className="w-full divide-y divide-gray-200">
+          <div className="overflow-x-auto w-full">
+            <table className="min-w-[1100px] w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase border-b border-gray-200 w-12" scope="col">
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase border-b border-gray-200 w-25" scope="col">
                     <input
                       id="qbheadercheckbox"
                       name="qbheadercheckbox"

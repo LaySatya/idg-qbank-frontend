@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -18,6 +19,9 @@ import {
   Paper,
   Typography
 } from '@mui/material';
+
+
+
 
 const TagFilterStatus = ({ tagFilter, allTags }) => {
   if (!Array.isArray(tagFilter) || tagFilter.length === 0) {
@@ -97,6 +101,20 @@ const FiltersRow = ({
   categoryQuestionCount = 0,
   categoryCountMap = {}, 
 }) => {
+  // Always sync localStorage with the current category filter (for moves and filter changes)
+  useEffect(() => {
+    if (filters.category && filters.category !== 'All') {
+      localStorage.setItem('questionCategoryId', filters.category);
+      if (filters.categoryName) {
+        localStorage.setItem('questionCategoryName', filters.categoryName);
+      } else {
+        const selectedCat = availableCategories.find(cat => String(cat.id) === String(filters.category));
+        if (selectedCat && selectedCat.name) {
+          localStorage.setItem('questionCategoryName', selectedCat.name);
+        }
+      }
+    }
+  }, [filters.category, filters.categoryName, availableCategories]);
   const [internalSearchQuery, setInternalSearchQuery] = useState(searchQuery);
   const lastRequestTimeRef = useRef(0);
   const lastCategoryChangeRef = useRef(0);
@@ -203,10 +221,24 @@ const FiltersRow = ({
     setInternalSearchQuery('');
     setSearchQuery('');
     setTagFilter([]);
-    
+    // Remove tag filter from localStorage
     localStorage.removeItem('questionTagFilter');
-    localStorage.removeItem('questionCategoryId');
-    localStorage.removeItem('questionCategoryName');
+    // If a new category is selected (e.g., after a move), store it in localStorage
+    if (clearedFilters.category && clearedFilters.category !== 'All') {
+      localStorage.setItem('questionCategoryId', clearedFilters.category);
+      if (clearedFilters.categoryName) {
+        localStorage.setItem('questionCategoryName', clearedFilters.categoryName);
+      } else {
+        // Try to get name from availableCategories if not present
+        const selectedCat = availableCategories.find(cat => String(cat.id) === String(clearedFilters.category));
+        if (selectedCat && selectedCat.name) {
+          localStorage.setItem('questionCategoryName', selectedCat.name);
+        }
+      }
+    } else {
+      localStorage.removeItem('questionCategoryId');
+      localStorage.removeItem('questionCategoryName');
+    }
     
   }, [setFilters, setSearchQuery, setTagFilter, filters.courseId, filters.courseName]);
 
@@ -421,12 +453,14 @@ const FiltersRow = ({
     [questions, filters.category]
   );
 
+  // Always show the selected category, even if not in availableCategories yet (after move)
   const validCategory = useMemo(() => {
     if (filters.category === 'All') return 'All';
+    // If the selected category is not in availableCategories, still return it
     const allCategoryIds = availableCategories
       .filter(cat => cat && cat.id)
       .map(cat => String(cat.id));
-    return allCategoryIds.includes(String(filters.category)) ? filters.category : 'All';
+    return allCategoryIds.includes(String(filters.category)) ? filters.category : filters.category;
   }, [filters.category, availableCategories]);
 
   const validStatus = useMemo(() => {
@@ -515,13 +549,16 @@ const FiltersRow = ({
                 }
                 
                 const selectedCategory = availableCategories.find(cat => String(cat.id) === String(selected));
-                const count = categoryCountMap?.[selected] || selectedCategory?.totalQuestionCount || selectedCategory?.questioncount || 0;
-                
+                // Always use the latest categoryCountMap for real-time count
+                const count = categoryCountMap?.[selected] || 0;
+                // If not found in availableCategories, use filters.categoryName or fallback
                 if (selectedCategory) {
                   return `${selectedCategory.name} (${count})`;
                 }
-                
-                return filters.categoryName ? `${filters.categoryName} (${count})` : `Category ${selected} (${count})`;
+                if (filters.categoryName) {
+                  return `${filters.categoryName} (${count})`;
+                }
+                return `Category ${selected} (${count})`;
               }
             }}
           >
@@ -738,6 +775,6 @@ const FiltersRow = ({
       )}
     </Paper>
   );
-};
+}
 
 export default React.memo(FiltersRow);

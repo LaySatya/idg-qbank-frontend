@@ -1,6 +1,4 @@
-// ============================================================================
-// src/features/questions/pages/QuestionBank.jsx - FIXED SCROLLING VERSION
-// ============================================================================
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { 
@@ -33,6 +31,10 @@ import CategoriesComponent from '../../../shared/components/CategoriesComponent'
 import PaginationControls from '../../../shared/components/PaginationControls';
 import { EDIT_COMPONENTS, BULK_EDIT_COMPONENTS } from '../../../shared/constants/questionConstants';
 import { toast } from 'react-hot-toast';
+
+// ============================================================================
+// src/features/questions/pages/QuestionBank.jsx - FIXED SCROLLING VERSION
+// ============================================================================
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -124,6 +126,75 @@ const useTagFiltering = () => {
 // ============================================================================
 
 const QuestionBank = () => {
+
+  // FIXED: Filter state with proper localStorage persistence (move above setFiltersWithLogging)
+  const [filters, setFilters] = useState(() => {
+    const savedCourseId = localStorage.getItem('CourseID');
+    const savedCourseName = localStorage.getItem('CourseName');
+    const savedCategoryId = localStorage.getItem('questionCategoryId');
+    const savedCategoryName = localStorage.getItem('questionCategoryName');
+
+    return {
+      category: savedCategoryId || 'All',
+      categoryName: savedCategoryName || '',
+      status: 'All',
+      type: 'All',
+      courseId: savedCourseId ? parseInt(savedCourseId) : null,
+      courseName: savedCourseName || ''
+    };
+  });
+
+  // FIXED: Enhanced setFilters with stability check (move this below filters)
+  const setFiltersWithLogging = React.useCallback((newFilters) => {
+    // FIXED: Prevent unnecessary updates
+    const filtersEqual = JSON.stringify(filters) === JSON.stringify(newFilters);
+    if (filtersEqual) {
+      console.log(' Filters unchanged, skipping update');
+      return;
+    }
+
+    console.log('Filters updated:', { old: filters, new: newFilters });
+    setFilters(newFilters);
+
+    // Persist course selection
+    if (newFilters.courseId) {
+      localStorage.setItem('CourseID', newFilters.courseId.toString());
+      if (newFilters.courseName) {
+        localStorage.setItem('CourseName', newFilters.courseName);
+      }
+    } else {
+      // localStorage.removeItem('CourseID');
+      localStorage.removeItem('CourseName');
+    }
+
+    // Persist category selection
+    if (newFilters.category && newFilters.category !== 'All') {
+      localStorage.setItem('questionCategoryId', newFilters.category);
+      if (newFilters.categoryName) {
+        localStorage.setItem('questionCategoryName', newFilters.categoryName);
+      }
+    } else {
+      localStorage.removeItem('questionCategoryId');
+      localStorage.removeItem('questionCategoryName');
+    }
+  }, [filters]);
+
+  // Listen for category change event from BulkActionsRow (move modal)
+  useEffect(() => {
+    const handler = (e) => {
+      const { id, name } = (e.detail || {});
+      if (id) {
+        setFiltersWithLogging(prev => ({
+          ...prev,
+          category: id,
+          categoryName: name || '',
+        }));
+        setCurrentPage(1);
+      }
+    };
+    window.addEventListener('questionCategoryChanged', handler);
+    return () => window.removeEventListener('questionCategoryChanged', handler);
+  }, [setFiltersWithLogging]);
   // Navigation hooks
   const navigate = useNavigate();
   const location = useLocation();
@@ -156,22 +227,7 @@ const QuestionBank = () => {
     deleteQuestion
   } = useQuestionBank([]);
 
-  // FIXED: Filter state with proper localStorage persistence
-  const [filters, setFilters] = useState(() => {
-    const savedCourseId = localStorage.getItem('CourseID');
-    const savedCourseName = localStorage.getItem('CourseName');
-    const savedCategoryId = localStorage.getItem('questionCategoryId');
-    const savedCategoryName = localStorage.getItem('questionCategoryName');
 
-    return {
-      category: savedCategoryId || 'All',
-      categoryName: savedCategoryName || '',
-      status: 'All',
-      type: 'All',
-      courseId: savedCourseId ? parseInt(savedCourseId) : null,
-      courseName: savedCourseName || ''
-    };
-  });
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debugInfo, setDebugInfo] = useState({});
@@ -620,40 +676,7 @@ const QuestionBank = () => {
     setCurrentView(view);
   }, []);
 
-  // FIXED: Enhanced setFilters with stability check
-  const setFiltersWithLogging = useCallback((newFilters) => {
-    // FIXED: Prevent unnecessary updates
-    const filtersEqual = JSON.stringify(filters) === JSON.stringify(newFilters);
-    if (filtersEqual) {
-      console.log(' Filters unchanged, skipping update');
-      return;
-    }
 
-    console.log('Filters updated:', { old: filters, new: newFilters });
-    setFilters(newFilters);
-
-    // Persist course selection
-    if (newFilters.courseId) {
-      localStorage.setItem('CourseID', newFilters.courseId.toString());
-      if (newFilters.courseName) {
-        localStorage.setItem('CourseName', newFilters.courseName);
-      }
-    } else {
-      // localStorage.removeItem('CourseID');
-      localStorage.removeItem('CourseName');
-    }
-
-    // Persist category selection
-    if (newFilters.category && newFilters.category !== 'All') {
-      localStorage.setItem('questionCategoryId', newFilters.category);
-      if (newFilters.categoryName) {
-        localStorage.setItem('questionCategoryName', newFilters.categoryName);
-      }
-    } else {
-      localStorage.removeItem('questionCategoryId');
-      localStorage.removeItem('questionCategoryName');
-    }
-  }, [filters]);
 
   // Enhanced course selection handler
   const handleCourseSelect = useCallback(async (course) => {
