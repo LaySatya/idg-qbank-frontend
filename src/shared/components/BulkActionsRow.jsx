@@ -62,7 +62,7 @@ const BulkActionsRow = ({
     };
   }, [setSelectedQuestions]);
   const [anchorEl, setAnchorEl] = useState(null);
-  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusDropdownAnchorEl, setStatusDropdownAnchorEl] = useState(null);
   const [showTagModal, setShowTagModal] = useState(false);
   const [showConfirmAddModal, setShowConfirmAddModal] = useState(false);
   const [pendingTagOperation, setPendingTagOperation] = useState(null);
@@ -856,7 +856,13 @@ const handleConfirmRemoveTag = async () => {
             <MoreVertIcon />
           </Button>
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-            <MenuItem onClick={() => handleAction('status')}>
+            <MenuItem
+              onClick={e => {
+                e.stopPropagation();
+                setStatusDropdownAnchorEl(e.currentTarget);
+                handleMenuClose();
+              }}
+            >
               <EditIcon sx={{ mr: 1 }} /> Change Status
             </MenuItem>
             <MenuItem onClick={() => handleAction('tags')}>
@@ -1096,41 +1102,42 @@ const handleConfirmRemoveTag = async () => {
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={showStatusModal} onClose={() => setShowStatusModal(false)}>
-        <DialogTitle>Change Status</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Update status for {selectedQuestions.length} selected question{selectedQuestions.length !== 1 ? 's' : ''}
+      {/* Status Dropdown anchored to Change Status button */}
+      <Menu
+        anchorEl={statusDropdownAnchorEl}
+        open={Boolean(statusDropdownAnchorEl)}
+        onClose={() => setStatusDropdownAnchorEl(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      >
+        <MenuItem disabled>
+          <Typography variant="subtitle2" sx={{ px: 1 }}>
+            Change Status for {selectedQuestions.length} question{selectedQuestions.length !== 1 ? 's' : ''}
           </Typography>
-          <Stack spacing={2} mt={2}>
-            <Button
-              variant="outlined"
-              color="warning"
-              startIcon={<WarningIcon />}
-              onClick={() => {
-                onBulkStatusChange(selectedQuestions, 'draft');
-                setShowStatusModal(false);
-              }}
-            >
-              Set as Draft
-            </Button>
-            <Button
-              variant="outlined"
-              color="success"
-              startIcon={<CheckCircleIcon />}
-              onClick={() => {
-                onBulkStatusChange(selectedQuestions, 'ready');
-                setShowStatusModal(false);
-              }}
-            >
-              Set as Ready
-            </Button>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowStatusModal(false)}>Cancel</Button>
-        </DialogActions>
-      </Dialog>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            onBulkStatusChange(selectedQuestions, 'draft');
+            setStatusDropdownAnchorEl(null);
+          }}
+        >
+          <WarningIcon sx={{ mr: 1 }} color="warning" />  Draft
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            onBulkStatusChange(selectedQuestions, 'ready');
+            setStatusDropdownAnchorEl(null);
+          }}
+        >
+          <CheckCircleIcon sx={{ mr: 1 }} color="success" />  Ready
+        </MenuItem>
+        <MenuItem
+          onClick={() => setStatusDropdownAnchorEl(null)}
+          sx={{ color: '#888' }}
+        >
+          Cancel
+        </MenuItem>
+      </Menu>
 
       {/* Tag Management Modal - Enhanced with MUI styling */}
       <Dialog 
