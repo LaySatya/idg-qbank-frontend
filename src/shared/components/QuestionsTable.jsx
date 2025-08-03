@@ -682,7 +682,9 @@ const QuestionsTable = ({
   filteredQuestions = [],
   selectedQuestions = [],
   setSelectedQuestions = () => {},
-  showQuestionText = true,
+  showQuestionText = false,
+  showQuestionMedia = false,
+  scalerTopic = 'no',
   editingQuestion = null,
   setEditingQuestion = () => {},
   newQuestionTitle = '',
@@ -727,7 +729,26 @@ const QuestionsTable = ({
   const [verifiedQuestions, setVerifiedQuestions] = useState(new Set());
   const [lastActionedQuestionId, setLastActionedQuestionId] = useState(null);
   const [lastActionType, setLastActionType] = useState(null);
-  
+
+const extractMediaFromHtml = (html) => {
+  if (!html) return [];
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  const images = Array.from(div.querySelectorAll('img'));
+  const videos = Array.from(div.querySelectorAll('video'));
+  return [...images, ...videos].map(el => el.outerHTML);
+};
+
+
+
+function addTokenToImageSrc(html, token) {
+  if (!token) return html;
+  return html.replace(/<img([^>]+)src="([^"]+)"/g, (match, attrs, src) => {
+    const separator = src.includes('?') ? '&' : '?';
+    return `<img${attrs}src="${src}${src.includes('token=') ? '' : `${separator}token=${token}`}"`;
+  });
+}
+
   useEffect(() => {
     async function fetchQtypeIcons() {
       try {
@@ -1662,8 +1683,9 @@ const handleEditMoodle = async (question) => {
                 }
 
                 return (
+                  <React.Fragment key={question.id}>
                   <tr 
-                    key={question.id} 
+                    // key={question.id} 
                     className={`group transition-all duration-200 cursor-pointer ${rowClass}`}
                     onClick={() => {
                       handlePreviewMoodle(question);
@@ -2135,7 +2157,42 @@ const handleEditMoodle = async (question) => {
                         </div>
                       </div>
                     </td>
+
                   </tr>
+                        {(showQuestionText || showQuestionMedia) && (question.questiontext || question.questionText) && (
+        <tr>
+          <td colSpan={10} style={{ background: '#f9fafb', padding: 0 }}>
+            <div style={{ padding: '16px 32px', borderTop: '1px solid #e5e7eb' }}>
+                           {showQuestionText && (
+                <div
+                  className="text-sm text-gray-700"
+                  style={{ marginBottom: showQuestionMedia ? 12 : 0 }}
+                  dangerouslySetInnerHTML={{
+                    __html: addTokenToImageSrc(
+                      showQuestionMedia
+                        ? (question.questiontext || question.questionText)
+                        : (question.questiontext || question.questionText).replace(/<img[^>]*>/g, ''),
+                      localStorage.getItem('token')
+                    )
+                  }}
+                />
+              )}
+              {/* {showQuestionMedia && (
+                <div className="flex flex-wrap gap-4 mt-2">
+                  {extractMediaFromHtml(question.questiontext || question.questionText).map((mediaHtml, i) => (
+                    <span
+                      key={i}
+                      dangerouslySetInnerHTML={{ __html: mediaHtml }}
+                      style={{ maxWidth: 300, maxHeight: 200, display: 'inline-block' }}
+                    />
+                  ))}
+                </div>
+              )} */}
+            </div>
+          </td>
+        </tr>
+      )}
+    </React.Fragment>
                 );
               }).filter(Boolean)}
             </tbody>

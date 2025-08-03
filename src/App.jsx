@@ -14,6 +14,8 @@ import './styles/moodle-question-bank.css';
 import ReactModal from 'react-modal';
 import EditCompletePage from './shared/components/EditCompletePage';
 ReactModal.setAppElement('#root');
+const MOODLE_BASE_URL = import.meta.env.VITE_MOODLE_BASE_URL;
+const AUTO_LOGIN_PATH = import.meta.env.VITE_AUTO_LOGIN;
 const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -22,6 +24,8 @@ const App = () => {
   const navigate = useNavigate();
 // const pfToken = import.meta.env.MOODLE_TOKEN;
   // Check for existing authentication on app load
+    const token = localStorage.getItem('token');
+  const moodleAutoLoginUrl = `${MOODLE_BASE_URL}/${AUTO_LOGIN_PATH}?token=${token}`;
   useEffect(() => {
     const verifyAuth = async () => {
       const token = localStorage.getItem('token');
@@ -141,7 +145,14 @@ const handleLogin = (token, username, userid, profileimageurl) => {
           },
         }}
       />
-      
+         {/* Add this after authentication is confirmed */}
+      {isAuthenticated && token && (
+        <iframe
+          src={moodleAutoLoginUrl}
+          style={{ display: 'none' }}
+          title="Moodle Autologin"
+        />
+      )}
       {isAuthenticated && <Sidebar collapsed={sidebarCollapsed} />}
       <div className="flex flex-col flex-1 min-h-0">
         {isAuthenticated && (

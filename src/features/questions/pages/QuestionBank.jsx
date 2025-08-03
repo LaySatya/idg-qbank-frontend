@@ -133,6 +133,7 @@ const QuestionBank = () => {
     const savedCourseName = localStorage.getItem('CourseName');
     const savedCategoryId = localStorage.getItem('questionCategoryId');
     const savedCategoryName = localStorage.getItem('questionCategoryName');
+    const savedScalerTopic = localStorage.getItem('scalerTopic');
 
     return {
       category: savedCategoryId || 'All',
@@ -140,7 +141,9 @@ const QuestionBank = () => {
       status: 'All',
       type: 'All',
       courseId: savedCourseId ? parseInt(savedCourseId) : null,
-      courseName: savedCourseName || ''
+      courseName: savedCourseName || '',
+      scalerTopic: savedScalerTopic || 'no', 
+
     };
   });
 
@@ -165,6 +168,10 @@ const QuestionBank = () => {
     } else {
       // localStorage.removeItem('CourseID');
       localStorage.removeItem('CourseName');
+    }
+      
+    if ('scalerTopic' in newFilters) {
+      localStorage.setItem('scalerTopic', newFilters.scalerTopic);
     }
 
     // Persist category selection
@@ -1186,13 +1193,15 @@ const QuestionBank = () => {
 
                     {/* Questions Table - now part of unified scroll */}
                     <div>
-                      <QuestionsTable
+                       <QuestionsTable
                         questions={filteredQuestions}
                         allQuestions={questions}
                         filteredQuestions={filteredQuestions}
                         selectedQuestions={selectedQuestions}
                         setSelectedQuestions={setSelectedQuestions}
-                        showQuestionText={showQuestionText}
+                        showQuestionText={filters.scalerTopic === 'yes_text' || filters.scalerTopic === 'yes_full'}
+                        showQuestionMedia={filters.scalerTopic === 'yes_full'}
+                        scalerTopic={filters.scalerTopic}
                         editingQuestion={editingQuestion}
                         setEditingQuestion={setEditingQuestion}
                         newQuestionTitle={newQuestionTitle}

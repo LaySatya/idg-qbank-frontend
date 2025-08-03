@@ -492,6 +492,26 @@ const FiltersRow = ({
   return (
     <Paper elevation={2} sx={{ p: 2, mb: 2, boxShadow: 0.4 }}>
       <Grid container spacing={2} alignItems="flex-end">
+        {/* Scaler Topic Dropdown */}
+        <Grid item sx={{ width: 220 }}>
+          <TextField
+            id="scaler-topic-select"
+            select
+            fullWidth
+            label="Scaler Topic"
+            value={filters.scalerTopic || 'no'}
+            onChange={e => {
+              const value = e.target.value;
+              setFilters(prev => ({ ...prev, scalerTopic: value }));
+              localStorage.setItem('scalerTopic', value);
+            }}
+            size="small"
+          >
+            <MenuItem value="no">No (Default)</MenuItem>
+            <MenuItem value="yes_text">Yes, Text only</MenuItem>
+            <MenuItem value="yes_full">Yes, with images, media, etc</MenuItem>
+          </TextField>
+        </Grid>
         {/* Search */}
         <Grid item sx={{ width: 300 }}>
           <TextField
