@@ -29,6 +29,7 @@ const App = () => {
     const token = localStorage.getItem('token');
   const moodleAutoLoginUrl = `${MOODLE_BASE_URL}/${AUTO_LOGIN_PATH}?token=${token}`;
   useEffect(() => {
+    console.log('Auth useEffect running');
     const verifyAuth = async () => {
          
       const token = localStorage.getItem('token');
@@ -63,7 +64,7 @@ const App = () => {
     };
 
     verifyAuth();
-  }, [navigate]);
+  }, []);
 
 const handleLogin = (token, username, userid, profileimageurl) => {
   console.log('Handling login with:', { token, username, userid });
@@ -78,7 +79,7 @@ const handleLogin = (token, username, userid, profileimageurl) => {
     token,
     username,
     id: userid,
-    // profileImageUrl: profileimageurl ? profileimageurl + '?=' + pfToken : ''
+   profileImageUrl: profileimageurl
   });
 
   // Navigate to dashboard by default

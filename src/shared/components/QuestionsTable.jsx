@@ -748,6 +748,15 @@ function addTokenToImageSrc(html, token) {
     return `<img${attrs}src="${src}${src.includes('token=') ? '' : `${separator}token=${token}`}"`;
   });
 }
+useEffect(() => {
+  if (Array.isArray(questions)) {
+    const ids = questions.map(q => q.id);
+    const duplicates = ids.filter((id, idx) => ids.indexOf(id) !== idx);
+    if (duplicates.length > 0) {
+      console.warn('Duplicate question IDs found:', duplicates);
+    }
+  }
+}, [questions]);
 
   useEffect(() => {
     async function fetchQtypeIcons() {
@@ -1237,27 +1246,7 @@ const handleDuplicateMoodle = async (question) => {
   }
 };
 //use for test edit in real too 
-const handleEditClick = (questionId, courseIdParam) => {
-  const baseMoodleUrl = import.meta.env.VITE_MOODLE_BASE_URL;
-  const frontendBaseUrl = window.location.hostname === 'localhost'
-    ? 'http://localhost:5173'
-    : 'https://your-vercel-app.vercel.app';
 
-  const courseId = courseIdParam || localStorage.getItem('CourseID');
-
-  if (!courseId) {
-    toast.error('Course ID is missing. Cannot open Moodle editor.');
-    return;
-  }
-
-  const returnUrl = encodeURIComponent(`${frontendBaseUrl}/edit-complete?questionid=${questionId}`);
-  const editFormUrl = `${baseMoodleUrl}/question/bank/editquestion/question.php?courseid=${courseId}&id=${questionId}&returnurl=${returnUrl}`;
-
-  console.log('Opening Moodle edit with:', editFormUrl);
-  setMoodlePreviewUrl(editFormUrl);
-  setShowMoodlePreview(true);
-  setMoodleFormLoading(false);
-};
 
 
   ///edit for real  moodle question
@@ -1704,7 +1693,7 @@ const handleEditMoodle = async (question) => {
 
                 return (
                   <React.Fragment key={question.id}>
-                  <tr 
+                  <tr key={`main-${question.id}`} 
                     // key={question.id} 
                     className={`group transition-all duration-200 cursor-pointer ${rowClass}`}
                     onClick={() => {
@@ -2180,7 +2169,7 @@ const handleEditMoodle = async (question) => {
 
                   </tr>
                         {(showQuestionText || showQuestionMedia) && (question.questiontext || question.questionText) && (
-        <tr>
+       <tr key={`expanded-${question.id}`}>
           <td colSpan={10} style={{ background: '#f9fafb', padding: 0 }}>
             <div style={{ padding: '16px 32px', borderTop: '1px solid #e5e7eb' }}>
                            {showQuestionText && (
@@ -2197,17 +2186,17 @@ const handleEditMoodle = async (question) => {
                   }}
                 />
               )}
-              {/* {showQuestionMedia && (
+              {showQuestionMedia && (
                 <div className="flex flex-wrap gap-4 mt-2">
-                  {extractMediaFromHtml(question.questiontext || question.questionText).map((mediaHtml, i) => (
+                                    {extractMediaFromHtml(question.questiontext || question.questionText).map((mediaHtml, i) => (
                     <span
-                      key={i}
+                      key={`media-${question.id}-${i}`}
                       dangerouslySetInnerHTML={{ __html: mediaHtml }}
                       style={{ maxWidth: 300, maxHeight: 200, display: 'inline-block' }}
                     />
                   ))}
                 </div>
-              )} */}
+              )}
             </div>
           </td>
         </tr>
