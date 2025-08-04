@@ -16,6 +16,8 @@ import EditCompletePage from './shared/components/EditCompletePage';
 ReactModal.setAppElement('#root');
 const MOODLE_BASE_URL = import.meta.env.VITE_MOODLE_BASE_URL;
 const AUTO_LOGIN_PATH = import.meta.env.VITE_AUTO_LOGIN;
+console.log('VITE_MOODLE_BASE_URL:', import.meta.env.VITE_MOODLE_BASE_URL);
+console.log('VITE_AUTO_LOGIN:', import.meta.env.VITE_AUTO_LOGIN);
 const App = () => {
     console.log('VITE env:', import.meta.env);
 
@@ -113,7 +115,14 @@ const handleLogin = (token, username, userid, profileimageurl) => {
       </div>
     );
   }
-
+if (!MOODLE_BASE_URL || !AUTO_LOGIN_PATH) {
+  return (
+    <div style={{ background: 'red', color: 'white', padding: 16, textAlign: 'center' }}>
+      Error: VITE_MOODLE_BASE_URL or VITE_AUTO_LOGIN is not set!<br />
+      Please check your Vercel environment variables.
+    </div>
+  );
+}
  return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* ADD TOASTER COMPONENT HERE ↓ */}
