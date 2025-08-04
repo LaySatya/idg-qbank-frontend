@@ -469,436 +469,433 @@ const ManageUsers = () => {
     );
   }
 
-  return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <PersonIcon color="primary" />
-          Manage Users
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Manage and organize your system users
-        </Typography>
-      </Box>
 
-      {/* Stats Cards */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2, mb: 3 }}>
-        <Card>
-          <CardContent>
-            <Typography variant="h6" component="div">
-              {users.length}
-              {totalAvailableUsers > users.length && (
-                <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                  / {totalAvailableUsers}
-                </Typography>
-              )}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {totalAvailableUsers > users.length ? 'Loaded / Total Users' : 'Total Users'}
-            </Typography>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <Typography variant="h6" component="div">
-              {selectedUsers.length}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Selected Users
-            </Typography>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <Typography variant="h6" component="div">
-              {filteredAndSortedUsers.length}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Filtered Results
-            </Typography>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <Typography variant="h6" component="div">
-              {filterRole !== 'all' ? filterRole : 'All Roles'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Current Filter
-            </Typography>
-          </CardContent>
-        </Card>
-      </Box>
+return (
+  <Box sx={{ p: 3 }}>
+    {/* Header */}
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <PersonIcon color="primary" />
+        Manage Users
+      </Typography>
+      <Typography variant="body1" color="text.secondary">
+        Manage and organize your system users
+      </Typography>
+    </Box>
 
-      {/* Main Content */}
-      <Paper elevation={1} sx={{ p: 0 }}>
-        {/* Toolbar */}
-        <Toolbar sx={{ pl: 2, pr: 1, bgcolor: 'grey.50' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-            <TextField
-              placeholder="Search users by name, email, or role..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              size="small"
-              sx={{ minWidth: 300 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                )
-              }}
-            />
-            
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Role</InputLabel>
-              <Select
-                value={filterRole}
-                onChange={async (e) => {
-                  const selectedRole = e.target.value;
-                  setFilterRole(selectedRole);
-                  setCurrentPage(1);
-                  setSelectedUsers([]);
-                  
-                  if (selectedRole === 'all') {
-                    await loadUsersAndRoles();
-                  } else {
-                    await loadUsersByRole(selectedRole, false, 1, usersPerPage);
-                  }
-                }}
-                label="Role"
-                disabled={loading}
-              >
-                <MenuItem value="all">All Roles</MenuItem>
-                {roles.map(role => (
-                  <MenuItem key={role.id} value={role.shortname}>
-                    {role.name || role.shortname}
-                    {role.name && role.name !== role.shortname && (
-                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                        ({role.shortname})
-                      </Typography>
-                    )}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+    {/* Stats Cards */}
+    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2, mb: 3 }}>
+      <Card sx={{ borderRadius: 2, boxShadow: 'none', border: '1px solid #e5e7eb' }}>
+        <CardContent>
+          <Typography variant="h6" component="div">
+            {users.length}
+            {totalAvailableUsers > users.length && (
+              <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                / {totalAvailableUsers}
+              </Typography>
+            )}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {totalAvailableUsers > users.length ? 'Loaded / Total Users' : 'Total Users'}
+          </Typography>
+        </CardContent>
+      </Card>
+      <Card sx={{ borderRadius: 2, boxShadow: 'none', border: '1px solid #e5e7eb' }}>
+        <CardContent>
+          <Typography variant="h6" component="div">
+            {selectedUsers.length}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Selected Users
+          </Typography>
+        </CardContent>
+      </Card>
+      <Card sx={{ borderRadius: 2, boxShadow: 'none', border: '1px solid #e5e7eb' }}>
+        <CardContent>
+          <Typography variant="h6" component="div">
+            {filteredAndSortedUsers.length}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Filtered Results
+          </Typography>
+        </CardContent>
+      </Card>
+      <Card sx={{ borderRadius: 2, boxShadow: 'none', border: '1px solid #e5e7eb' }}>
+        <CardContent>
+          <Typography variant="h6" component="div">
+            {filterRole !== 'all' ? filterRole : 'All Roles'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Current Filter
+          </Typography>
+        </CardContent>
+      </Card>
+    </Box>
 
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                label="Status"
-              >
-                <MenuItem value="all">All Status</MenuItem>
-                <MenuItem value="Active">Active</MenuItem>
-                <MenuItem value="Inactive">Inactive</MenuItem>
-                <MenuItem value="Pending">Pending</MenuItem>
-              </Select>
-            </FormControl>
-
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => console.log('Add user')}
-            >
-              Add User
-            </Button>
-            
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={async () => {
-                if (filterRole === 'all') {
+    {/* Main Content */}
+    <Paper elevation={0} sx={{ borderRadius: 2, overflow: 'hidden', maxWidth: '1100px', margin: '0 auto', border: '1px solid #e5e7eb', boxShadow: 'none', background: '#fff' }}>
+      {/* Toolbar */}
+      <Toolbar sx={{ pl: 2, pr: 1, bgcolor: 'grey.50', borderBottom: '1px solid', borderColor: 'divider', minHeight: '60px !important' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+          <TextField
+            placeholder="Search users by name, email, or role..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            size="small"
+            sx={{ minWidth: 300, '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: 'white', fontSize: '0.9rem' } }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              )
+            }}
+          />
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel>Role</InputLabel>
+            <Select
+              value={filterRole}
+              onChange={async (e) => {
+                const selectedRole = e.target.value;
+                setFilterRole(selectedRole);
+                setCurrentPage(1);
+                setSelectedUsers([]);
+                if (selectedRole === 'all') {
                   await loadUsersAndRoles();
                 } else {
-                  await loadUsersByRole(filterRole, false, currentPage, usersPerPage);
+                  await loadUsersByRole(selectedRole, false, 1, usersPerPage);
                 }
               }}
+              label="Role"
               disabled={loading}
             >
-              Refresh
-            </Button>
-            
-            {/* {filterRole !== 'all' && users.length > 0 && totalAvailableUsers > users.length && (
-              <Button
-                variant="outlined"
-                color="secondary"
-                startIcon={isLoadingAll ? <CircularProgress size={16} /> : null}
-                onClick={async () => {
-                  await loadUsersByRole(filterRole, true);
-                }}
-                disabled={loading || isLoadingAll}
-                sx={{ 
-                  bgcolor: 'primary.light',
-                  color: 'primary.contrastText',
-                  '&:hover': {
-                    bgcolor: 'primary.main',
-                  }
-                }}
-              >
-                {isLoadingAll ? 'Loading All Users...' : `Load All Users (${totalAvailableUsers})`}
-              </Button>
-            )} */}
-          </Box>
-          
-          {selectedUsers.length > 0 && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                {selectedUsers.length} selected
-              </Typography>
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteIcon />}
-                onClick={() => setShowDeleteModal(true)}
-                size="small"
-              >
-                Delete Selected
-              </Button>
-            </Box>
-          )}
-        </Toolbar>
-
-        {/* Table */}
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell padding="checkbox">
-                  <Checkbox
-                    indeterminate={selectedUsers.length > 0 && selectedUsers.length < paginatedUsers.length}
-                    checked={paginatedUsers.length > 0 && selectedUsers.length === paginatedUsers.length}
-                    onChange={handleSelectAll}
-                  />
-                </TableCell>
-                <TableCell>
-                  <TableSortLabel
-                    active={sortBy === 'fullname'}
-                    direction={sortBy === 'fullname' ? sortOrder : 'asc'}
-                    onClick={() => handleSort('fullname')}
-                  >
-                    User
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell>
-                  <TableSortLabel
-                    active={sortBy === 'email'}
-                    direction={sortBy === 'email' ? sortOrder : 'asc'}
-                    onClick={() => handleSort('email')}
-                  >
-                    Email
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell>
-                  <TableSortLabel
-                    active={sortBy === 'role'}
-                    direction={sortBy === 'role' ? sortOrder : 'asc'}
-                    onClick={() => handleSort('role')}
-                  >
-                    Role
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell>Last Access</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                    <CircularProgress />
-                    <Typography variant="body2" sx={{ mt: 2 }}>
-                      Loading users for {filterRole === 'all' ? 'all roles' : `role: ${filterRole}`}...
+              <MenuItem value="all">All Roles</MenuItem>
+              {roles.map(role => (
+                <MenuItem key={role.id} value={role.shortname}>
+                  {role.name || role.shortname}
+                  {role.name && role.name !== role.shortname && (
+                    <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                      ({role.shortname})
                     </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : filterRole === 'all' && users.length === 0 && !searchQuery && filterStatus === 'all' ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                    <Typography variant="h6" color="text.secondary" gutterBottom>
-                      Select a role to view users
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Choose a specific role from the dropdown above to load and view users.
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : paginatedUsers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                    <Typography variant="body1" color="text.secondary">
-                      {searchQuery || filterRole !== 'all' || filterStatus !== 'all' 
-                        ? 'No users found matching your criteria.' 
-                        : 'No users found.'}
-                    </Typography>
-                    {(searchQuery || filterRole !== 'all' || filterStatus !== 'all') && (
-                      <Button
-                        onClick={() => {
-                          setSearchQuery('');
-                          setFilterRole('all');
-                          setFilterStatus('all');
-                          setCurrentPage(1);
-                          setSelectedUsers([]);
-                          setUsers([]);
-                          setTotalAvailableUsers(0);
-                        }}
-                        sx={{ mt: 1 }}
-                        size="small"
-                      >
-                        Clear filters
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginatedUsers.map((user) => (
-                  <TableRow key={user.id} hover>
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        checked={selectedUsers.includes(user.id)}
-                        onChange={() => handleUserSelect(user.id)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar src={user.avatar} alt={user.fullname}>
-                          {user.fullname.charAt(0).toUpperCase()}
-                        </Avatar>
-                        <Box>
-                          <Typography variant="body2" fontWeight="medium">
-                            {user.fullname}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {user.username && user.username !== 'N/A' ? `@${user.username}` : ''}
-                            {user.department && user.department !== 'N/A' && user.username && user.username !== 'N/A' ? ' • ' : ''}
-                            {user.department && user.department !== 'N/A' ? user.department : ''}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body2">{user.email}</Typography>
-                        {user.phone1 && user.phone1 !== '' && (
-                          <Typography variant="caption" color="text.secondary">
-                            {user.phone1}
-                          </Typography>
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={user.role} 
-                        color="primary" 
-                        variant="outlined" 
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body2">
-                          {formatDate(user.lastaccess)}
-                        </Typography>
-                        {user.firstaccess && user.firstaccess !== user.lastaccess && (
-                          <Typography variant="caption" color="text.secondary">
-                            First: {formatDate(user.firstaccess)}
-                          </Typography>
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Stack direction="row" spacing={1}>
-                        <Tooltip title="View Details">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleViewUser(user)}
-                          >
-                            <VisibilityIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Edit User">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleEditUser(user)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete User">
-                          <IconButton 
-                            size="small" 
-                            color="error"
-                            onClick={() => handleDeleteUser(user.id)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        {/* Professional Pagination Controls - Only show when needed */}
-        {(totalAvailableUsers > usersPerPage || totalPages > 1) && (
-          <PaginationControls
-            currentPage={currentPage}
-            totalPages={filterRole !== 'all' ? Math.ceil(totalAvailableUsers / usersPerPage) : totalPages}
-            totalItems={filterRole !== 'all' ? totalAvailableUsers : filteredAndSortedUsers.length}
-            itemsPerPage={usersPerPage}
-            onPageChange={handlePageChange}
-            onItemsPerPageChange={handleItemsPerPageChange}
-            isLoading={loading}
-          />
-        )}
-        
-        {/* Show total count if no pagination needed */}
-        {totalPages <= 1 && filteredAndSortedUsers.length > 0 && (
-          <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="body2" color="text.secondary" align="center">
-              Showing all {filteredAndSortedUsers.length.toLocaleString()} users
-            </Typography>
-          </Box>
-        )}
-      </Paper>
-
-      {/* Delete Confirmation Modal */}
-      <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <DeleteIcon color="error" />
-            <Typography variant="h6">Confirm Delete</Typography>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body1">
-            Are you sure you want to delete <strong>{selectedUsers.length}</strong> user{selectedUsers.length !== 1 ? 's' : ''}?
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowDeleteModal(false)} color="inherit">
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleDeleteSelected}
+                  )}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel>Status</InputLabel>
+            <Select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              label="Status"
+            >
+              <MenuItem value="all">All Status</MenuItem>
+              <MenuItem value="Active">Active</MenuItem>
+              <MenuItem value="Inactive">Inactive</MenuItem>
+              <MenuItem value="Pending">Pending</MenuItem>
+            </Select>
+          </FormControl>
+          <Button
             variant="contained"
-            color="error"
-            startIcon={<DeleteIcon />}
+            startIcon={<AddIcon />}
+            onClick={() => console.log('Add user')}
+            sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 600, px: 2.5, fontSize: '0.85rem' }}
           >
-            Delete Users
+            Add User
           </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
-  );
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={async () => {
+              if (filterRole === 'all') {
+                await loadUsersAndRoles();
+              } else {
+                await loadUsersByRole(filterRole, false, currentPage, usersPerPage);
+              }
+            }}
+            disabled={loading}
+            sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 500, px: 2, fontSize: '0.85rem' }}
+          >
+            Refresh
+          </Button>
+        </Box>
+        {selectedUsers.length > 0 && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, bgcolor: 'error.50', px: 2, py: 0.75, borderRadius: 1.5, border: '1px solid', borderColor: 'error.200' }}>
+            <Typography variant="body2" sx={{ color: 'error.dark', fontWeight: 600, fontSize: '0.8rem' }}>
+              {selectedUsers.length} selected
+            </Typography>
+            <Button
+              variant="contained"
+              color="error"
+              startIcon={<DeleteIcon />}
+              onClick={() => setShowDeleteModal(true)}
+              size="small"
+              sx={{ borderRadius: 1, textTransform: 'none', fontWeight: 600, fontSize: '0.75rem', px: 1.5, py: 0.5, minHeight: 'auto' }}
+            >
+              Delete
+            </Button>
+          </Box>
+        )}
+      </Toolbar>
+
+      {/* Table */}
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ bgcolor: 'grey.50' }}>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  indeterminate={selectedUsers.length > 0 && selectedUsers.length < paginatedUsers.length}
+                  checked={paginatedUsers.length > 0 && selectedUsers.length === paginatedUsers.length}
+                  onChange={handleSelectAll}
+                />
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'fullname'}
+                  direction={sortBy === 'fullname' ? sortOrder : 'asc'}
+                  onClick={() => handleSort('fullname')}
+                >
+                  User
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'email'}
+                  direction={sortBy === 'email' ? sortOrder : 'asc'}
+                  onClick={() => handleSort('email')}
+                >
+                  Email
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortBy === 'role'}
+                  direction={sortBy === 'role' ? sortOrder : 'asc'}
+                  onClick={() => handleSort('role')}
+                >
+                  Role
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>Last Access</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                  <CircularProgress />
+                  <Typography variant="body2" sx={{ mt: 2 }}>
+                    Loading users for {filterRole === 'all' ? 'all roles' : `role: ${filterRole}`}...
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : filterRole === 'all' && users.length === 0 && !searchQuery && filterStatus === 'all' ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    Select a role to view users
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Choose a specific role from the dropdown above to load and view users.
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : paginatedUsers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    {searchQuery || filterRole !== 'all' || filterStatus !== 'all' 
+                      ? 'No users found matching your criteria.' 
+                      : 'No users found.'}
+                  </Typography>
+                  {(searchQuery || filterRole !== 'all' || filterStatus !== 'all') && (
+                    <Button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setFilterRole('all');
+                        setFilterStatus('all');
+                        setCurrentPage(1);
+                        setSelectedUsers([]);
+                        setUsers([]);
+                        setTotalAvailableUsers(0);
+                      }}
+                      sx={{ mt: 1 }}
+                      size="small"
+                    >
+                      Clear filters
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginatedUsers.map((user, idx) => (
+                <TableRow
+                  key={user.id}
+                  hover
+                  sx={{
+                    backgroundColor: idx % 2 === 0 ? '#fff' : '#f9fafb',
+                    transition: 'background 0.2s',
+                    '&:hover': {
+                      backgroundColor: '#e0f2fe',
+                    },
+                  }}
+                >
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={selectedUsers.includes(user.id)}
+                      onChange={() => handleUserSelect(user.id)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Avatar src={user.avatar} alt={user.fullname}>
+                        {user.fullname.charAt(0).toUpperCase()}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">
+                          {user.fullname}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {user.username && user.username !== 'N/A' ? `@${user.username}` : ''}
+                          {user.department && user.department !== 'N/A' && user.username && user.username !== 'N/A' ? ' • ' : ''}
+                          {user.department && user.department !== 'N/A' ? user.department : ''}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body2">{user.email}</Typography>
+                      {user.phone1 && user.phone1 !== '' && (
+                        <Typography variant="caption" color="text.secondary">
+                          {user.phone1}
+                        </Typography>
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={user.role} 
+                      color="primary" 
+                      variant="outlined" 
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body2">
+                        {formatDate(user.lastaccess)}
+                      </Typography>
+                      {user.firstaccess && user.firstaccess !== user.lastaccess && (
+                        <Typography variant="caption" color="text.secondary">
+                          First: {formatDate(user.firstaccess)}
+                        </Typography>
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={1}>
+                      <Tooltip title="View Details">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleViewUser(user)}
+                          sx={{ p: 0.5, color: 'primary.main', '&:hover': { bgcolor: 'primary.50', color: 'primary.dark' } }}
+                        >
+                          <VisibilityIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Edit User">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleEditUser(user)}
+                          sx={{ p: 0.5, color: 'primary.main', '&:hover': { bgcolor: 'primary.50', color: 'primary.dark' } }}
+                        >
+                          <EditIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete User">
+                        <IconButton 
+                          size="small" 
+                          color="error"
+                          onClick={() => handleDeleteUser(user.id)}
+                          sx={{ p: 0.5, color: 'error.main', '&:hover': { bgcolor: 'error.50', color: 'error.dark' } }}
+                        >
+                          <DeleteIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Pagination Controls */}
+      {(totalAvailableUsers > usersPerPage || totalPages > 1) && (
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={filterRole !== 'all' ? Math.ceil(totalAvailableUsers / usersPerPage) : totalPages}
+          totalItems={filterRole !== 'all' ? totalAvailableUsers : filteredAndSortedUsers.length}
+          itemsPerPage={usersPerPage}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          isLoading={loading}
+        />
+      )}
+      {totalPages <= 1 && filteredAndSortedUsers.length > 0 && (
+        <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="body2" color="text.secondary" align="center">
+            Showing all {filteredAndSortedUsers.length.toLocaleString()} users
+          </Typography>
+        </Box>
+      )}
+    </Paper>
+
+    {/* Delete Confirmation Modal */}
+    <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)} maxWidth="sm" fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          boxShadow: 'none',
+          border: '1px solid #e5e7eb',
+          overflow: 'hidden',
+        }
+      }}
+    >
+      <DialogTitle>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <DeleteIcon color="error" />
+          <Typography variant="h6">Confirm Delete</Typography>
+        </Box>
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body1">
+          Are you sure you want to delete <strong>{selectedUsers.length}</strong> user{selectedUsers.length !== 1 ? 's' : ''}?
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          This action cannot be undone.
+        </Typography>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setShowDeleteModal(false)} color="inherit">
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleDeleteSelected}
+          variant="contained"
+          color="error"
+          startIcon={<DeleteIcon />}
+        >
+          Delete Users
+        </Button>
+      </DialogActions>
+    </Dialog>
+  </Box>
+);
 };
 
 export default ManageUsers;

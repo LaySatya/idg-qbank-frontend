@@ -1,8 +1,10 @@
-/* Updated CSS to fix layout issues - moodle-question-bank.css */
+/* Responsive Moodle Question Bank Table & Layout */
 
 /* Base layout - Fixed height viewport */
 html, body {
   height: 100%;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
 }
 
@@ -31,15 +33,17 @@ html, body {
   flex-direction: column;
 }
 
-/* Main content area - Allow natural height expansion */
+/* Main content area */
 #region-main {
   padding: 20px;
   background: #fff;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
 }
 
-/* Question bank window container - Allow natural height */
+/* Question bank window container */
 .questionbankwindow {
   width: 100%;
   margin: 0 auto;
@@ -62,30 +66,76 @@ html, body {
   flex-shrink: 0;
 }
 
-/* Questions container - FIXED: Allow natural height expansion */
+/* Questions container */
 .categoryquestionscontainer {
   display: flex;
   flex-direction: column;
   width: 100%;
+  flex: 1 1 auto;
 }
 
-/* Table container - FIXED: Allow full content display */
-.table-responsive {
+/* Responsive Table Container */
+.questions-table-wrapper,
+.table-container,
+.react-table-container {
   width: 100%;
-  overflow: visible; /* Changed from auto to visible */
-}
-
-/* Fix table layout - Allow natural height */
-#categoryquestions {
-  width: 100%;
-  min-width: 800px; /* Minimum width to prevent cramping */
-  border-collapse: collapse;
-  margin: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow-x: auto;
+  overflow-y: visible;
   background: #fff;
-  /* Remove height constraints */
+}
+
+/* Responsive Table */
+.questions-table-wrapper table,
+.table-container table,
+.react-table-container table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+@media (max-width: 1100px) {
+  .questions-table-wrapper table,
+  .table-container table,
+  .react-table-container table {
+    min-width: 700px;
+  }
+}
+
+/* Table Head and Body */
+.questions-table-wrapper thead th,
+.table-container thead th,
+.react-table-container thead th,
+.questions-table-wrapper tbody td,
+.table-container tbody td,
+.react-table-container tbody td {
+  padding: 8px 6px;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+@media (max-width: 1100px) {
+  .questions-table-wrapper thead th,
+  .table-container thead th,
+  .react-table-container thead th,
+  .questions-table-wrapper tbody td,
+  .table-container tbody td,
+  .react-table-container tbody td {
+    max-width: 120px;
+    font-size: 12px;
+    padding: 6px 4px;
+    white-space: normal;
+  }
 }
 
 /* Header row styling */
+.questions-table-wrapper thead th,
 #categoryquestions thead th {
   background: #f8f9fa;
   border-bottom: 2px solid #dee2e6;
@@ -101,6 +151,7 @@ html, body {
 }
 
 /* Table body styling */
+.questions-table-wrapper tbody td,
 #categoryquestions tbody td {
   padding: 8px;
   border-bottom: 1px solid #dee2e6;
@@ -109,12 +160,13 @@ html, body {
 }
 
 /* Row alternating colors */
-#categoryquestions tbody tr.r0 {
-  background: #fff;
-}
-
+.questions-table-wrapper tbody tr:nth-child(even),
 #categoryquestions tbody tr.r1 {
   background: #f8f9fa;
+}
+.questions-table-wrapper tbody tr:nth-child(odd),
+#categoryquestions tbody tr.r0 {
+  background: #fff;
 }
 
 /* Checkbox column */
@@ -181,7 +233,7 @@ html, body {
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   min-width: 150px;
   padding: 4px 0;
-  z-index: 1000;
+  z-index: 1050 !important;
   position: absolute;
   top: 100%;
   left: 0;
@@ -221,12 +273,17 @@ html, body {
   flex-shrink: 0;
 }
 
-/* Pagination */
+/* Pagination - always visible at bottom */
 .categorypagingbarcontainer {
-  padding: 16px;
-  text-align: center;
-  border-top: 1px solid #dee2e6;
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
   background: #f8f9fa;
+  z-index: 20;
+  border-top: 1px solid #dee2e6;
+  padding: 12px 0;
+  text-align: center;
   flex-shrink: 0;
 }
 
@@ -277,7 +334,7 @@ html, body {
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-/* CRITICAL: Fix React app layout for fixed sidebar/header with scrollable content */
+/* App layout for fixed sidebar/header with scrollable content */
 .App {
   height: 100vh;
   display: flex;
@@ -293,7 +350,7 @@ html, body {
   overflow: hidden;
 }
 
-/* Fix table container in React components - Allow natural height */
+/* Table container in React components */
 .react-table-container {
   width: 100%;
   display: flex;
@@ -302,31 +359,35 @@ html, body {
 
 .react-table-container .table-wrapper {
   width: 100%;
-  overflow: visible; /* Changed from auto to visible */
+  overflow-x: auto;
 }
 
 .react-table-container table {
   width: 100%;
-  min-width: 800px;
+  min-width: 900px;
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
-  .questionbank-container {
-    padding: 10px;
+@media (max-width: 1024px) {
+  .questions-table-wrapper table,
+  .table-container table,
+  .react-table-container table {
+    min-width: 700px;
   }
-  
-  #region-main {
-    padding: 10px;
+  .questions-table-wrapper thead th,
+  .table-container thead th,
+  .react-table-container thead th,
+  .questions-table-wrapper tbody td,
+  .table-container tbody td,
+  .react-table-container tbody td {
+    max-width: 100px;
+    font-size: 11px;
+    padding: 4px 2px;
+    white-space: normal;
   }
-  
-  #categoryquestions {
-    font-size: 12px;
-  }
-  
-  #categoryquestions thead th,
-  #categoryquestions tbody td {
-    padding: 6px 4px;
+  .categorypagingbarcontainer {
+    padding: 8px 0;
+    font-size: 13px;
   }
 }
 
@@ -337,7 +398,7 @@ html, body {
 }
 
 .dropdown-menu {
-  z-index: 1000;
+  z-index: 1050 !important;
 }
 
 /* Loading states */
@@ -357,7 +418,7 @@ html, body {
   margin: 16px 0;
 }
 
-/* ADDITIONAL: Fix for sticky headers and smooth scrolling */
+/* Sticky headers and smooth scrolling */
 .sticky-header {
   position: sticky;
   top: 0;
@@ -370,7 +431,7 @@ html, body {
   z-index: 1050 !important;
 }
 
-/* Fix for table responsiveness without double scrollbars */
+/* Table responsiveness without double scrollbars */
 .table-container {
   width: 100%;
   overflow-x: auto;
@@ -382,7 +443,7 @@ html, body {
   margin-bottom: 0;
 }
 
-/* Fix specific to question bank tables */
+/* Question bank tables */
 .questions-table-wrapper {
   height: 100%;
   display: flex;
@@ -395,7 +456,7 @@ html, body {
   overflow: auto;
 }
 
-/* Prevent content from expanding beyond viewport - UPDATED for natural height */
+/* Prevent content from expanding beyond viewport */
 .main-content {
   min-height: 100vh;
   display: flex;

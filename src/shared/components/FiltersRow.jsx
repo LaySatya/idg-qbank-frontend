@@ -490,7 +490,14 @@ const FiltersRow = ({
   }, [categoryGroups, categoryCountMap, filters.category, totalQuestionsAllCategories, calculateGroupTotal]);
 
   return (
-    <Paper elevation={2} sx={{ p: 2, mb: 2, boxShadow: 0.4 }}>
+    <Paper
+  elevation={0}
+  sx={{
+    p: 2,
+    mb: 2,
+    boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)'
+  }}
+>
       <Grid container spacing={2} alignItems="flex-end">
         {/* Scaler Topic Dropdown */}
         <Grid item sx={{ width: 220 }}>

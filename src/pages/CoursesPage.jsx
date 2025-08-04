@@ -543,23 +543,28 @@ const CoursesPage = () => {
   );
 
   return (
-    <Box sx={{ p: 3, height: '100vh', overflow: 'auto' }}>
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <SchoolIcon color="primary" sx={{ fontSize: 32 }} />
-          Course Search
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          {hasSearched 
-            ? `Found ${totalCourses} course${totalCourses !== 1 ? 's' : ''} matching your search`
-            : 'Search for courses by name to get started'
-          }
-        </Typography>
-      </Box>
+     <Box sx={{ p: 3 }}>
+    {/* Header */}
+    <Box sx={{ mb: 3 }}>
+      <Typography
+        variant="h4"
+        component="h1"
+        gutterBottom
+        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+      >
+        <SchoolIcon sx={{ fontSize: 32, color: 'primary.dark' }} />
+        Course Search
+      </Typography>
+      <Typography variant="body1" color="text.secondary">
+        {hasSearched
+          ? `Found ${totalCourses} course${totalCourses !== 1 ? 's' : ''} matching your search`
+          : 'Search for courses by name to get started'
+        }
+      </Typography>
+    </Box>
 
       {/* Search and View Controls */}
-      <Paper elevation={1} sx={{ p: 2, mb: 3 }}>
+           <Paper elevation={0} sx={{ p: 2, mb: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
           {/* Search */}
           <TextField
@@ -577,7 +582,7 @@ const CoursesPage = () => {
               ),
             }}
           />
-
+      
           {/* View Mode Toggle */}
           <ToggleButtonGroup
             value={viewMode}

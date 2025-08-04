@@ -103,44 +103,19 @@ const ManageTags = () => {
         });
 
         const data = await res.json();
-        console.log('PUT response:', data);
-        
-        // Check for actual errors (not warnings)
         if (!res.ok) {
           throw new Error(data.message || data.error || `HTTP ${res.status}: ${res.statusText}`);
         }
-        
-        // Handle warnings separately (they don't prevent success)
-        if (data.warnings && data.warnings.length > 0) {
-          const warning = data.warnings[0];
-          if (warning.warningcode === 'tagnotfound') {
-            throw new Error('Tag not found. It may have been deleted by another user.');
-          }
-          // For other warnings, just log them but continue
-          console.warn('API Warning:', warning.message);
-        }
-        
-        // Check for exception/errorcode which indicate real errors
         if (data.exception || data.errorcode || data.error) {
           throw new Error(data.message || data.error || 'Failed to update tag');
         }
-
-        console.log('Tag updated successfully:', data);
-        
-        // Update the tag in local state
-        // The PUT endpoint might return the updated tag data or just success confirmation
         const updatedTag = {
           id: editingTag.id,
           name: data.name || trimmedName,
           rawname: data.rawname || trimmedRawName
         };
-        
-        setTags(prev => prev.map(tag => 
-          tag.id === editingTag.id ? updatedTag : tag
-        ));
-        
+        setTags(prev => prev.map(tag => tag.id === editingTag.id ? updatedTag : tag));
         toast.success(`Tag "${updatedTag.name}" updated successfully!`);
-        
       } else {
         // Create new tag
         const res = await fetch(`${API_BASE_URL}/questions/manage_tags?name=${encodeURIComponent(trimmedName)}&rawname=${encodeURIComponent(trimmedRawName)}`, {
@@ -152,37 +127,25 @@ const ManageTags = () => {
         });
 
         const data = await res.json();
-        
         if (!res.ok || data.exception || data.errorcode || data.error) {
           throw new Error(data.message || data.error || `HTTP ${res.status}: ${res.statusText}`);
         }
-
         if (!data.id || !data.name) {
           throw new Error('Invalid response from server - missing required fields');
         }
-
-        console.log(' Tag created successfully:', data);
-        
-        // Add the new tag to the beginning of the local state so it appears on first page
         const newTag = {
           id: data.id,
           name: data.name,
           rawname: data.rawname || data.name
         };
-        
         setTags(prev => [newTag, ...prev]);
         toast.success(`Tag "${data.name}" created successfully!`);
-        
-        // Stay on first page to show the new tag at the top
         setCurrentPage(1);
       }
-      
-      // Reset form
       setNewTagName('');
       setNewTagRawName('');
       setShowCreateModal(false);
       setEditingTag(null);
-      
     } catch (error) {
       console.error('Error saving tag:', error);
       toast.error(`Failed to ${editingTag ? 'update' : 'create'} tag: ${error.message}`);
@@ -200,15 +163,11 @@ const ManageTags = () => {
 
     setDeleting(true);
     try {
-      // Build URL with tagids[] parameters
       const params = new URLSearchParams();
       selectedTags.forEach(tagId => {
         params.append('tagids[]', tagId.toString());
       });
-      
       const deleteUrl = `${API_BASE_URL}/questions/manage_tags?${params.toString()}`;
-      console.log('🚀 Sending DELETE request to:', deleteUrl);
-      
       const res = await fetch(deleteUrl, {
         method: 'DELETE',
         headers: {
@@ -218,32 +177,23 @@ const ManageTags = () => {
       });
 
       const data = await res.json();
-      console.log('Delete response:', data);
-      
       if (!res.ok) {
         throw new Error(data.message || data.error || `HTTP ${res.status}: ${res.statusText}`);
       }
-
-      // Remove deleted tags from local state
       setTags(prevTags => prevTags.filter(tag => !selectedTags.includes(tag.id)));
       setSelectedTags([]);
-      
       const deletedCount = data.deletedcount || 0;
       if (deletedCount > 0) {
         toast.success(`Successfully deleted ${deletedCount} tag${deletedCount !== 1 ? 's' : ''}`);
       } else {
         toast.warning('No tags were deleted - they may not exist or may be in use');
       }
-      
       setShowDeleteModal(false);
-      
-      // Adjust current page if needed after deletion
       const remainingTags = tags.filter(tag => !selectedTags.includes(tag.id));
       const newTotalPages = Math.ceil(remainingTags.length / itemsPerPage);
       if (currentPage > newTotalPages && newTotalPages > 0) {
         setCurrentPage(newTotalPages);
       }
-      
     } catch (error) {
       console.error('Error deleting tags:', error);
       toast.error(`Failed to delete tags: ${error.message}`);
@@ -269,8 +219,6 @@ const ManageTags = () => {
   useEffect(() => {
     const newTotalPages = Math.ceil(filteredTags.length / itemsPerPage);
     setTotalPages(newTotalPages);
-    
-    // Reset to first page if current page exceeds total pages
     if (currentPage > newTotalPages && newTotalPages > 0) {
       setCurrentPage(1);
     }
@@ -326,19 +274,12 @@ const ManageTags = () => {
 
       {/* Stats Cards */}
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 2, mb: 3 }}>
-        <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <Card sx={{ borderRadius: 2, boxShadow: 'none', border: '1px solid #e5e7eb' }}>
           <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box sx={{ 
-              p: 1, 
-              borderRadius: 1.5, 
-              bgcolor: 'primary.50',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <SellIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-            </Box>
+              <Box sx={{ p: 1, borderRadius: 1.5, bgcolor: 'primary.50', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <SellIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+              </Box>
               <Box>
                 <Typography variant="h6" component="div" sx={{ fontSize: '1.5rem', fontWeight: 700 }}>
                   {tags.length}
@@ -350,18 +291,10 @@ const ManageTags = () => {
             </Box>
           </CardContent>
         </Card>
-        
-        <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <Card sx={{ borderRadius: 2, boxShadow: 'none', border: '1px solid #e5e7eb' }}>
           <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{ 
-                p: 1, 
-                borderRadius: 1.5, 
-                bgcolor: 'warning.50',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
+              <Box sx={{ p: 1, borderRadius: 1.5, bgcolor: 'warning.50', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <CheckBoxIcon sx={{ color: 'warning.main', fontSize: 20 }} />
               </Box>
               <Box>
@@ -375,18 +308,10 @@ const ManageTags = () => {
             </Box>
           </CardContent>
         </Card>
-
-        <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <Card sx={{ borderRadius: 2, boxShadow: 'none', border: '1px solid #e5e7eb' }}>
           <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{ 
-                p: 1, 
-                borderRadius: 1.5, 
-                bgcolor: 'success.50',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
+              <Box sx={{ p: 1, borderRadius: 1.5, bgcolor: 'success.50', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <SearchIcon sx={{ color: 'success.main', fontSize: 20 }} />
               </Box>
               <Box>
@@ -400,18 +325,10 @@ const ManageTags = () => {
             </Box>
           </CardContent>
         </Card>
-
-        <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <Card sx={{ borderRadius: 2, boxShadow: 'none', border: '1px solid #e5e7eb' }}>
           <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{ 
-                p: 1, 
-                borderRadius: 1.5, 
-                bgcolor: 'info.50',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
+              <Box sx={{ p: 1, borderRadius: 1.5, bgcolor: 'info.50', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Typography sx={{ color: 'info.main', fontSize: 16, fontWeight: 700 }}>
                   #
                 </Typography>
@@ -430,7 +347,7 @@ const ManageTags = () => {
       </Box>
 
       {/* Main Content */}
-      <Paper elevation={1} sx={{ borderRadius: 2, overflow: 'hidden', maxWidth: '1100px', margin: '0 auto' }}>
+      <Paper elevation={0} sx={{ borderRadius: 2, overflow: 'hidden', maxWidth: '1100px', margin: '0 auto', border: '1px solid #e5e7eb', boxShadow: 'none', background: '#fff' }}>
         {/* Toolbar */}
         <Toolbar sx={{ 
           pl: 2, 
@@ -540,157 +457,156 @@ const ManageTags = () => {
         {/* Table View */}
         <TableContainer>
           <Table size="small" sx={{ maxWidth: '1000px', margin: '0 auto' }}>
-              <TableHead>
-                <TableRow sx={{ bgcolor: 'grey.50' }}>
-                  <TableCell 
-                    padding="checkbox" 
-                    sx={{ width: '50px' }}
-                  >
-                    <Checkbox
-                      indeterminate={selectedTags.length > 0 && selectedTags.length < paginatedTags.length}
-                      checked={paginatedTags.length > 0 && selectedTags.length === paginatedTags.length}
-                      onChange={handleSelectAll}
-                      size="small"
-                    />
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'grey.50' }}>
+                <TableCell padding="checkbox" sx={{ width: '50px' }}>
+                  <Checkbox
+                    indeterminate={selectedTags.length > 0 && selectedTags.length < paginatedTags.length}
+                    checked={paginatedTags.length > 0 && selectedTags.length === paginatedTags.length}
+                    onChange={handleSelectAll}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell sx={{ width: '80px', fontWeight: 600, fontSize: '0.85rem' }}>ID</TableCell>
+                <TableCell sx={{ width: '300px', fontWeight: 600, fontSize: '0.85rem' }}>Name</TableCell>
+                <TableCell sx={{ width: '250px', fontWeight: 600, fontSize: '0.85rem' }}>Raw Name</TableCell>
+                <TableCell sx={{ width: '140px', fontWeight: 600, fontSize: '0.85rem' }}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                    <CircularProgress size={28} />
                   </TableCell>
-                  <TableCell sx={{ width: '80px', fontWeight: 600, fontSize: '0.85rem' }}>ID</TableCell>
-                  <TableCell sx={{ width: '300px', fontWeight: 600, fontSize: '0.85rem' }}>Name</TableCell>
-                  <TableCell sx={{ width: '250px', fontWeight: 600, fontSize: '0.85rem' }}>Raw Name</TableCell>
-                  <TableCell sx={{ width: '140px', fontWeight: 600, fontSize: '0.85rem' }}>Actions</TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                      <CircularProgress size={28} />
+              ) : filteredTags.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {searchTerm ? 'No tags found matching your search.' : 'No tags found.'}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedTags.map((tag, idx) => (
+                  <TableRow 
+                    key={tag.id} 
+                    hover 
+                    sx={{
+                      backgroundColor: idx % 2 === 0 ? '#fff' : '#f9fafb',
+                      transition: 'background 0.2s',
+                      '&:hover': {
+                        backgroundColor: '#e0f2fe',
+                      },
+                    }}
+                  >
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        checked={selectedTags.includes(tag.id)}
+                        onChange={() => handleTagSelect(tag.id)}
+                        size="small"
+                      />
                     </TableCell>
-                  </TableRow>
-                ) : filteredTags.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        {searchTerm ? 'No tags found matching your search.' : 'No tags found.'}
+                    <TableCell sx={{ py: 1.5 }}>
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: 'text.secondary',
+                          fontFamily: 'monospace',
+                          fontSize: '0.8rem',
+                          fontWeight: 500
+                        }}
+                      >
+                        #{tag.id}
                       </Typography>
                     </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedTags.map((tag) => (
-                    <TableRow 
-                      key={tag.id} 
-                      hover 
-                      sx={{
-                        '&:hover': {
-                          bgcolor: 'rgba(0, 0, 0, 0.02)'
-                        }
-                      }}
-                    >
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          checked={selectedTags.includes(tag.id)}
-                          onChange={() => handleTagSelect(tag.id)}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell sx={{ py: 1.5 }}>
-                        <Typography 
-                          variant="caption" 
-                          sx={{ 
-                            color: 'text.secondary',
-                            fontFamily: 'monospace',
+                    <TableCell sx={{ py: 1.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <SellIcon sx={{ color: 'primary.main', fontSize: 18 }} />
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            maxWidth: '250px',
                             fontSize: '0.8rem',
-                            fontWeight: 500
-                          }}
-                        >
-                          #{tag.id}
-                        </Typography>
-                      </TableCell>
-                      <TableCell sx={{ py: 1.5 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <SellIcon sx={{ color: 'primary.main', fontSize: 18 }} />
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              maxWidth: '250px',
-                              fontSize: '0.8rem',
-                              fontWeight: 500,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              color: 'primary.main',
-                            }}
-                          >
-                            {tag.name}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ py: 1.5 }}>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: tag.rawname ? 'text.primary' : 'text.secondary',
-                            fontSize: '0.75rem',
-                            fontStyle: tag.rawname ? 'normal' : 'italic',
-                            maxWidth: '230px',
-                            display: 'block',
+                            fontWeight: 500,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
-                            textOverflow: 'ellipsis'
+                            textOverflow: 'ellipsis',
+                            color: 'primary.main',
                           }}
                         >
-                          {tag.rawname || 'No raw name'}
+                          {tag.name}
                         </Typography>
-                      </TableCell>
-                      <TableCell sx={{ py: 1.5 }}>
-                        <Stack direction="row" spacing={1}>
-                          <Tooltip title="Edit Tag">
-                            <IconButton 
-                              size="small" 
-                              onClick={() => {
-                                setEditingTag(tag);
-                                setNewTagName(tag.name);
-                                setNewTagRawName(tag.rawname || tag.name);
-                                setShowCreateModal(true);
-                              }}
-                              sx={{
-                                p: 0.5,
-                                color: 'primary.main',
-                                '&:hover': {
-                                  bgcolor: 'primary.50',
-                                  color: 'primary.dark'
-                                }
-                              }}
-                            >
-                              <EditIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Delete Tag">
-                            <IconButton 
-                              size="small" 
-                              onClick={() => {
-                                setSelectedTags([tag.id]);
-                                setShowDeleteModal(true);
-                              }}
-                              sx={{
-                                p: 0.5,
-                                color: 'error.main',
-                                '&:hover': {
-                                  bgcolor: 'error.50',
-                                  color: 'error.dark'
-                                }
-                              }}
-                            >
-                              <DeleteIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                          </Tooltip>
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ py: 1.5 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: tag.rawname ? 'text.primary' : 'text.secondary',
+                          fontSize: '0.75rem',
+                          fontStyle: tag.rawname ? 'normal' : 'italic',
+                          maxWidth: '230px',
+                          display: 'block',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
+                        {tag.rawname || 'No raw name'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ py: 1.5 }}>
+                      <Stack direction="row" spacing={1}>
+                        <Tooltip title="Edit Tag">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => {
+                              setEditingTag(tag);
+                              setNewTagName(tag.name);
+                              setNewTagRawName(tag.rawname || tag.name);
+                              setShowCreateModal(true);
+                            }}
+                            sx={{
+                              p: 0.5,
+                              color: 'primary.main',
+                              '&:hover': {
+                                bgcolor: 'primary.50',
+                                color: 'primary.dark'
+                              }
+                            }}
+                          >
+                            <EditIcon sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Tag">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => {
+                              setSelectedTags([tag.id]);
+                              setShowDeleteModal(true);
+                            }}
+                            sx={{
+                              p: 0.5,
+                              color: 'error.main',
+                              '&:hover': {
+                                bgcolor: 'error.50',
+                                color: 'error.dark'
+                              }
+                            }}
+                          >
+                            <DeleteIcon sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
         {/* Pagination Controls */}
         {filteredTags.length > 0 && (
@@ -715,7 +631,8 @@ const ManageTags = () => {
         PaperProps={{
           sx: {
             borderRadius: 3,
-            boxShadow: '0 4px 24px 0 rgba(30,41,59,0.10)',
+            boxShadow: 'none',
+            border: '1px solid #e5e7eb',
             overflow: 'hidden',
           }
         }}
@@ -847,7 +764,8 @@ const ManageTags = () => {
         PaperProps={{
           sx: {
             borderRadius: 3,
-            boxShadow: '0 4px 24px 0 rgba(30,41,59,0.10)',
+            boxShadow: 'none',
+            border: '1px solid #e5e7eb',
             overflow: 'hidden',
           }
         }}

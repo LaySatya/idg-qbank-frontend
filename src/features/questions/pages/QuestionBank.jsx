@@ -1160,7 +1160,9 @@ const QuestionBank = () => {
 
                 {/* Questions Table and Pagination - unified scrolling */}
                 {!loading && !error && questions.length > 0 && (
-                  <div className="flex flex-col">
+                  // <div className="flex flex-col">
+                  <div className="w-full overflow-x-auto" style={{ minHeight: 0 }}>
+  <div style={{ minWidth: 700 }}>
                     {/* Pagination above table */}
                     <div>
                       <PaginationControls
@@ -1254,6 +1256,7 @@ const QuestionBank = () => {
                         className="border-t bg-gray-50"
                       />
                     </div>
+                  </div>
                   </div>
                 )}
               </div>

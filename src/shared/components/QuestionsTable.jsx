@@ -1,5 +1,6 @@
 import CheckCircleTwoToneIcon from '@mui/icons-material/CheckCircleTwoTone';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import ReactDOM from 'react-dom';
 // ============================================================================
 // components/QuestionsTable.jsx - COMPLETE FIXED VERSION
 // ============================================================================
@@ -729,7 +730,7 @@ const QuestionsTable = ({
   const [verifiedQuestions, setVerifiedQuestions] = useState(new Set());
   const [lastActionedQuestionId, setLastActionedQuestionId] = useState(null);
   const [lastActionType, setLastActionType] = useState(null);
-
+const [openActionDropdowns, setOpenActionDropdowns] = useState([]);
 const extractMediaFromHtml = (html) => {
   if (!html) return [];
   const div = document.createElement('div');
@@ -835,19 +836,18 @@ useEffect(() => {
 
     return (
       <div className="flex flex-wrap gap-1 mt-1">
-        {visibleTags.map((tag) => {
+              {visibleTags.map((tag, idx) => {
           if (!tag || !tag.id) return null;
-          
           return (
             <span
-              key={tag.id}
+              key={`${tag.id}-${idx}`} // Make key unique even if ids repeat
               className="bg-sky-100 text-gray-800 text-xs px-2 py-1 rounded-full whitespace-nowrap"
               title={tag.name || `Tag ${tag.id}`}
             >
               {tag.name || `Tag ${tag.id}`}
             </span>
           );
-        }).filter(Boolean)}
+        })}
         {remainingCount > 0 && (
           <span
             className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full whitespace-nowrap cursor-help"
@@ -1080,12 +1080,21 @@ useEffect(() => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (openActionDropdown && dropdownRefs?.current?.[openActionDropdown]) {
-        if (!dropdownRefs.current[openActionDropdown].contains(event.target)) {
-          setOpenActionDropdown(null);
-        }
+      // Handle multiple open action dropdowns
+      if (Array.isArray(openActionDropdowns) && openActionDropdowns.length > 0 && dropdownRefs?.current) {
+        let changed = false;
+        let newOpen = [...openActionDropdowns];
+        openActionDropdowns.forEach(id => {
+          const ref = dropdownRefs.current[id];
+          if (ref && !ref.contains(event.target)) {
+            newOpen = newOpen.filter(openId => openId !== id);
+            changed = true;
+          }
+        });
+        if (changed) setOpenActionDropdowns(newOpen);
       }
-
+  
+      // Status dropdown (if still single)
       if (openStatusDropdown) {
         const statusDropdown = document.querySelector(`[data-status-dropdown="${openStatusDropdown}"]`);
         if (statusDropdown && !statusDropdown.contains(event.target)) {
@@ -1093,13 +1102,12 @@ useEffect(() => {
         }
       }
     };
-
+  
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [openActionDropdown, openStatusDropdown, setOpenActionDropdown, setOpenStatusDropdown, dropdownRefs]);
-
+  }, [openActionDropdowns, openStatusDropdown, setOpenActionDropdowns, setOpenStatusDropdown, dropdownRefs]);
   const getQuestionTypeIcon = (qtype, question) => {
     if (!question) return <span className="w-6 h-6 inline-block">•</span>;
     
@@ -1611,8 +1619,9 @@ const handleEditMoodle = async (question) => {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto w-full">
-            <table className="min-w-[1100px] w-full divide-y divide-gray-200">
+                <div className="questions-table-wrapper" style={{ width: '100%', flex: 1, overflowX: 'auto', position: 'relative' }}>
+            <table className="min-w-[900px] w-full divide-y divide-gray-200">
+        
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase border-b border-gray-200 w-25" scope="col">
@@ -1632,7 +1641,7 @@ const handleEditMoodle = async (question) => {
                     />
                     <label htmlFor="qbheadercheckbox" className="sr-only">Select all</label>
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 min-w-[300px]" scope="col">
+                     <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 min-w-[300px] whitespace-normal" scope="col">
                     <div className="flex flex-col gap-1">
                       <span>Question</span>
                       <div className="flex flex-row gap-2 text-xs text-gray-500 font-normal">
@@ -1645,9 +1654,9 @@ const handleEditMoodle = async (question) => {
                   <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 w-24" scope="col">Status</th>
                   <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 w-20" scope="col">Comments</th>
                   <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 w-20" scope="col">Version</th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 w-24" scope="col">
-                    <span>Created by</span>
-                    <div className="flex flex-row gap-2 text-xs text-gray-500 font-normal justify-center mt-1">
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 min-w-[180px] whitespace-normal" scope="col">
+                    <span className="block">Created by</span>
+                    <div className="flex flex-row flex-wrap gap-2 text-xs text-gray-500 font-normal justify-center mt-1">
                       <span>First name</span>
                       <span className="text-gray-300">|</span>
                       <span>Last name</span>
@@ -1655,9 +1664,9 @@ const handleEditMoodle = async (question) => {
                       <span>Date</span>
                     </div>
                   </th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 min-w-[100px]" scope="col">
-                    <span>Modified by</span>
-                    <div className="flex flex-row gap-2 text-xs text-gray-500 font-normal justify-center mt-1">
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b border-gray-200 min-w-[180px] whitespace-normal" scope="col">
+                    <span className="block">Modified by</span>
+                    <div className="flex flex-row flex-wrap gap-2 text-xs text-gray-500 font-normal justify-center mt-1">
                       <span>First name</span>
                       <span className="text-gray-300">|</span>
                       <span>Last name</span>
@@ -1934,9 +1943,10 @@ const handleEditMoodle = async (question) => {
                                 aria-label="Edit"
                                 role="button"
                                 aria-haspopup="true"
-                                aria-expanded={openActionDropdown === question.id}
+                                  aria-expanded={openActionDropdowns.includes(question.id)}
                                 onClick={(e) => {
                                   e.preventDefault();
+                                   e.stopPropagation(); 
                                   if (dropdownRefs?.current?.[question.id]) {
                                     const el = dropdownRefs.current[question.id];
                                     const rect = el.getBoundingClientRect();
@@ -1947,20 +1957,53 @@ const handleEditMoodle = async (question) => {
                                       [question.id]: spaceBelow < dropdownHeight ? 'up' : 'down'
                                     }));
                                   }
-                                  setOpenActionDropdown(openActionDropdown === question.id ? null : question.id);
+                                        setOpenActionDropdowns(prev =>
+                                    prev.includes(question.id)
+                                      ? prev.filter(id => id !== question.id)
+                                      : [...prev, question.id]
+                                  );
                                 }}
                               >
                                 Edit
                                 <i className="fa fa-chevron-down ml-1"></i>
                               </a>
-                              {openActionDropdown === question.id && (
+                            
+                                {openActionDropdowns.includes(question.id) && (() =>{
+                                const el = dropdownRefs.current[question.id];
+                                if (!el) return null;
+                            
+                                const elRect = el.getBoundingClientRect();
+                                const dropdownHeight = 350;
+                                const direction = dropdownDirection[question.id] || 'down';
+                            
+                                let left = elRect.left;
+                                let top = direction === 'up'
+                                  ? elRect.top - dropdownHeight
+                                  : elRect.bottom;
+                            
+                                // Clamp to viewport
+                                const maxTop = window.innerHeight - dropdownHeight - 8;
+                                if (direction === 'down' && top > maxTop) top = maxTop;
+                                if (direction === 'up' && top < 8) top = 8;
+                            
+                                // Optional: clamp left if needed
+                                const maxLeft = window.innerWidth - 240; // 240px = w-56
+                                if (left > maxLeft) left = maxLeft;
+                                if (left < 8) left = 8;
+                            
+                                return ReactDOM.createPortal(
                                 <div
-                                  className={`absolute right-0 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1
-                                  ${dropdownDirection[question.id] === 'up' ? 'bottom-full mb-2' : 'mt-2'}`}
+                                  className={`absolute w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1
+                                    ${direction === 'up' ? 'mb-2' : 'mt-2'}`}
                                   style={{
-                                    ...(dropdownDirection[question.id] === 'up' ? { bottom: '100%' } : { top: '100%' })
+                                    left,
+                                    top,
+                                    position: 'fixed'
                                   }}
+                                  onMouseDown={e => e.stopPropagation()} // <-- Add this line
                                 >
+
+                           
                                   <a
                                     href="#"
                                     className={`flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors cursor-pointer ${loadingMoodlePreview ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -1972,7 +2015,7 @@ const handleEditMoodle = async (question) => {
                                         await handlePreviewMoodle(question);
                                         setLastActionedQuestionId(question.id);
                                         setLastActionType('preview');
-                                        setOpenActionDropdown(null);
+                                           setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                       }
                                     }}
                                   >
@@ -1990,7 +2033,7 @@ const handleEditMoodle = async (question) => {
                                       await handleEditMoodle(question);
                                       setLastActionedQuestionId(question.id);
                                       setLastActionType('editMoodle');
-                                      setOpenActionDropdown(null);
+                                                                            setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
                                     <i className="fa fa-edit w-4 text-center mr-2 text-blue-500"></i>
@@ -2007,7 +2050,7 @@ const handleEditMoodle = async (question) => {
                                       await handleDuplicateMoodle(question);
                                       setLastActionedQuestionId(question.id);
                                       setLastActionType('duplicate');
-                                      setOpenActionDropdown(null);
+                                          setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
                                     <i className="fa fa-copy w-4 text-center mr-2 text-blue-500"></i>
@@ -2024,10 +2067,10 @@ const handleEditMoodle = async (question) => {
 
                                   setOpenActionDropdown(null);
                                 }}
-                              >
-                                <i className="fa fa-edit w-4 text-center mr-2 text-blue-500"></i>
-                                <span>Edit  Moodle</span>
-                              </a> */}
+                                >
+                                  <i className="fa fa-edit w-4 text-center mr-2 text-blue-500"></i>
+                                  <span>Edit  Moodle</span>
+                                </a> */}
 
                                   <a
                                     href="#"
@@ -2040,7 +2083,7 @@ const handleEditMoodle = async (question) => {
                                       setNewQuestionTitle(question.name || question.title || '');
                                       setLastActionedQuestionId(question.id);
                                       setLastActionType('editName');
-                                      setOpenActionDropdown(null);
+                                      setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
                                     <i className="fa fa-cog w-4 text-center mr-2 text-gray-500"></i>
@@ -2070,7 +2113,7 @@ const handleEditMoodle = async (question) => {
                                       openTagModal(question);
                                       setLastActionedQuestionId(question.id);
                                       setLastActionType('tags');
-                                      setOpenActionDropdown(null);
+                                      setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
                                     <i className="fa fa-tags w-4 text-center mr-2 text-gray-500"></i>
@@ -2090,7 +2133,7 @@ const handleEditMoodle = async (question) => {
                                       toggleQuestionVerification(question.id);
                                       setLastActionedQuestionId(question.id);
                                       setLastActionType('verify');
-                                      setOpenActionDropdown(null);
+                                      setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
                                     <i className={`fa ${verifiedQuestions.has(question.id) ? 'fa-check-double text-blue-500' : 'fa-check text-gray-500'} w-4 text-center mr-2`}></i>
@@ -2106,7 +2149,7 @@ const handleEditMoodle = async (question) => {
                                       handlePreview(question);
                                       setLastActionedQuestionId(question.id);
                                       setLastActionType('preview');
-                                      setOpenActionDropdown(null);
+                                         setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
                                     <i className="fa fa-search w-4 text-center mr-2 text-gray-500"></i>
@@ -2122,7 +2165,7 @@ const handleEditMoodle = async (question) => {
                                       handleHistory(question);
                                       setLastActionedQuestionId(question.id);
                                       setLastActionType('history');
-                                      setOpenActionDropdown(null);
+                                      setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
                                     <i className="fa fa-list w-4 text-center mr-2 text-gray-500"></i>
@@ -2138,7 +2181,7 @@ const handleEditMoodle = async (question) => {
                                       onDelete(question.id);
                                       setLastActionedQuestionId(question.id);
                                       setLastActionType('delete');
-                                      setOpenActionDropdown(null);
+                                      setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
                                     <i className="fa fa-trash w-4 text-center mr-2 text-red-500"></i>
@@ -2159,9 +2202,15 @@ const handleEditMoodle = async (question) => {
                                     <i className="fa fa-download w-4 text-center mr-2 text-gray-500"></i>
                                     <span>Export as Moodle XML</span>
                                   </a> */}
-                                </div>
-                              )}
+                                
+                                    {/* ...dropdown content... */}
+                                  </div>,
+                                  document.body
+                                );
+                              })()
+                            }
                             </div>
+                         
                           </div>
                         </div>
                       </div>

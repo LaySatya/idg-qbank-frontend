@@ -567,40 +567,40 @@ const Dashboard = () => {
     setExpandedCategories(newExpanded);
   };
 
-  const SearchAndFilterBar = ({ itemCount, itemType }) => {
-    const searchInputRef = useRef(null);
+const SearchAndFilterBar = ({ itemCount, itemType }) => {
+  const searchInputRef = useRef(null);
 
-    // Ensure input stays focused after typing
-    useEffect(() => {
-      if (searchInputRef.current && document.activeElement !== searchInputRef.current) {
-        searchInputRef.current.focus();
-      }
-    }, [searchTerm]);
+  // Ensure input stays focused after typing
+  useEffect(() => {
+    if (searchInputRef.current && document.activeElement !== searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [searchTerm]);
 
-    return (
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="flex-1 flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder={`Search ${itemType}...`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                autoComplete="off"
-              />
-            </div>
-            <div className="text-sm text-gray-500 font-medium">
-              {itemCount} {itemType}
-            </div>
+  return (
+       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6 shadow-sm">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex-1 flex items-center gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-500" />
+            <input
+              ref={searchInputRef}
+              type="text" // Make sure this is "text"
+              placeholder={`Search ${itemType}...`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-11 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-1 focus:ring-blue-200 focus:border-blue-300 transition-all duration-200 text-gray-900 bg-white placeholder-gray-400 outline-none"
+              autoComplete="off"
+            />
+          </div>
+          <div className="text-sm text-gray-500 font-medium">
+            {itemCount} {itemType}
           </div>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const CategoryPanel = () => {
     const filteredCategories = useMemo(() => 
@@ -1175,7 +1175,7 @@ const Dashboard = () => {
         </div>
 
         {/* Main Content Panel */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
           {renderActivePanel()}
         </div>
       </div>
