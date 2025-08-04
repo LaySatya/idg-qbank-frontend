@@ -1514,6 +1514,8 @@ const handleEditMoodle = async (question) => {
 
   return (
     <>
+      
+      
       <ReactModal
         isOpen={showMoodlePreview}
         onRequestClose={() => {
@@ -1525,8 +1527,10 @@ const handleEditMoodle = async (question) => {
         style={{
           overlay: { zIndex: 1000, background: 'rgba(0,0,0,0.5)' },
           content: {
-            width: '1400px',
-            height: '1000px',
+            width: '95vw',
+            maxWidth: 1400,
+            height: '90vh',
+            maxHeight: 900,
             margin: 'auto',
             padding: 0,
             overflow: 'hidden',
@@ -1567,15 +1571,31 @@ const handleEditMoodle = async (question) => {
             <span style={{ fontSize: 24, lineHeight: 1 }}>&#10005;</span>
           </button>
         </div>
-        <iframe
-          src={moodlePreviewUrl}
-          width="1400"
-          height="1000"
-          frameBorder="0"
-          title="Moodle Form"
-          style={{ display: 'block', border: 'none' }}
-        />
+        <div style={{
+          position: 'relative',
+          width: '90vw',
+          maxWidth: 1300,
+          paddingBottom: '56.25%', // 16:9 aspect ratio
+          height: 0,
+          background: '#f9f9f9'
+        }}>
+          <iframe
+            src={moodlePreviewUrl}
+            title="Moodle Form"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              border: 'none'
+            }}
+            allowFullScreen
+          />
+        </div>
       </ReactModal>
+      
+   
 
       <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col">
         {/* Back button header */}

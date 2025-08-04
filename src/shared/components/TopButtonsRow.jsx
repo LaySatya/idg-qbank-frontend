@@ -325,12 +325,48 @@ const handleNavigation = (value) => {
       toast.error(`Error: ${error.message}`);
     }
   };
+// Responsive iframe component
+function ResponsiveIframe({ src, title }) {
+  return (
+    <div style={{
+      position: 'relative',
+      width: '90vw',
+      maxWidth: 1400,
+      paddingBottom: '56.25%', // 16:9 aspect ratio
+      height: 0,
+      overflow: 'hidden',
+      background: '#f9f9f9'
+    }}>
+      <iframe
+        src={src}
+        title={title}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          border: 0
+        }}
+        allowFullScreen
+      />
+    </div>
+  );
+}
 
   // Loader-enhanced iframe component
 function IframeWithLoader({ src, title }) {
   const [loading, setLoading] = React.useState(true);
   return (
-    <div style={{ position: 'relative', width: 1400, height: 1000 }}>
+    <div style={{
+      position: 'relative',
+      width: '90vw',
+      maxWidth: 1400,
+      paddingBottom: '56.25%', // 16:9 aspect ratio
+      height: 0,
+      overflow: 'hidden',
+      background: '#f9f9f9'
+    }}>
       {loading && (
         <div style={{
           position: 'absolute',
@@ -350,16 +386,23 @@ function IframeWithLoader({ src, title }) {
       )}
       <iframe
         src={src}
-        width="1400"
-        height="1000"
-        frameBorder="0"
         title={title}
-        style={{ display: 'block', maxWidth: '98vw', maxHeight: '95vh', zIndex: 1 }}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          border: 0,
+          zIndex: 1
+        }}
+        allowFullScreen
         onLoad={() => setLoading(false)}
       />
     </div>
   );
 }
+
 
   return (
     <div className="w-full border-2 border-white shadow-sm mb-4">
@@ -577,20 +620,13 @@ function IframeWithLoader({ src, title }) {
               fontSize: 24,
               cursor: 'pointer'
             }}>&times;</button>
-            {previewLoading ? (
-              <div style={{ padding: 40, textAlign: 'center', fontSize: 18 }}>Loading preview...</div>
-            ) : previewUrl ? (
-                <iframe
-                  src={previewUrl}
-                  width="1400"
-                  height="1000"
-                  frameBorder="0"
-                  title="Preview Questions"
-                  style={{ display: 'block', maxWidth: '98vw', maxHeight: '95vh' }}
-                />
-            ) : (
-              <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>No preview available.</div>
-            )}
+        {previewLoading ? (
+  <div style={{ padding: 40, textAlign: 'center', fontSize: 18 }}>Loading preview...</div>
+) : previewUrl ? (
+    <ResponsiveIframe src={previewUrl} title="Preview Questions" />
+) : (
+  <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>No preview available.</div>
+)}
           </div>
         </div>
       )}
