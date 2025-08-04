@@ -17,6 +17,8 @@ ReactModal.setAppElement('#root');
 const MOODLE_BASE_URL = import.meta.env.VITE_MOODLE_BASE_URL;
 const AUTO_LOGIN_PATH = import.meta.env.VITE_AUTO_LOGIN;
 const App = () => {
+    console.log('VITE env:', import.meta.env);
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
