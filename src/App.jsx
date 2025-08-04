@@ -30,11 +30,14 @@ const App = () => {
   const moodleAutoLoginUrl = `${MOODLE_BASE_URL}/${AUTO_LOGIN_PATH}?token=${token}`;
   useEffect(() => {
     const verifyAuth = async () => {
+         
       const token = localStorage.getItem('token');
       const usernameoremail = localStorage.getItem('usernameoremail');
       const userid = localStorage.getItem('userid');
       const profileimageurl = localStorage.getItem('profileimageurl');
-      
+
+      console.log('Auth check:', { token, usernameoremail, userid, profileimageurl });
+
       if (token && usernameoremail && usernameoremail !== 'undefined' && userid) {
         try {
           // Add token verification API call if needed
@@ -162,7 +165,7 @@ const handleLogin = (token, username, userid, profileimageurl) => {
             toggleSidebar={() => setSidebarCollapsed(prev => !prev)} 
             onLogout={handleLogout}
             username={currentUser?.username}
-            profileImageUrl={currentUser?.profileimageurl}
+             profileImageUrl={currentUser?.profileImageUrl}
           />
         )}
         <main className="flex-1 min-h-0 overflow-auto">
