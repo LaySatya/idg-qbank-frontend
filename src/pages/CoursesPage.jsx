@@ -564,25 +564,69 @@ const CoursesPage = () => {
     </Box>
 
       {/* Search and View Controls */}
-           <Paper elevation={0} sx={{ p: 2, mb: 3 }}>
+                    <Paper
+            elevation={0}
+            sx={{
+              p: { xs: 2, md: 6 },
+              mb: 3,
+              borderRadius: 3,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              border: '1px solid',
+              borderColor: 'divider',
+              background: '#fff'
+            }}
+          >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
           {/* Search */}
-          <TextField
-            placeholder="Search courses by name..."
-            variant="outlined"
-            size="small"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            sx={{ minWidth: 300, maxWidth: 400 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
-      
+                            <TextField
+                      placeholder="Search courses by name..."
+                      variant="outlined"
+                      size="small"
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      sx={{
+                        minWidth: 500,
+                        maxWidth: 400,
+                        background: '#fff',
+                        borderRadius: 3, // More rounded
+                        boxShadow: '0 2px 8px rgba(80,112,255,0.06)',
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 3,
+                          background: '#fff',
+                          paddingRight: 0,
+                          fontSize: 16,
+                          height: 48,
+                          '& fieldset': {
+                           borderColor: '#e0e7ef',  // light gray border
+                          },
+                          '&:hover fieldset': {
+                            borderColor: '#b6c2e2',
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderColor: '#90caf9', 
+                             boxShadow: 'none',  
+                          },
+                        },
+                        '& .MuiInputAdornment-root': {
+                          marginRight: 1,
+                        }
+                      }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon sx={{ color: 'primary.main', fontSize: 24 }} />
+                          </InputAdornment>
+                        ),
+                        sx: {
+                          pl: 1.5,
+                          pr: 0,
+                          fontSize: 16,
+                          height: 48,
+                          background: '#fff',
+                          borderRadius: 6,
+                        }
+                      }}
+                    />
           {/* View Mode Toggle */}
           <ToggleButtonGroup
             value={viewMode}

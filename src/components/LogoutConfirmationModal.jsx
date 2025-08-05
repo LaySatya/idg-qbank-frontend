@@ -83,28 +83,31 @@ const LogoutConfirmationModal = ({ isOpen, onConfirm, onCancel, isLoading }) => 
     <DialogContent sx={{ py: 4, px: 3, backgroundColor: '#fff' }}>
       <Box display="flex" alignItems="flex-start" gap={2}>
         <Box
-          sx={{
-            width: 40,
-            height: 40,
-            borderRadius: '50%',
-            backgroundColor: '#fee2e2',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            mt: 0.5
-          }}
+          // sx={{
+          //   width: 40,
+          //   height: 40,
+          //   borderRadius: '50%',
+          //   backgroundColor: '#fee2e2',
+          //   display: 'flex',
+          //   alignItems: 'center',
+          //   justifyContent: 'center',
+          //   flexShrink: 0,
+          //   mt: 0.5
+          // }}
         >
-          <LogoutIcon sx={{ fontSize: 20, color: '#ef4444' }} />
-        </Box>
-        <Box>
-          <Typography variant="body1" color="#111" fontWeight={600} mb={1}>
-            You'll need to log in again to access your account
+          {/* <LogoutIcon sx={{ fontSize: 20, color: '#ef4444' }} /> */}
+       </Box>
+                <Box>
+          <Typography variant="body1" color="#ef4444" fontWeight={500} mb={1}>
+              Are you sure you want to log out?
           </Typography>
-          <Typography variant="body2" color="#111" lineHeight={1.6}>
-            This will end your current session and you'll be redirected to the login page. 
-            <span style={{ color: '#ef4444', fontWeight: 500 }}>Any unsaved work may be lost.</span>
+            <Typography variant="body1" color="#111" fontWeight={500} mb={2}>
+            You'll need to log in again to access your account. Any unsaved work may be lost.
           </Typography>
+          {/* <Typography variant="body2" color="#111" lineHeight={1.6}>
+            Logging out will end your current session and return you to the login page.
+            <span style={{ color: '#ef4444', fontWeight: 500 }}> Please make sure all your work is saved.</span>
+          </Typography> */}
         </Box>
       </Box>
     </DialogContent>

@@ -332,7 +332,7 @@ function ResponsiveIframe({ src, title }) {
       position: 'relative',
       width: '90vw',
       maxWidth: 1400,
-      paddingBottom: '56.25%', // 16:9 aspect ratio
+      paddingBottom: '55%', // 16:9 aspect ratio
       height: 0,
       overflow: 'hidden',
       background: '#f9f9f9'
@@ -362,7 +362,7 @@ function IframeWithLoader({ src, title }) {
       position: 'relative',
       width: '90vw',
       maxWidth: 1400,
-      paddingBottom: '56.25%', // 16:9 aspect ratio
+      paddingBottom: '55%', // 16:9 aspect ratio
       height: 0,
       overflow: 'hidden',
       background: '#f9f9f9'

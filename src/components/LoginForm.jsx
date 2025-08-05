@@ -377,16 +377,16 @@ const openMoodleWithSession = (targetUrl = null) => {
                 Username or Email
               </label>
               <div className="relative">
-                <input
-                  type="text"
-                  id="usernameoremail"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="block w-full border-2 border-gray-200 rounded-2xl px-6 py-5 text-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white"
-                  autoComplete="username"
-                  disabled={isLoading}
-                  placeholder="Enter your username or email"
-                />
+             <input
+              type="text"
+              id="usernameoremail"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="block w-full rounded-2xl px-6 py-5 text-xl bg-gray-50 focus:bg-white border border-gray-200 focus:border-blue-500 transition-all duration-200"
+              autoComplete="username"
+              disabled={isLoading}
+              placeholder="Enter your username or email"
+            />
                 <div className="absolute inset-y-0 right-0 pr-6 flex items-center pointer-events-none">
                   <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -401,16 +401,16 @@ const openMoodleWithSession = (targetUrl = null) => {
                 Password
               </label>
               <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full border-2 border-gray-200 rounded-2xl px-6 py-5 text-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white pr-16"
-                  autoComplete="current-password"
-                  disabled={isLoading}
-                  placeholder="Enter your password"
-                />
+          <input
+              type={showPassword ? "text" : "password"}
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="block w-full rounded-2xl px-6 py-5 text-xl bg-gray-50 focus:bg-white border border-gray-200 focus:border-blue-500 transition-all duration-200 pr-16"
+              autoComplete="current-password"
+              disabled={isLoading}
+              placeholder="Enter your password"
+            />
                 <button
                   type="button"
                   tabIndex={-1}

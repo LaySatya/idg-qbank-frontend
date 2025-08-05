@@ -7,7 +7,7 @@ import ReactDOM from 'react-dom';
 import React, { useState, useEffect, useRef } from 'react';
 import { questionAPI } from '../../api/questionAPI';
 import { toast } from 'react-hot-toast';
-// ...existing code...
+
 import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -19,12 +19,21 @@ import InputAdornment from '@mui/material/InputAdornment';
 import CircularProgress from '@mui/material/CircularProgress';
 import TagIcon from '@mui/icons-material/LocalOffer';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
-import EditIcon from '@mui/icons-material/Edit';
+
+
 import CloseIcon from '@mui/icons-material/Close';
 import Quill from 'quill';
 import ReactQuill from 'react-quill';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import EditIcon from '@mui/icons-material/Edit';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import LabelIcon from '@mui/icons-material/Label';
+import CheckIcon from '@mui/icons-material/Check';
+
+import HistoryIcon from '@mui/icons-material/History';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 ReactQuill.Quill = Quill;
 
@@ -1572,7 +1581,7 @@ const handleEditMoodle = async (question) => {
           position: 'relative',
           width: '90vw',
           maxWidth: 1300,
-          paddingBottom: '56.25%', // 16:9 aspect ratio
+          paddingBottom: '55%', // 16:9 aspect ratio
           height: 0,
           background: '#f9f9f9'
         }}>
@@ -1992,7 +2001,7 @@ const handleEditMoodle = async (question) => {
                                 if (left < 8) left = 8;
                             
                                 return ReactDOM.createPortal(
-                                <div
+                                                              <div
                                   className={`absolute w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1
                                     ${direction === 'up' ? 'mb-2' : 'mt-2'}`}
                                   style={{
@@ -2000,10 +2009,9 @@ const handleEditMoodle = async (question) => {
                                     top,
                                     position: 'fixed'
                                   }}
-                                  onMouseDown={e => e.stopPropagation()} // <-- Add this line
+                                  onMouseDown={e => e.stopPropagation()}
                                 >
-
-                           
+                                                                  
                                   <a
                                     href="#"
                                     className={`flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors cursor-pointer ${loadingMoodlePreview ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -2015,11 +2023,11 @@ const handleEditMoodle = async (question) => {
                                         await handlePreviewMoodle(question);
                                         setLastActionedQuestionId(question.id);
                                         setLastActionType('preview');
-                                           setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
+                                        setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                       }
                                     }}
                                   >
-                                    <i className={`fa ${loadingMoodlePreview ? 'fa-spinner fa-spin' : 'fa-eye'} w-4 text-center mr-2 text-blue-500`}></i>
+                                    <VisibilityIcon fontSize="small" sx={{ mr: 1, color: '#3b82f6' }} />
                                     <span>{loadingMoodlePreview ? 'Loading...' : 'Preview Moodle'}</span>
                                   </a>
                                   <a
@@ -2029,14 +2037,13 @@ const handleEditMoodle = async (question) => {
                                     tabIndex="-1"
                                     onClick={async (e) => {
                                       e.preventDefault();
-                                      // Use the same iframe modal for Edit in Moodle
                                       await handleEditMoodle(question);
                                       setLastActionedQuestionId(question.id);
                                       setLastActionType('editMoodle');
-                                                                            setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
+                                      setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
-                                    <i className="fa fa-edit w-4 text-center mr-2 text-blue-500"></i>
+                                    <EditIcon fontSize="small" sx={{ mr: 1, color: '#3b82f6' }} />
                                     <span>Edit in Moodle</span>
                                   </a>
                                   <a
@@ -2046,32 +2053,15 @@ const handleEditMoodle = async (question) => {
                                     tabIndex="-1"
                                     onClick={async (e) => {
                                       e.preventDefault();
-                                      // Use the same iframe modal for Duplicate in Moodle
                                       await handleDuplicateMoodle(question);
                                       setLastActionedQuestionId(question.id);
                                       setLastActionType('duplicate');
-                                          setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
+                                      setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
-                                    <i className="fa fa-copy w-4 text-center mr-2 text-blue-500"></i>
+                                    <ContentCopyIcon fontSize="small" sx={{ mr: 1, color: '#3b82f6' }} />
                                     <span>Duplicate in Moodle</span>
                                   </a>
-                                  {/* <a
-                                href="#"
-                                className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors"
-                                role="menuitem"
-                                tabIndex="-1"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handleEditClick(question.id, question.courseid|| localStorage.getItem('CourseID')); // or question.courseId based on your API
-
-                                  setOpenActionDropdown(null);
-                                }}
-                                >
-                                  <i className="fa fa-edit w-4 text-center mr-2 text-blue-500"></i>
-                                  <span>Edit  Moodle</span>
-                                </a> */}
-
                                   <a
                                     href="#"
                                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
@@ -2086,23 +2076,9 @@ const handleEditMoodle = async (question) => {
                                       setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
-                                    <i className="fa fa-cog w-4 text-center mr-2 text-gray-500"></i>
+                                    <SettingsIcon fontSize="small" sx={{ mr: 1, color: '#6b7280' }} />
                                     <span>Edit question name</span>
                                   </a>
-                                  {/* <a
-                                    href="#"
-                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
-                                    role="menuitem"
-                                    tabIndex="-1"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      onDuplicate(question.id);
-                                      setOpenActionDropdown(null);
-                                    }}
-                                  >
-                                    <i className="fa fa-copy w-4 text-center mr-2 text-gray-500"></i>
-                                    <span>Duplicate</span>
-                                  </a> */}
                                   <a
                                     href="#"
                                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
@@ -2116,7 +2092,7 @@ const handleEditMoodle = async (question) => {
                                       setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
-                                    <i className="fa fa-tags w-4 text-center mr-2 text-gray-500"></i>
+                                    <LabelIcon fontSize="small" sx={{ mr: 1, color: '#6b7280' }} />
                                     <span>Manage tags</span>
                                   </a>
                                   <a
@@ -2136,7 +2112,11 @@ const handleEditMoodle = async (question) => {
                                       setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
-                                    <i className={`fa ${verifiedQuestions.has(question.id) ? 'fa-check-double text-blue-500' : 'fa-check text-gray-500'} w-4 text-center mr-2`}></i>
+                                    {verifiedQuestions.has(question.id) ? (
+                                      <CheckIcon fontSize="small" sx={{ mr: 1, color: '#3b82f6' }} />
+                                    ) : (
+                                      <CheckCircleOutlineIcon fontSize="small" sx={{ mr: 1, color: '#6b7280' }} />
+                                    )}
                                     <span>{verifiedQuestions.has(question.id) ? 'Mark as unverified' : 'Mark as verified'}</span>
                                   </a>
                                   <a
@@ -2149,10 +2129,10 @@ const handleEditMoodle = async (question) => {
                                       handlePreview(question);
                                       setLastActionedQuestionId(question.id);
                                       setLastActionType('preview');
-                                         setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
+                                      setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
-                                    <i className="fa fa-search w-4 text-center mr-2 text-gray-500"></i>
+                                    <SearchIcon fontSize="small" sx={{ mr: 1, color: '#6b7280' }} />
                                     <span>Preview</span>
                                   </a>
                                   <a
@@ -2168,7 +2148,7 @@ const handleEditMoodle = async (question) => {
                                       setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
-                                    <i className="fa fa-list w-4 text-center mr-2 text-gray-500"></i>
+                                    <HistoryIcon fontSize="small" sx={{ mr: 1, color: '#6b7280' }} />
                                     <span>History</span>
                                   </a>
                                   <a
@@ -2184,27 +2164,10 @@ const handleEditMoodle = async (question) => {
                                       setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));
                                     }}
                                   >
-                                    <i className="fa fa-trash w-4 text-center mr-2 text-red-500"></i>
+                                    <DeleteIcon fontSize="small" sx={{ mr: 1, color: '#ef4444' }} />
                                     <span>Delete</span>
                                   </a>
-                                  {/* <a
-                                    href="#"
-                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
-                                    role="menuitem"
-                                    tabIndex="-1"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      setOpenActionDropdown(null);
-                                      setLastActionedQuestionId(question.id);
-                                      setLastActionType('export');
-                                    }}
-                                  >
-                                    <i className="fa fa-download w-4 text-center mr-2 text-gray-500"></i>
-                                    <span>Export as Moodle XML</span>
-                                  </a> */}
-                                
-                                    {/* ...dropdown content... */}
-                                  </div>,
+                                </div>,
                                   document.body
                                 );
                               })()

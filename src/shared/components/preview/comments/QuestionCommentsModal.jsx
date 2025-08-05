@@ -18,7 +18,7 @@ import CommentIcon from '@mui/icons-material/Comment';
 import PersonIcon from '@mui/icons-material/Person';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SendIcon from '@mui/icons-material/Send';
-
+import CloseIcon from '@mui/icons-material/Close';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions }) => {
@@ -439,7 +439,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
           '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
         }}
       >
-        <span style={{ fontSize: 18 }}>×</span>
+        <CloseIcon sx={{ fontSize: 22 }} />
       </IconButton>
     </Box>
   </Box>
@@ -681,7 +681,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder="Add your comment here... (Press Enter to submit)"
+          placeholder="Add your comment here..."
           variant="outlined"
           size="small"
           sx={{
@@ -715,9 +715,9 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
         </Button>
       </Box>
       
-      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+      {/* <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
          Tip: Press Enter to submit, Shift+Enter for new line
-      </Typography>
+      </Typography> */}
     </Box>
   </Box>
 
@@ -793,7 +793,7 @@ const QuestionCommentsModal = ({ isOpen, onRequestClose, question, setQuestions 
     >
       
 
-      <span style={{ fontSize: 18 }}>×</span>
+      <CloseIcon sx={{ fontSize: 22 }} />
     </IconButton>
   </Box>
 
