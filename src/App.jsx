@@ -13,6 +13,7 @@ import { logoutUser } from './api/userapi';
 import './styles/moodle-question-bank.css';
 import ReactModal from 'react-modal';
 import EditCompletePage from './shared/components/EditCompletePage';
+import { getUserByUsername } from './api/userapi';
 ReactModal.setAppElement('#root');
 const MOODLE_BASE_URL = import.meta.env.VITE_MOODLE_BASE_URL;
 const AUTO_LOGIN_PATH = import.meta.env.VITE_AUTO_LOGIN;
@@ -30,31 +31,21 @@ const App = () => {
   // Check for existing authentication on app load
     const token = localStorage.getItem('token');
   const moodleAutoLoginUrl = `${MOODLE_BASE_URL}/${AUTO_LOGIN_PATH}?token=${token}`;
-  useEffect(() => {
+   useEffect(() => {
     console.log('Auth useEffect running');
     const verifyAuth = async () => {
-         
       const token = localStorage.getItem('token');
       const usernameoremail = localStorage.getItem('usernameoremail');
       const userid = localStorage.getItem('userid');
       const profileimageurl = localStorage.getItem('profileimageurl');
-
-      console.log('Auth check:', { token, usernameoremail, userid, profileimageurl });
-
+  
       if (token && usernameoremail && usernameoremail !== 'undefined' && userid) {
         try {
-          // Add token verification API call if needed
-          // await verifyToken(token); 
-          
           setIsAuthenticated(true);
-          setCurrentUser({ 
-            token, 
-            username: usernameoremail,
-            id: userid,
-            profileImageUrl: profileimageurl // or provide a value if available
-          });
+          // Fetch full user info from API
+          const userData = await getUserByUsername(usernameoremail);
+          setCurrentUser(userData); // userData is the full user object
         } catch (error) {
-         
           localStorage.removeItem('token');
           localStorage.removeItem('usernameoremail');
           localStorage.removeItem('userid');
@@ -64,7 +55,7 @@ const App = () => {
       }
       setIsLoading(false);
     };
-
+  
     verifyAuth();
   }, []);
 
@@ -176,6 +167,7 @@ if (!MOODLE_BASE_URL || !AUTO_LOGIN_PATH) {
             onLogout={handleLogout}
             username={currentUser?.username}
              profileImageUrl={currentUser?.profileImageUrl}
+             user={currentUser} 
           />
         )}
         <main className="flex-1 min-h-0 overflow-auto">

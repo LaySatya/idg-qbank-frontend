@@ -197,7 +197,25 @@ export const logoutUser = async () => {
     window.location.href = '/login';
   }
 };
-
+export const getUserByUsername = async (username) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/users/user-by-username?username=${encodeURIComponent(username)}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!response.ok) throw new Error('Failed to fetch user');
+    const data = await response.json();
+    // API returns an array, so return the first user
+    return Array.isArray(data) ? data[0] : data;
+  } catch (error) {
+    console.error('Error fetching user by username:', error);
+    return null;
+  }
+};
 
 // Get users for the Manage Users page
 export const getUsers = async () => {
