@@ -1,7 +1,5 @@
-// ============================================================================
-// src/shared/components/QuestionHistoryView.jsx
-// ============================================================================
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { toast } from 'react-hot-toast';
 import {
   Dialog,
@@ -23,13 +21,15 @@ import {
   ArrowBackIos as ArrowBackIosIcon 
 } from '@mui/icons-material';
 
+import PaginationControls from './PaginationControls';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const QuestionHistoryView = ({ 
   question,
   onBack,
   onPreview,
-  onRevert 
+  onRevert // not used anymore
 }) => {
   const [historyData, setHistoryData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -38,41 +38,89 @@ const QuestionHistoryView = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [versionToDelete, setVersionToDelete] = useState(null);
 
-  // Load question history when component mounts or question changes
+  // Dropdown state for actions
+  const [openActionDropdowns, setOpenActionDropdowns] = useState([]);
+  const dropdownRefs = useRef({});
+  const [dropdownDirection, setDropdownDirection] = useState({});
+  const [questionData, setQuestionData] = useState(null);
+
+  // Pagination states
+  const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   useEffect(() => {
-    if (question) {
-      loadQuestionHistory();
+    if (question?.questionbankentryid) {
+      fetch(`${API_BASE_URL}/questions/entry/${question.questionbankentryid}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        }
+      })
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Question not found');
+          }
+          return res.json();
+        })
+        .then(data => {
+          setQuestionData(data);
+        })
+        .catch(err => {
+          setQuestionData(null);
+          toast.error('Question not found');
+        });
     }
-  }, [question]);
+  }, [question?.questionbankentryid]);
 
-  const loadQuestionHistory = async () => {
+  useEffect(() => {
+    loadQuestionHistory(page, itemsPerPage);
+    // eslint-disable-next-line
+  }, [question?.questionbankentryid, page, itemsPerPage]);
+
+  useEffect(() => {
+    if (openActionDropdowns.length === 0) return;
+
+    const handleClickOutside = (event) => {
+      let clickedInside = false;
+      openActionDropdowns.forEach(id => {
+        const ref = dropdownRefs.current[id];
+        if (ref && ref.contains(event.target)) {
+          clickedInside = true;
+        }
+      });
+      if (!clickedInside) {
+        setOpenActionDropdowns([]);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openActionDropdowns]);
+
+  const loadQuestionHistory = async (pageNum = 1, perPage = 10) => {
     const qbankId = question?.questionbankentryid;
-
     if (!qbankId) {
       toast.error('Missing question bank entry ID');
       setLoading(false);
       return;
     }
-
     setLoading(true);
     setError(null);
-
     try {
-      const response = await fetch(`${API_BASE_URL}/questions/history?qbankentryid=${qbankId}`, {
+      const response = await fetch(`${API_BASE_URL}/questions/history?qbankentryid=${qbankId}&page=${pageNum}&per_page=${perPage}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Accept': 'application/json'
         }
       });
-
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-
       const data = await response.json();
       setHistoryData(data);
     } catch (error) {
-      console.error('Error loading question history:', error);
       setError(error.message);
       toast.error('Failed to load question history');
     } finally {
@@ -115,22 +163,14 @@ const QuestionHistoryView = ({
     }
   };
 
-  // Handle preview version
-  const handlePreviewVersion = (version) => {
-    console.log('Preview version:', version);
-    if (onPreview) {
-      onPreview(version);
-    }
+  // Preview in Moodle logic (replace with your API call/modal logic)
+  const handlePreviewMoodle = async (version) => {
+    toast.success(`Preview in Moodle for version ${version.version}`);
   };
 
-  // Handle revert to version
-  const handleRevertToVersion = (version) => {
-    if (window.confirm(`Are you sure you want to revert to version ${version.version}? This will create a new version based on the selected version.`)) {
-      console.log('Revert to version:', version);
-      if (onRevert) {
-        onRevert(version);
-      }
-    }
+  // Comments modal logic (replace with your modal logic)
+  const openCommentsModal = (version) => {
+    toast.success(`Open comments for version ${version.version}`);
   };
 
   // Handle delete version
@@ -142,18 +182,15 @@ const QuestionHistoryView = ({
   // Confirm delete version
   const confirmDeleteVersion = async () => {
     if (!versionToDelete) return;
-
     const version = versionToDelete;
     setShowDeleteModal(false);
     setDeletingVersions(prev => new Set([...prev, version.questionid]));
-
     try {
       const token = localStorage.getItem('token');
       if (!token) {
         toast.error('Authentication required');
         return;
       }
-
       const response = await fetch(`${API_BASE_URL}/questions/delete_specific_versions?questionid[]=${version.questionid}`, {
         method: 'DELETE',
         headers: {
@@ -161,13 +198,10 @@ const QuestionHistoryView = ({
           'Accept': 'application/json'
         }
       });
-
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-
       const data = await response.json();
-      
       if (data.errors && data.errors.length > 0 && data.errors[0]) {
         toast.error(data.errors[0]);
       } else {
@@ -178,12 +212,8 @@ const QuestionHistoryView = ({
           toast.success(`Version ${version.version} deleted successfully`);
         }
       }
-      
-      // Always refresh the history data after a successful API call
-      await loadQuestionHistory();
-      
+      await loadQuestionHistory(page, itemsPerPage);
     } catch (error) {
-      console.error('Error deleting version:', error);
       toast.error('Failed to delete version. Please try again.');
     } finally {
       setDeletingVersions(prev => {
@@ -219,9 +249,17 @@ const QuestionHistoryView = ({
           </button>
           <div className="min-w-0 flex-1">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">Question History</h3>
-            <p className="text-xs sm:text-sm text-blue-600 truncate">
-              {question?.name || question?.title} (ID: {question?.id})
-            </p>
+            {questionData ? (
+              <p className="text-xs sm:text-sm text-blue-600 truncate">
+                {questionData?.name || questionData?.title} (ID: {questionData?.id})
+              </p>
+            ) : (
+              historyData?.versions?.length > 0 ? null : (
+                <p className="text-xs sm:text-sm text-red-600 truncate">
+                  Question not found
+                </p>
+              )
+            )}
           </div>
         </div>
       </div>
@@ -348,15 +386,16 @@ const QuestionHistoryView = ({
                       <td className="px-4 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           version.status === 'ready' ? 'bg-green-100 text-green-800' : 
-                          version.status === 'draft' ? 'bg-yellow-100 text-yellow-800' : 
+                          version.status === 'draft' ? 'bg-orange-100 text-orange-800' : 
                           'bg-gray-100 text-gray-800'
                         }`}>
                           {version.status}
                         </span>
                       </td>
                       
+                      {/* Comments */}
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800 cursor-pointer">
-                        0
+                        {version.comments || 0}
                       </td>
                       
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -401,42 +440,153 @@ const QuestionHistoryView = ({
                         </div>
                       </td>
                       
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <button 
-                            className="text-blue-600 hover:text-blue-800 text-sm"
-                            onClick={() => handlePreviewVersion(version)}
-                          >
-                            Preview
-                          </button>
-                          <span className="text-gray-300">|</span>
-                          <button 
-                            className="text-green-600 hover:text-green-800 text-sm"
-                            onClick={() => handleRevertToVersion(version)}
-                          >
-                            Revert
-                          </button>
-                          <span className="text-gray-300">|</span>
-                          <button 
-                            className="text-red-600 hover:text-red-800 text-sm"
-                            onClick={() => handleDeleteVersion(version)}
-                            disabled={deletingVersions.has(version.questionid)}
-                          >
-                            {deletingVersions.has(version.questionid) ? (
-                              <span className="flex items-center gap-1">
-                                <div className="w-3 h-3 border border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                                Deleting...
-                              </span>
-                            ) : (
-                              'Delete'
-                            )}
-                          </button>
+                      {/* Actions Dropdown */}
+                      <td className="px-4 py-4 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                        <div className="relative">
+                          <div className="flex">
+                            <div className="relative" ref={el => {
+                              if (dropdownRefs?.current) {
+                                dropdownRefs.current[version.id] = el;
+                              }
+                            }}>
+                              <a
+                                href="#"
+                                className="text-gray-700 hover:text-blue-700 focus:outline-none cursor-pointer flex items-center"
+                                aria-label="Actions"
+                                role="button"
+                                aria-haspopup="true"
+                                aria-expanded={openActionDropdowns.includes(version.id)}
+                                onClick={e => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if (dropdownRefs?.current?.[version.id]) {
+                                    const el = dropdownRefs.current[version.id];
+                                    const rect = el.getBoundingClientRect();
+                                    const dropdownHeight = 150;
+                                    const spaceBelow = window.innerHeight - rect.bottom;
+                                    setDropdownDirection(prev => ({
+                                      ...prev,
+                                      [version.id]: spaceBelow < dropdownHeight ? 'up' : 'down'
+                                    }));
+                                  }
+                                  setOpenActionDropdowns(prev =>
+                                    prev.includes(version.id)
+                                      ? prev.filter(id => id !== version.id)
+                                      : [...prev, version.id]
+                                  );
+                                }}
+                              >
+                                <i className="fa fa-ellipsis-h mr-1"></i>
+                                Edit
+                              </a>
+                              {openActionDropdowns.includes(version.id) && (() => {
+                                const el = dropdownRefs.current[version.id];
+                                if (!el) return null;
+                                const elRect = el.getBoundingClientRect();
+                                const dropdownHeight = 150;
+                                const direction = dropdownDirection[version.id] || 'down';
+                                let left = elRect.left;
+                                let top = direction === 'up'
+                                  ? elRect.top - dropdownHeight
+                                  : elRect.bottom;
+                                const maxTop = window.innerHeight - dropdownHeight - 8;
+                                if (direction === 'down' && top > maxTop) top = maxTop;
+                                if (direction === 'up' && top < 8) top = 8;
+                                const maxLeft = window.innerWidth - 240;
+                                if (left > maxLeft) left = maxLeft;
+                                if (left < 8) left = 8;
+                                return ReactDOM.createPortal(
+                                  <div
+                                    className={`absolute w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1 ${direction === 'up' ? 'mb-2' : 'mt-2'}`}
+                                    style={{
+                                      left,
+                                      top,
+                                      position: 'fixed'
+                                    }}
+                                    onMouseDown={e => e.stopPropagation()}
+                                  >
+                                    {/* Preview in Moodle */}
+                                    <a
+                                      href="#"
+                                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-700 transition-colors cursor-pointer"
+                                      role="menuitem"
+                                      tabIndex="-1"
+                                      onClick={async e => {
+                                        e.preventDefault();
+                                        await handlePreviewMoodle(version);
+                                        setOpenActionDropdowns(prev => prev.filter(id => id !== version.id));
+                                      }}
+                                    >
+                                      <i className="fa fa-eye mr-2 text-blue-500"></i>
+                                      <span>Preview in Moodle</span>
+                                    </a>
+                                    {/* Comments */}
+                                    <a
+                                      href="#"
+                                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-700 transition-colors cursor-pointer"
+                                      role="menuitem"
+                                      tabIndex="-1"
+                                      onClick={e => {
+                                        e.preventDefault();
+                                        openCommentsModal(version);
+                                        setOpenActionDropdowns(prev => prev.filter(id => id !== version.id));
+                                      }}
+                                    >
+                                      <i className="fa fa-comment mr-2 text-blue-500"></i>
+                                      <span>Comments ({version.comments || 0})</span>
+                                    </a>
+                                    {/* Delete */}
+                                    <a
+                                      href="#"
+                                      className={`flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 hover:text-red-900 transition-colors cursor-pointer${deletingVersions.has(version.questionid) ? ' opacity-50 cursor-not-allowed' : ''}`}
+                                      role="menuitem"
+                                      tabIndex="-1"
+                                      onClick={e => {
+                                        e.preventDefault();
+                                        if (!deletingVersions.has(version.questionid)) {
+                                          handleDeleteVersion(version);
+                                          setOpenActionDropdowns(prev => prev.filter(id => id !== version.id));
+                                        }
+                                      }}
+                                    >
+                                      <i className="fa fa-trash mr-2 text-red-500"></i>
+                                      <span>
+                                        {deletingVersions.has(version.questionid) ? (
+                                          <span className="flex items-center gap-1">
+                                            <div className="w-3 h-3 border border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                                            Deleting...
+                                          </span>
+                                        ) : (
+                                          'Delete'
+                                        )}
+                                      </span>
+                                    </a>
+                                  </div>,
+                                  document.body
+                                );
+                              })()}
+                            </div>
+                          </div>
                         </div>
                       </td>
+                     
                     </tr>
                   ))}
                 </tbody>
               </table>
+              {/* Pagination Controls */}
+              {historyData.total > 0 && (
+                <PaginationControls
+                  currentPage={historyData.current_page}
+                  totalPages={historyData.last_page}
+                  totalItems={historyData.total}
+                  itemsPerPage={historyData.per_page}
+                  onPageChange={setPage}
+                  onItemsPerPageChange={setItemsPerPage}
+                  isLoading={loading}
+                  className="mt-2"
+                />
+              )}
             </div>
 
             {/* Mobile Card View - Visible on mobile and tablet */}
@@ -520,22 +670,25 @@ const QuestionHistoryView = ({
                     {/* Mobile Action Buttons */}
                     <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
                       <button 
-                        className="flex-1 sm:flex-none px-3 py-2 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
-                        onClick={() => handlePreviewVersion(version)}
+                        className="flex-1 sm:flex-none px-3 py-2 text-xs text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 hover:text-blue-700 transition-colors flex items-center justify-center"
+                        onClick={() => handlePreviewMoodle(version)}
                       >
-                        Preview
+                        <i className="fa fa-eye mr-2 text-blue-500"></i>
+                        Preview in Moodle
                       </button>
                       <button 
-                        className="flex-1 sm:flex-none px-3 py-2 text-xs bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors"
-                        onClick={() => handleRevertToVersion(version)}
+                        className="flex-1 sm:flex-none px-3 py-2 text-xs text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 hover:text-blue-700 transition-colors flex items-center justify-center"
+                        onClick={() => openCommentsModal(version)}
                       >
-                        Revert
+                        <i className="fa fa-comment mr-2 text-blue-500"></i>
+                        Comments ({version.comments || 0})
                       </button>
                       <button 
-                        className="flex-1 sm:flex-none px-3 py-2 text-xs bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50"
+                        className="flex-1 sm:flex-none px-3 py-2 text-xs text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors flex items-center justify-center disabled:opacity-50"
                         onClick={() => handleDeleteVersion(version)}
                         disabled={deletingVersions.has(version.questionid)}
                       >
+                        <i className="fa fa-trash mr-2 text-red-500"></i>
                         {deletingVersions.has(version.questionid) ? (
                           <span className="flex items-center justify-center gap-1">
                             <div className="w-3 h-3 border border-red-600 border-t-transparent rounded-full animate-spin"></div>
@@ -548,6 +701,19 @@ const QuestionHistoryView = ({
                     </div>
                   </div>
                 ))}
+                {/* Pagination Controls for mobile */}
+                {historyData.total > 0 && (
+                  <PaginationControls
+                    currentPage={historyData.current_page}
+                    totalPages={historyData.last_page}
+                    totalItems={historyData.total}
+                    itemsPerPage={historyData.per_page}
+                    onPageChange={setPage}
+                    onItemsPerPageChange={setItemsPerPage}
+                    isLoading={loading}
+                    className="mt-2"
+                  />
+                )}
               </div>
             </div>
           </>
@@ -604,14 +770,13 @@ const QuestionHistoryView = ({
             <Box sx={{ 
               width: 48, 
               height: 48, 
-              backgroundColor: 'error.light',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0
             }}>
-              <WarningIcon sx={{ color: 'error.main', fontSize: 24 }} />
+              {/* <WarningIcon sx={{ color: 'error.main', fontSize: 24 }} /> */}
             </Box>
             <Box sx={{ flex: 1 }}>
               <Typography variant="body1" sx={{ fontWeight: 500, mb: 2 }}>

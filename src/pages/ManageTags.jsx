@@ -310,18 +310,19 @@ const ManageTags = () => {
               px: 2.5,
               fontSize: '0.95rem',
               boxShadow: 'none',
-              background: 'linear-gradient(90deg, #2563eb 0%, #6366f1 100%)',
+              backgroundColor: '#2c64b8',
               '&:hover': {
-                background: 'linear-gradient(90deg, #1d4ed8 0%, #4f46e5 100%)',
+                  backgroundColor: '#2c64b8',
+            borderColor: '#2c64b8'
               },
             }}
             size="small"
           >
             Create Tag
           </Button>
-          <Button
+          {/* <Button
             variant="outlined"
-            startIcon={<RefreshIcon />}
+            endIcon={<RefreshIcon />}
             onClick={fetchTags}
             disabled={loading}
             sx={{
@@ -342,7 +343,7 @@ const ManageTags = () => {
             size="small"
           >
             Refresh
-          </Button>
+          </Button> */}
                                        {selectedTags.length > 0 && (
                       <Box
                         tabIndex={0}
@@ -704,13 +705,13 @@ const ManageTags = () => {
             sx={{
               px: 2.5,
               py: 1,
-              bgcolor: '#2563eb',
+              bgcolor: '#2c64b8',
               color: '#fff',
               borderRadius: 1,
               fontWeight: 600,
               fontSize: 15,
               textTransform: 'none',
-              '&:hover': { bgcolor: '#1d4ed8' },
+              '&:hover': { bgcolor: '#2c64b8' },
               '&:disabled': { bgcolor: '#cbd5e1', color: '#94a3b8' },
             }}
           >

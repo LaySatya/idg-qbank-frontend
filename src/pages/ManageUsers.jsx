@@ -595,15 +595,15 @@ return (
               <MenuItem value="Pending">Pending</MenuItem>
             </Select>
           </FormControl>
-          <Button
+          {/* <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => console.log('Add user')}
             sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 600, px: 2.5, fontSize: '0.85rem' }}
           >
             Add User
-          </Button>
-          <Button
+          </Button> */}
+          {/* <Button
             variant="outlined"
             startIcon={<RefreshIcon />}
             onClick={async () => {
@@ -617,7 +617,7 @@ return (
             sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 500, px: 2, fontSize: '0.85rem' }}
           >
             Refresh
-          </Button>
+          </Button> */}
         </Box>
         {selectedUsers.length > 0 && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, bgcolor: 'error.50', px: 2, py: 0.75, borderRadius: 1.5, border: '1px solid', borderColor: 'error.200' }}>

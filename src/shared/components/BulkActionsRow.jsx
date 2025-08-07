@@ -23,7 +23,7 @@ import DriveFileMoveOutlineIcon from '@mui/icons-material/DriveFileMoveOutline';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import TagIcon from '@mui/icons-material/Tag';
+
 import SettingsIcon from '@mui/icons-material/Settings';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -32,6 +32,10 @@ import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import { toast } from 'react-hot-toast';
+import CloseSharpIcon from '@mui/icons-material/CloseSharp';
+import SellSharpIcon from '@mui/icons-material/SellSharp';
+
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import {
   buildGroupedCategoryTree,
   flattenCategoryTree,
@@ -876,7 +880,7 @@ const handleConfirmRemoveTag = async () => {
               <EditIcon sx={{ mr: 1 }} /> Change Status
             </MenuItem>
             <MenuItem onClick={() => handleAction('tags')}>
-              <TagIcon sx={{ mr: 1 }} /> Manage Tags
+              <SellSharpIcon sx={{ mr: 1 }} /> Manage Tags
             </MenuItem>
             <MenuItem onClick={() => handleAction('move')}>
               <DriveFileMoveOutlineIcon sx={{ mr: 1 }} /> Move to ...
@@ -1100,10 +1104,11 @@ const handleConfirmRemoveTag = async () => {
               borderRadius: '6px',
               textTransform: 'none',
               fontWeight: 500,
-              backgroundColor: '#111827',
+              backgroundColor: '#2c64b8',
               color: 'white',
               '&:hover': {
-                backgroundColor: '#000000'
+                 backgroundColor: '#2c64b8',
+            borderColor: '#2c64b8'
               },
               transition: 'all 0.2s ease'
             }}
@@ -1192,7 +1197,7 @@ const handleConfirmRemoveTag = async () => {
                   justifyContent: 'center'
                 }}
               >
-                <TagIcon sx={{ fontSize: 20, color: '#6b7280' }} />
+                <SellSharpIcon sx={{ fontSize: 20, color: '#6b7280' }} />
               </Box>
               <Box>
                 <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', mb: 0.5 }}>
@@ -1245,7 +1250,7 @@ const handleConfirmRemoveTag = async () => {
                   color: '#111827'
                 }}
               >
-                Common Tags
+                Current Tags
               </Typography>
               
               {commonTags.length > 0 ? (
@@ -1263,7 +1268,7 @@ const handleConfirmRemoveTag = async () => {
                         key={tag.id}
                         label={tag.name}
                         onDelete={() => handleRemoveTag(tag.id)}
-                        deleteIcon={<DeleteIcon />}
+                        deleteIcon={<CloseSharpIcon />}
                         sx={{
                           backgroundColor: '#e5e7eb',
                           color: '#374151',
@@ -1369,7 +1374,7 @@ const handleConfirmRemoveTag = async () => {
                     );
                   })
                 }
-                renderInput={(params) => (
+                                renderInput={(params) => (
                   <TextField
                     {...params}
                     placeholder="Search or create tags..."
@@ -1384,6 +1389,7 @@ const handleConfirmRemoveTag = async () => {
                       endAdornment: (
                         <>
                           {creatingTag && <CircularProgress size={20} />}
+                          <ArrowDropDownIcon sx={{ color: '#9ca3af', fontSize: 22, ml: 1 }} />
                           {params.InputProps.endAdornment}
                         </>
                       )
@@ -1436,7 +1442,7 @@ const handleConfirmRemoveTag = async () => {
                           {isCreateOption ? (
                             <AddIcon fontSize="small" sx={{ color: 'white' }} />
                           ) : (
-                            <TagIcon fontSize="small" sx={{ color: '#6b7280' }} />
+                            <SellSharpIcon fontSize="small" sx={{ color: '#6b7280' }} />
                           )}
                         </Box>
                         <Box sx={{ flex: 1 }}>
@@ -1514,7 +1520,7 @@ const handleConfirmRemoveTag = async () => {
           >
             Cancel
           </Button>
-          <Button 
+                  <Button 
             variant="contained" 
             onClick={() => setShowTagModal(false)}
             sx={{ 
@@ -1523,10 +1529,13 @@ const handleConfirmRemoveTag = async () => {
               borderRadius: '6px',
               textTransform: 'none',
               fontWeight: 500,
-              backgroundColor: '#111827',
+              backgroundColor: '#2c64b8',
+              borderColor: '#2c64b8',
               color: 'white',
+              boxShadow: 'none',
               '&:hover': {
-                backgroundColor: '#000000'
+                backgroundColor: '#2c64b8',
+                borderColor: '#2c64b8'
               },
               transition: 'all 0.2s ease'
             }}

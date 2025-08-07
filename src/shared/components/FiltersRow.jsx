@@ -21,7 +21,7 @@ import {
 } from '@mui/material';
 
 
-
+import CloseIcon from '@mui/icons-material/Close';
 
 const TagFilterStatus = ({ tagFilter, allTags }) => {
   if (!Array.isArray(tagFilter) || tagFilter.length === 0) {
@@ -692,17 +692,31 @@ const FiltersRow = ({
             getOptionLabel={(option) => option.label}
             value={selectedTagValues}
             onChange={handleTagChange}
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => (
-                <Chip
-                  label={option.label}
-                  {...getTagProps({ index })}
-                  key={option.value}
-                  color="primary"
-                  variant="outlined"
-                />
-              ))
-            }
+renderTags={(value, getTagProps) =>
+  value.map((option, index) => (
+    <Chip
+      label={option.label}
+      {...getTagProps({ index })}
+      key={option.value}
+      variant="outlined"
+      deleteIcon={
+        <CloseIcon sx={{ fontSize: 16, color: '#888' }} /> // Smaller and lighter
+      }
+      sx={{
+        fontSize: '0.85rem',        // Smaller font for tag text
+        fontWeight: 500,
+        px: 2,
+        py: 0.5,
+        maxWidth: 160,
+        backgroundColor: '#f5f5f5',
+        color: '#222',
+        borderColor: '#bdbdbd',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden'
+      }}
+    />
+  ))
+}
             renderInput={(params) => (
               <TextField
                 {...params}

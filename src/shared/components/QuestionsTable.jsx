@@ -17,10 +17,11 @@ import Chip from '@mui/material/Chip';
 import Autocomplete from '@mui/material/Autocomplete';
 import InputAdornment from '@mui/material/InputAdornment';
 import CircularProgress from '@mui/material/CircularProgress';
-import TagIcon from '@mui/icons-material/LocalOffer';
+
+import SellSharpIcon from '@mui/icons-material/SellSharp';
 import AddIcon from '@mui/icons-material/Add';
 
-
+import CloseSharpIcon from '@mui/icons-material/CloseSharp';
 import CloseIcon from '@mui/icons-material/Close';
 import Quill from 'quill';
 import ReactQuill from 'react-quill';
@@ -29,7 +30,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import LabelIcon from '@mui/icons-material/Label';
 import CheckIcon from '@mui/icons-material/Check';
-
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import HistoryIcon from '@mui/icons-material/History';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
@@ -339,7 +340,7 @@ const TagManagementModal = ({
                 justifyContent: 'center'
               }}
             >
-              <TagIcon sx={{ fontSize: 20, color: '#6b7280' }} />
+              <SellSharpIcon sx={{ fontSize: 20, color: '#6b7280' }} />
             </Box>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', mb: 0.5 }}>
@@ -410,7 +411,7 @@ const TagManagementModal = ({
                       key={tag.id}
                       label={tag.name}
                       onDelete={() => removeTagFromQuestion(tag)}
-                      deleteIcon={<DeleteIcon />}
+                      deleteIcon={<CloseSharpIcon />}
                       sx={{
                         backgroundColor: '#e5e7eb',
                         color: '#374151',
@@ -516,7 +517,7 @@ const TagManagementModal = ({
                 );
               })
             }
-            renderInput={(params) => (
+                        renderInput={(params) => (
               <TextField
                 {...params}
                 placeholder="Search or create tags..."
@@ -531,6 +532,7 @@ const TagManagementModal = ({
                   endAdornment: (
                     <>
                       {creatingTag && <CircularProgress size={20} />}
+                      <ArrowDropDownIcon sx={{ color: '#9ca3af', fontSize: 22, ml: 1 }} />
                       {params.InputProps.endAdornment}
                     </>
                   )
@@ -583,7 +585,7 @@ const TagManagementModal = ({
                       {isCreateOption ? (
                         <AddIcon fontSize="small" sx={{ color: 'white' }} />
                       ) : (
-                        <TagIcon fontSize="small" sx={{ color: '#6b7280' }} />
+                        <SellSharpIcon fontSize="small" sx={{ color: '#6b7280' }} />
                       )}
                     </Box>
                     <Box sx={{ flex: 1 }}>
@@ -662,19 +664,22 @@ const TagManagementModal = ({
       >
         Cancel
       </Button>
-      <Button 
+            <Button 
         variant="contained" 
-        onClick={onRequestClose}
+        onClick={() => setShowTagModal(false)}
         sx={{ 
           px: 3,
           py: 1,
           borderRadius: '6px',
           textTransform: 'none',
           fontWeight: 500,
-          backgroundColor: '#111827',
+          backgroundColor: '#2c64b8',
+          borderColor: '#2c64b8',
           color: 'white',
+          boxShadow: 'none',
           '&:hover': {
-            backgroundColor: '#000000'
+            backgroundColor: '#2c64b8',
+            borderColor: '#2c64b8'
           },
           transition: 'all 0.2s ease'
         }}
@@ -730,8 +735,8 @@ const QuestionsTable = ({
   const isFetchingRef = useRef(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewQuestion, setPreviewQuestion] = useState(null);
-  const [showHistoryView, setShowHistoryView] = useState(false);
-  const [historyQuestion, setHistoryQuestion] = useState(null);
+  // const [showHistoryView, setShowHistoryView] = useState(false);
+  // const [historyQuestion, setHistoryQuestion] = useState(null);
   const [commentsModalOpen, setCommentsModalOpen] = useState(false);
   const [commentsQuestion, setCommentsQuestion] = useState(null);
   const [qtypeIcons, setQtypeIcons] = useState({});
@@ -1340,27 +1345,27 @@ const handleEditMoodle = async (question) => {
     setLastActionType('preview');
   };
 
-  const handleHistory = (question) => {
-    if (!question) {
-      console.error('No question provided to handleHistory');
-      return;
-    }
-    const questionWithQbankEntry = {
-      ...question,
-      qbankentryid: question.qbankentryid || question.qbank_entry_id || question.entryid,
-    };
-    setHistoryQuestion(questionWithQbankEntry);
-    setShowHistoryView(true);
-    setLastActionedQuestionId(question.id);
-    setLastActionType('history');
-  };
+  // const handleHistory = (question) => {
+  //   if (!question) {
+  //     console.error('No question provided to handleHistory');
+  //     return;
+  //   }
+  //   const questionWithQbankEntry = {
+  //     ...question,
+  //     qbankentryid: question.qbankentryid || question.qbank_entry_id || question.entryid,
+  //   };
+  //   setHistoryQuestion(questionWithQbankEntry);
+  //   setShowHistoryView(true);
+  //   setLastActionedQuestionId(question.id);
+  //   setLastActionType('history');
+  // };
 
-  const handleBackFromHistory = () => {
-    setShowHistoryView(false);
-    setHistoryQuestion(null);
-    setLastActionedQuestionId(null);
-    setLastActionType(null);
-  };
+  // const handleBackFromHistory = () => {
+  //   setShowHistoryView(false);
+  //   setHistoryQuestion(null);
+  //   setLastActionedQuestionId(null);
+  //   setLastActionType(null);
+  // };
 
   const toggleQuestionSelection = (id) => {
     if (!setSelectedQuestions) return;
@@ -1498,25 +1503,25 @@ const handleEditMoodle = async (question) => {
     );
   }
 
-  if (showHistoryView && historyQuestion) {
-    return (
-      <QuestionHistoryView
-        question={historyQuestion}
-        onBack={handleBackFromHistory}
-        onPreview={(version) => {
-          console.log('Preview version:', version);
-          setShowHistoryView(false);
-          setPreviewQuestion(version);
-          setPreviewModalOpen(true);
-        }}
-        onRevert={(version) => {
-          console.log('Revert to version:', version);
-          toast.success(`Reverted to version ${version.version}`);
-          setShowHistoryView(false);
-        }}
-      />
-    );
-  }
+  // if (showHistoryView && historyQuestion) {
+  //   return (
+  //     <QuestionHistoryView
+  //       question={historyQuestion}
+  //       onBack={handleBackFromHistory}
+  //       onPreview={(version) => {
+  //         console.log('Preview version:', version);
+  //         setShowHistoryView(false);
+  //         setPreviewQuestion(version);
+  //         setPreviewModalOpen(true);
+  //       }}
+  //       onRevert={(version) => {
+  //         console.log('Revert to version:', version);
+  //         toast.success(`Reverted to version ${version.version}`);
+  //         setShowHistoryView(false);
+  //       }}
+  //     />
+  //   );
+  // }
 
   return (
     <>
@@ -1706,7 +1711,10 @@ const handleEditMoodle = async (question) => {
                 } else if (Array.isArray(selectedQuestions) && selectedQuestions.includes(question.id)) {
                   rowClass = 'bg-blue-50 border-l-4 border-l-blue-500 shadow-sm hover:bg-blue-100';
                 } else {
-                  rowClass = `${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 hover:shadow-md hover:border-l-4 hover:border-l-blue-500`;
+                  // rowClass = `${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 hover:shadow-md hover:border-l-4 hover:border-l-blue-500`;
+                                   
+                  rowClass = `${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`;
+                  
                 }
 
                 return (
@@ -2119,7 +2127,7 @@ const handleEditMoodle = async (question) => {
                                     )}
                                     <span>{verifiedQuestions.has(question.id) ? 'Mark as unverified' : 'Mark as verified'}</span>
                                   </a>
-                                  <a
+                                  {/* <a
                                     href="#"
                                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
                                     role="menuitem"
@@ -2134,15 +2142,15 @@ const handleEditMoodle = async (question) => {
                                   >
                                     <SearchIcon fontSize="small" sx={{ mr: 1, color: '#6b7280' }} />
                                     <span>Preview</span>
-                                  </a>
-                                  <a
+                                  </a> */}
+                                      <a
                                     href="#"
                                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
                                     role="menuitem"
                                     tabIndex="-1"
                                     onClick={(e) => {
                                       e.preventDefault();
-                                      handleHistory(question);
+                                      if (onHistory) onHistory(question);
                                       setLastActionedQuestionId(question.id);
                                       setLastActionType('history');
                                       setOpenActionDropdowns(prev => prev.filter(id => id !== question.id));

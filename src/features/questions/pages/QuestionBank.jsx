@@ -31,7 +31,7 @@ import CategoriesComponent from '../../../shared/components/CategoriesComponent'
 import PaginationControls from '../../../shared/components/PaginationControls';
 import { EDIT_COMPONENTS, BULK_EDIT_COMPONENTS } from '../../../shared/constants/questionConstants';
 import { toast } from 'react-hot-toast';
-
+import QuestionHistoryView from '../../../shared/components/QuestionHistoryView';
 // ============================================================================
 // src/features/questions/pages/QuestionBank.jsx - FIXED SCROLLING VERSION
 // ============================================================================
@@ -1159,42 +1159,90 @@ const QuestionBank = () => {
                 )}
 
                 {/* Questions Table and Pagination - unified scrolling */}
-                {!loading && !error && questions.length > 0 && (
-                  // <div className="flex flex-col">
-                  <div className="w-full overflow-x-auto" style={{ minHeight: 0 }}>
-  <div style={{ minWidth: 700 }}>
-                    {/* Pagination above table */}
-                    <div>
-                      <PaginationControls
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        totalItems={totalQuestions}
-                        itemsPerPage={questionsPerPage}
-                        onPageChange={(page) => {
-                          console.log(' Top Pagination onPageChange triggered:', { 
-                            page, 
-                            currentPage, 
-                            fetchInProgress: fetchInProgressRef.current 
-                          });
-                          if (fetchInProgressRef.current) {
-                            console.log(' Top Pagination blocked: fetch in progress');
-                            return;
-                          }
-                          console.log(' Setting current page to:', page);
-                          setCurrentPage(page);
-                        }}
-                        onItemsPerPageChange={(newPerPage) => {
-                          if (fetchInProgressRef.current) return;
-                          setQuestionsPerPage(newPerPage);
-                          setCurrentPage(1);
-                        }}
-                        isLoading={loading}
-                        className="border-t bg-gray-50"
-                      />
-                    </div>
+              {!loading && !error && questions.length > 0 && (
+  <div className="w-full overflow-x-auto" style={{ minHeight: 0 }}>
+    <div style={{ minWidth: 700 }}>
+     {/* Questions Table and Pagination - unified scroll */}
+{!historyModal ? (
+  <>
+    {/* Pagination above table */}
+    <div>
+      <PaginationControls
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalQuestions}
+        itemsPerPage={questionsPerPage}
+        onPageChange={setCurrentPage}
+        onItemsPerPageChange={setQuestionsPerPage}
+        isLoading={loading}
+        className="border-t bg-gray-50"
+      />
+    </div>
+
+    {/* Questions Table */}
+    <div>
+      <QuestionsTable
+        questions={filteredQuestions}
+        allQuestions={questions}
+        filteredQuestions={filteredQuestions}
+        selectedQuestions={selectedQuestions}
+        setSelectedQuestions={setSelectedQuestions}
+        showQuestionText={filters.scalerTopic === 'yes_text' || filters.scalerTopic === 'yes_full'}
+        showQuestionMedia={filters.scalerTopic === 'yes_full'}
+        scalerTopic={filters.scalerTopic}
+        editingQuestion={editingQuestion}
+        setEditingQuestion={setEditingQuestion}
+        newQuestionTitle={newQuestionTitle}
+        setNewQuestionTitle={setNewQuestionTitle}
+        setShowSaveConfirm={setShowSaveConfirm}
+        openActionDropdown={openActionDropdown}
+        setOpenActionDropdown={setOpenActionDropdown}
+        openStatusDropdown={openStatusDropdown}
+        setOpenStatusDropdown={setOpenStatusDropdown}
+        dropdownRefs={dropdownRefs}
+        onPreview={setPreviewQuestion}
+        onEdit={(question) => {
+          setEditingQuestionData(question);
+        }}
+        onDuplicate={handleDuplicateQuestion}
+        onHistory={setHistoryModal}
+        onDelete={handleDeleteQuestion}
+        onStatusChange={handleStatusChange}
+        username={username}
+        setQuestions={setQuestions}
+      />
+    </div>
+
+    {/* Pagination below table */}
+    <div>
+      <PaginationControls
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalQuestions}
+        itemsPerPage={questionsPerPage}
+        onPageChange={(page) => {
+          if (fetchInProgressRef.current) return;
+          setCurrentPage(page);
+        }}
+        onItemsPerPageChange={(newPerPage) => {
+          if (fetchInProgressRef.current) return;
+          setQuestionsPerPage(newPerPage);
+          setCurrentPage(1);
+        }}
+        isLoading={loading}
+        className="border-t bg-gray-50"
+      />
+    </div>
+  </>
+) : (
+  <QuestionHistoryView
+    question={historyModal}
+    onBack={() => setHistoryModal(null)}
+  />
+)}
 
                     {/* Questions Table - now part of unified scroll */}
-                    <div>
+                    {/* <div>
                        <QuestionsTable
                         questions={filteredQuestions}
                         allQuestions={questions}
@@ -1225,10 +1273,10 @@ const QuestionBank = () => {
                         username={username}
                         setQuestions={setQuestions}
                       />
-                    </div>
+                    </div> */}
 
                     {/* Pagination below table */}
-                    <div>
+                    {/* <div>
                       <PaginationControls
                         currentPage={currentPage}
                         totalPages={totalPages}
@@ -1255,7 +1303,7 @@ const QuestionBank = () => {
                         isLoading={loading}
                         className="border-t bg-gray-50"
                       />
-                    </div>
+                    </div> */}
                   </div>
                   </div>
                 )}

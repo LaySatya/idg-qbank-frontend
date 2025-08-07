@@ -62,15 +62,23 @@ const HistoryModal = ({ question, onClose }) => {
                 <th className="border border-gray-300 px-4 py-2 text-left">Changes</th>
               </tr>
             </thead>
-            <tbody>
-              {question.history.map((version, index) => (
-                <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="border border-gray-300 px-4 py-2">{version.version}</td>
-                  <td className="border border-gray-300 px-4 py-2">{version.date}</td>
-                  <td className="border border-gray-300 px-4 py-2">{version.author}</td>
-                  <td className="border border-gray-300 px-4 py-2">{version.changes}</td>
+                       <tbody>
+              {(Array.isArray(question.history) && question.history.length > 0) ? (
+                question.history.map((version, index) => (
+                  <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="border border-gray-300 px-4 py-2">{version.version}</td>
+                    <td className="border border-gray-300 px-4 py-2">{version.date}</td>
+                    <td className="border border-gray-300 px-4 py-2">{version.author}</td>
+                    <td className="border border-gray-300 px-4 py-2">{version.changes}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} className="border border-gray-300 px-4 py-2 text-center text-gray-500">
+                    No history available.
+                  </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
@@ -1033,12 +1041,12 @@ const Modals = ({
       )}
 
       {/* History Modal */}
-      {historyModal && (
+      {/* {historyModal && (
         <HistoryModal 
           question={historyModal} 
           onClose={() => setHistoryModal(null)} 
         />
-      )}
+      )} */}
     </>
   );
 };
