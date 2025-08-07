@@ -330,9 +330,10 @@ function ResponsiveIframe({ src, title }) {
   return (
     <div style={{
       position: 'relative',
-      width: '90vw',
-      maxWidth: 1400,
-      paddingBottom: '55%', // 16:9 aspect ratio
+     width: '80vw',
+maxWidth: 1100,
+minWidth: 320,
+      paddingBottom: '50%', // 16:9 aspect ratio
       height: 0,
       overflow: 'hidden',
       background: '#f9f9f9'
@@ -360,8 +361,9 @@ function IframeWithLoader({ src, title }) {
   return (
     <div style={{
       position: 'relative',
-      width: '90vw',
-      maxWidth: 1400,
+     width: '80vw',
+maxWidth: 1100,
+minWidth: 320,
       paddingBottom: '55%', // 16:9 aspect ratio
       height: 0,
       overflow: 'hidden',
@@ -604,13 +606,18 @@ function IframeWithLoader({ src, title }) {
           justifyContent: 'center',
           zIndex: 1000
         }}>
-          <div style={{
-            background: '#fff',
-            padding: 16,
-            borderRadius: 8,
-            position: 'relative',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-          }}>
+       <div
+  style={{
+    background: '#fff',
+    padding: 8,
+    borderRadius: 8,
+    position: 'relative',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+    width: '80vw',
+    // maxWidth: window.innerWidth > 1600 ? 1400 : 1100, // wider on big screens
+    minWidth: 320,
+  }}
+>
             <button onClick={() => setShowPreviewModal(false)} style={{
               position: 'absolute',
               top: 8,
@@ -724,13 +731,18 @@ function IframeWithLoader({ src, title }) {
           justifyContent: 'center',
           zIndex: 1000
         }}>
-          <div style={{
-            background: '#fff',
-            padding: 16,
-            borderRadius: 8,
-            position: 'relative',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-          }}>
+             <div
+  style={{
+    background: '#fff',
+    padding: 8,
+    borderRadius: 8,
+    position: 'relative',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+    width: '80vw',
+    // maxWidth: window.innerWidth > 1600 ? 1400 : 1100, // wider on big screens
+    minWidth: 320,
+  }}
+>
             <button onClick={() => setShowImportModal(false)} style={{
               position: 'absolute',
               top: 8,
@@ -765,13 +777,18 @@ function IframeWithLoader({ src, title }) {
           justifyContent: 'center',
           zIndex: 1000
         }}>
-          <div style={{
-            background: '#fff',
-            padding: 16,
-            borderRadius: 8,
-            position: 'relative',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-          }}>
+          <div
+  style={{
+    background: '#fff',
+    padding: 8,
+    borderRadius: 8,
+    position: 'relative',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+    width: '80vw',
+    // maxWidth: window.innerWidth > 1600 ? 1400 : 1100, // wider on big screens
+    minWidth: 320,
+  }}
+>
             <button onClick={() => setShowExportModal(false)} style={{
               position: 'absolute',
               top: 8,
@@ -806,13 +823,18 @@ function IframeWithLoader({ src, title }) {
           justifyContent: 'center',
           zIndex: 1000
         }}>
-          <div style={{
-            background: '#fff',
-            padding: 16,
-            borderRadius: 8,
-            position: 'relative',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-          }}>
+           <div
+  style={{
+    background: '#fff',
+    padding: 8,
+    borderRadius: 8,
+    position: 'relative',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+    width: '80vw',
+    // maxWidth: window.innerWidth > 1600 ? 1400 : 1100, // wider on big screens
+    minWidth: 320,
+  }}
+>
             <button onClick={() => setShowCreateModalIframe(false)} style={{
               position: 'absolute',
               top: 8,
