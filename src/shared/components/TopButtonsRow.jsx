@@ -41,6 +41,7 @@ const TopButtonsRow = ({
   const [createLoading, setCreateLoading] = useState(false);
   const [showTypeSelectModal, setShowTypeSelectModal] = useState(false);
   const [selectedQType, setSelectedQType] = useState("");
+
   const handleExportClick = async () => {
     const token = localStorage.getItem('token');
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -69,8 +70,7 @@ const TopButtonsRow = ({
       toast.error(`Error: ${error.message}`);
     }
   };
-  // Define handlePreviewClick inside the component after props
-  // Define handlePreviewClick inside the component
+
   const handlePreviewClick = async () => {
     const token = localStorage.getItem('token');
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -98,6 +98,7 @@ const TopButtonsRow = ({
       toast.error(`Error: ${error.message}`);
     }
   };
+
   const [isImporting, setIsImporting] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [questionTypes, setQuestionTypes] = useState([]);
@@ -119,10 +120,8 @@ const TopButtonsRow = ({
     };
   }, [showQuestionsDropdown, setShowQuestionsDropdown]);
 
-// Enhanced navigation handler
-const handleNavigation = (value) => {
-// ...existing code...
-
+  // Enhanced navigation handler
+  const handleNavigation = (value) => {
     if (value.includes('import')) {
       handleImportClick();
       return;
@@ -131,19 +130,15 @@ const handleNavigation = (value) => {
     // Handle different navigation options
     if (value.includes('categories')) {
       if (setCurrentView) setCurrentView('categories');
-      // toast('Navigating to Categories...', { icon: '' });
       if (onNavigate) onNavigate('categories');
     } else if (value.includes('export')) {
       if (setCurrentView) setCurrentView('export');
-      // toast('Navigating to Export...', { icon: '' });
       if (onNavigate) onNavigate('export');
     } else if (value.includes('edit')) {
       if (setCurrentView) setCurrentView('questions');
-      // toast('Navigating to Questions...', { icon: '' });
       if (onNavigate) onNavigate('questions');
     }
   };
-
 
   // Show create modal and fetch question types from API
   const handleCreateQuestion = async () => {
@@ -173,9 +168,8 @@ const handleNavigation = (value) => {
     }
   };
 
-  // File import click - Updated to use real category IDs with correct context
+  // File import click
   const handleImportClick = async () => {
-    // Log current values for debugging if needed
     console.log('\n === MOODLE IMPORT REDIRECT ===');
 
     const token = localStorage.getItem('token');
@@ -185,15 +179,10 @@ const handleNavigation = (value) => {
 
     console.log(' Real category ID from your system:', categoryId);
 
-    // Try multiple approaches to find working import URL
-    // Based on discovery: categoryid=7528&contextid=115135 works!
     const testCases = [
-      // Try with your real category ID and the discovered context pattern
       { categoryid: categoryId, contextid: '115135', note: 'Real category ID with discovered context 115135' },
       { categoryid: categoryId, contextid: '1', note: 'Real category ID with context 1' },
       { categoryid: categoryId, contextid: courseId, note: 'Real category ID with course context' },
-
-      // Fallback to known working IDs if real one fails
       { categoryid: '7', contextid: '1', note: 'Known working: category 7' },
       { categoryid: '8', contextid: '1', note: 'Known working: category 8' },
     ];
@@ -201,7 +190,6 @@ const handleNavigation = (value) => {
     console.log(' Testing import URLs in order of preference...');
 
     for (const testCase of testCases) {
-      // Skip if we don't have the required values
       if (!testCase.categoryid || testCase.categoryid === 'All') continue;
 
       try {
@@ -221,10 +209,9 @@ const handleNavigation = (value) => {
           console.log(' SUCCESS! Import form URL received:', data);
 
           if (data.import_form_url) {
-            // Open Moodle import form in new window/tab
             window.open(data.import_form_url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
             setTimeout(() => {}, 1000);
-            return; // Success - stop trying other URLs
+            return;
           }
         }
       } 
@@ -232,7 +219,6 @@ const handleNavigation = (value) => {
         console.log(` Error testing ${testCase.note}:`, error.message);
       }
     }
-    // If all import URLs failed, fallback to local import
     console.log(' All import URLs failed. Falling back to local file import...');
     fileInputRef.current?.click();
   };
@@ -260,17 +246,13 @@ const handleNavigation = (value) => {
     try {
       const fileContent = await file.text();
       let parsedQuestions = [];
-      // You may want to implement parseXMLQuestions and parseJSONQuestions as needed
       if (file.name.endsWith('.xml')) {
-        // parsedQuestions = parseXMLQuestions(fileContent);
         toast('XML import not implemented');
       } else if (file.name.endsWith('.json')) {
-        // parsedQuestions = parseJSONQuestions(fileContent);
         toast('JSON import not implemented');
       } else {
         throw new Error('Unsupported file format. Please use XML or JSON files.');
       }
-      // Further logic for handling parsedQuestions can be added here
     } catch (error) {
       toast.error(`Import failed: ${error.message}`);
     } finally {
@@ -278,7 +260,6 @@ const handleNavigation = (value) => {
       event.target.value = '';
     }
   };
-
 
   // Handle type selection from modal
   const handleSelectType = async (typeObj) => {
@@ -325,91 +306,91 @@ const handleNavigation = (value) => {
       toast.error(`Error: ${error.message}`);
     }
   };
-// Responsive iframe component
-function ResponsiveIframe({ src, title }) {
-  return (
-    <div style={{
-      position: 'relative',
-     width: '80vw',
-maxWidth: 1100,
-minWidth: 320,
-      paddingBottom: '50%', // 16:9 aspect ratio
-      height: 0,
-      overflow: 'hidden',
-      background: '#f9f9f9'
-    }}>
-      <iframe
-        src={src}
-        title={title}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          border: 0
-        }}
-        allowFullScreen
-      />
-    </div>
-  );
-}
+
+  // Responsive iframe component
+  function ResponsiveIframe({ src, title }) {
+    return (
+      <div style={{
+        position: 'relative',
+        width: '80vw',
+        maxWidth: 1100,
+        minWidth: 320,
+        paddingBottom: '50%',
+        height: 0,
+        overflow: 'hidden',
+        background: '#f9f9f9'
+      }}>
+        <iframe
+          src={src}
+          title={title}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            border: 0
+          }}
+          allowFullScreen
+        />
+      </div>
+    );
+  }
 
   // Loader-enhanced iframe component
-function IframeWithLoader({ src, title }) {
-  const [loading, setLoading] = React.useState(true);
-  return (
-    <div style={{
-      position: 'relative',
-     width: '80vw',
-maxWidth: 1100,
-minWidth: 320,
-      paddingBottom: '55%', // 16:9 aspect ratio
-      height: 0,
-      overflow: 'hidden',
-      background: '#f9f9f9'
-    }}>
-      {loading && (
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          background: 'rgba(255,255,255,0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 2
-        }}>
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
-          <span style={{ marginLeft: 16, fontSize: 18, color: '#2563eb' }}>Loading...</span>
-        </div>
-      )}
-      <iframe
-        src={src}
-        title={title}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          border: 0,
-          zIndex: 1
-        }}
-        allowFullScreen
-        onLoad={() => setLoading(false)}
-      />
-    </div>
-  );
-}
-
+  function IframeWithLoader({ src, title }) {
+    const [loading, setLoading] = React.useState(true);
+    return (
+      <div style={{
+        position: 'relative',
+        width: '80vw',
+        maxWidth: 1100,
+        minWidth: 320,
+        paddingBottom: '55%',
+        height: 0,
+        overflow: 'hidden',
+        background: '#f9f9f9'
+      }}>
+        {loading && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: 'rgba(255,255,255,0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2
+          }}>
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
+            <span style={{ marginLeft: 16, fontSize: 18, color: '#2563eb' }}>Loading...</span>
+          </div>
+        )}
+        <iframe
+          src={src}
+          title={title}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            border: 0,
+            zIndex: 1
+          }}
+          allowFullScreen
+          onLoad={() => setLoading(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full border-2 border-white shadow-sm mb-4">
       <div className="py-3 px-5 flex flex-col justify-between md:flex-row md:items-center md:justify-between gap-4">
-        {/* Back Button and Course Info - show when coming from courses */}
+        {/* Back Button and Course Info */}
         {showBackButton && (
           <div className="flex items-center gap-4 mb-2 md:mb-0">
             <button
@@ -425,7 +406,6 @@ minWidth: 320,
           </div>
         )}
 
-        {/* Removed Test Button and its modal as requested */}
         {/* Navigation Dropdown */}
         <div className="flex items-center gap-3 ">
           <label htmlFor="url_select" className="sr-only">
@@ -435,7 +415,6 @@ minWidth: 320,
 
         {/* Main Actions */}
         <div className="flex items-center gap-4 justify-start flex-1">
-          {/* Import/Export Dropdown and other actions */}
           {(currentView === 'questions' || !currentView) && (
             <>
               <div className="relative inline-block text-left" ref={dropdownRef}>
@@ -541,10 +520,9 @@ minWidth: 320,
                     </div>
                   </div>
                 )}
-                {/* Hidden file input */}
                 <input
                   ref={fileInputRef}
-        type="file"
+                  type="file"
                   className="hidden"
                   accept=".xml,.json"
                   onChange={handleFileChange}
@@ -592,51 +570,6 @@ minWidth: 320,
                 Preview Questions
                 <Eye size={18} />
               </button>
-      {/* Preview Questions Modal */}
-      {showPreviewModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-       <div
-  style={{
-    background: '#fff',
-    padding: 8,
-    borderRadius: 8,
-    position: 'relative',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-    width: '80vw',
-    // maxWidth: window.innerWidth > 1600 ? 1400 : 1100, // wider on big screens
-    minWidth: 320,
-  }}
->
-            <button onClick={() => setShowPreviewModal(false)} style={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              background: 'transparent',
-              border: 'none',
-              fontSize: 24,
-              cursor: 'pointer'
-            }}>&times;</button>
-        {previewLoading ? (
-  <div style={{ padding: 40, textAlign: 'center', fontSize: 18 }}>Loading preview...</div>
-) : previewUrl ? (
-    <ResponsiveIframe src={previewUrl} title="Preview Questions" />
-) : (
-  <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>No preview available.</div>
-)}
-          </div>
-        </div>
-      )}
 
               <button
                 type="button"
@@ -673,7 +606,76 @@ minWidth: 320,
                 Create New Question
                 <Plus size={18} />
               </button>
-      {/* Type Selection Modal (use CreateQuestionModal for better UI) */}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Preview Questions Modal */}
+      {showPreviewModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowPreviewModal(false)}
+        >
+          <div
+            className="modal-container"
+            style={{
+              background: '#fff',
+              padding: 8,
+              borderRadius: 8,
+              position: 'relative',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              width: '80vw',
+              minWidth: 320,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setShowPreviewModal(false)} 
+              style={{
+                position: 'absolute',
+                top: -15,
+                right: -15,
+                background: '#ef4444',
+                border: 'none',
+                borderRadius: '50%',
+                width: 40,
+                height: 40,
+                fontSize: 20,
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                zIndex: 1001,
+                fontWeight: 'bold'
+              }}
+              title="Close"
+            >&times;</button>
+            {previewLoading ? (
+              <div style={{ padding: 40, textAlign: 'center', fontSize: 18 }}>Loading preview...</div>
+            ) : previewUrl ? (
+              <ResponsiveIframe src={previewUrl} title="Preview Questions" />
+            ) : (
+              <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>No preview available.</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Type Selection Modal */}
       {showTypeSelectModal && (
         <CreateQuestionModal
           onClose={() => setShowTypeSelectModal(false)}
@@ -717,41 +719,60 @@ minWidth: 320,
           loadingQuestionTypes={loadingQuestionTypes}
         />
       )}
+
       {/* Import Modal */}
       {showImportModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-             <div
-  style={{
-    background: '#fff',
-    padding: 8,
-    borderRadius: 8,
-    position: 'relative',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-    width: '80vw',
-    // maxWidth: window.innerWidth > 1600 ? 1400 : 1100, // wider on big screens
-    minWidth: 320,
-  }}
->
-            <button onClick={() => setShowImportModal(false)} style={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              background: 'transparent',
-              border: 'none',
-              fontSize: 24,
-              cursor: 'pointer'
-            }}>&times;</button>
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowImportModal(false)}
+        >
+          <div
+            className="modal-container"
+            style={{
+              background: '#fff',
+              padding: 8,
+              borderRadius: 8,
+              position: 'relative',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              width: '80vw',
+              minWidth: 320,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setShowImportModal(false)} 
+              style={{
+                position: 'absolute',
+                top: -15,
+                right: -15,
+                background: '#ef4444',
+                border: 'none',
+                borderRadius: '50%',
+                width: 40,
+                height: 40,
+                fontSize: 20,
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                zIndex: 1001,
+                fontWeight: 'bold'
+              }}
+              title="Close"
+            >&times;</button>
             {importLoading ? (
               <div style={{ padding: 40, textAlign: 'center', fontSize: 18 }}>Loading import form...</div>
             ) : importUrl ? (
@@ -765,39 +786,57 @@ minWidth: 320,
 
       {/* Export Modal */}
       {showExportModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowExportModal(false)}
+        >
           <div
-  style={{
-    background: '#fff',
-    padding: 8,
-    borderRadius: 8,
-    position: 'relative',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-    width: '80vw',
-    // maxWidth: window.innerWidth > 1600 ? 1400 : 1100, // wider on big screens
-    minWidth: 320,
-  }}
->
-            <button onClick={() => setShowExportModal(false)} style={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              background: 'transparent',
-              border: 'none',
-              fontSize: 24,
-              cursor: 'pointer'
-            }}>&times;</button>
+            className="modal-container"
+            style={{
+              background: '#fff',
+              padding: 8,
+              borderRadius: 8,
+              position: 'relative',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              width: '80vw',
+              minWidth: 320,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setShowExportModal(false)} 
+              style={{
+                position: 'absolute',
+                top: -15,
+                right: -15,
+                background: '#ef4444',
+                border: 'none',
+                borderRadius: '50%',
+                width: 40,
+                height: 40,
+                fontSize: 20,
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                zIndex: 1001,
+                fontWeight: 'bold'
+              }}
+              title="Close"
+            >&times;</button>
             {exportLoading ? (
               <div style={{ padding: 40, textAlign: 'center', fontSize: 18 }}>Loading export form...</div>
             ) : exportUrl ? (
@@ -811,39 +850,57 @@ minWidth: 320,
 
       {/* Create New Question Modal (iframe) */}
       {showCreateModalIframe && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-           <div
-  style={{
-    background: '#fff',
-    padding: 8,
-    borderRadius: 8,
-    position: 'relative',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-    width: '80vw',
-    // maxWidth: window.innerWidth > 1600 ? 1400 : 1100, // wider on big screens
-    minWidth: 320,
-  }}
->
-            <button onClick={() => setShowCreateModalIframe(false)} style={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              background: 'transparent',
-              border: 'none',
-              fontSize: 24,
-              cursor: 'pointer'
-            }}>&times;</button>
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowCreateModalIframe(false)}
+        >
+          <div
+            className="modal-container"
+            style={{
+              background: '#fff',
+              padding: 8,
+              borderRadius: 8,
+              position: 'relative',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              width: '80vw',
+              minWidth: 320,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setShowCreateModalIframe(false)} 
+              style={{
+                position: 'absolute',
+                top: -15,
+                right: -15,
+                background: '#ef4444',
+                border: 'none',
+                borderRadius: '50%',
+                width: 40,
+                height: 40,
+                fontSize: 20,
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                zIndex: 1001,
+                fontWeight: 'bold'
+              }}
+              title="Close"
+            >&times;</button>
             {createLoading ? (
               <div style={{ padding: 40, textAlign: 'center', fontSize: 18 }}>Loading create form...</div>
             ) : createUrl ? (
@@ -855,32 +912,17 @@ minWidth: 320,
         </div>
       )}
 
-               {/* <button
-                type="button"
-                className="w-full md:w-auto flex items-center gap-2 rounded-md bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={setShowTestModal}
-                title="Create new question in selected category"
-                style={{ minWidth: 120 }}
-              >
-                Test
-              
-              </button> */}
-            </>
-          )}
-        </div>
-      </div>
-    {/* Create Question Modal */}
-    {showCreateModal && (
-      <CreateQuestionModal
-        onClose={() => setShowCreateModal(false)}
-        onSelectType={handleSelectType}
-        availableQuestionTypes={questionTypes}
-        loadingQuestionTypes={loadingQuestionTypes}
-      />
-    )}
-  </div>
+      {/* Create Question Modal */}
+      {showCreateModal && (
+        <CreateQuestionModal
+          onClose={() => setShowCreateModal(false)}
+          onSelectType={handleSelectType}
+          availableQuestionTypes={questionTypes}
+          loadingQuestionTypes={loadingQuestionTypes}
+        />
+      )}
+    </div>
   );
-
-}
+};
 
 export default TopButtonsRow;
