@@ -664,9 +664,9 @@ const TagManagementModal = ({
       >
         Cancel
       </Button>
-            <Button 
+  <Button 
         variant="contained" 
-        onClick={() => setShowTagModal(false)}
+        onClick={onRequestClose}
         sx={{ 
           px: 3,
           py: 1,
